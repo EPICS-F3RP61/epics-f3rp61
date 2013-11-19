@@ -1,0 +1,261 @@
+//
+//    FA-M3 CPU PROPERTY FILE
+//
+//    CPU type : F3SP71-4S, F3SP76-7S
+//    Revision : P1.0
+//
+//    Yokogawa Electric Corporation All rights reserved.
+//
+//////////////////////////////////////////////////
+// LOAD PROPERTY SELECTOR PART
+// (0:NOT LOAD, 1:LOAD )
+//////////////////////////////////////////////////
+[LOAD]
+NETWORK                     = 1             
+FL-NET                      = 1             
+ETHERNET                    = 1             
+SOCKET                      = 1             
+SOCKET_ADDRESS              = 1             
+HIGHER-LEVEL_LINK_SERVICE   = 1             
+FTP_CLIENT                  = 1             
+FTP_CLIENT_ADDRESS          = 1             
+FTP_SERVER                  = 1             
+ROTARY_SWITCH               = 1             
+NET_FILTER                  = 1             
+//////////////////////////////////////////////////
+// RENEW PROPERTY SELECTOR PART
+// (0:HOLD, 1:RENEW )
+//////////////////////////////////////////////////
+[RENEW]
+FL-NET_RENEW                = 0             
+FTP_SERVER_RENEW            = 0             
+NETWORK_FILTER_RENEW        = 0             
+//////////////////////////////////////////////////
+// PROPERTY PROTECT PART
+//////////////////////////////////////////////////
+[PROTECT]
+PROTECT_ENABLE              = 0             // 0=NON PROTECT, 1=PROTECT
+PROTECT_KEYWORD             =               // ASCII, length <= 8
+//////////////////////////////////////////////////
+// CPU PROPERTY PART
+//
+//  <NETWORK PROPERTY GROUP>
+//      [NETWORK]
+//
+//  <CONTROLLER-LINK PROPERTY GROUP>
+//      [FL-NET]
+//
+//  <ETHERNET PROPERTY GROUP>
+//      [ETHERNET]
+//
+//  <SOCKET PROPERTY GROUP>
+//      [SOCKET]
+//      [SOCKET_ADDRESS]
+//
+//  <HIGHER-LEVEL LINK PROPERTY GROUP>
+//      [HIGHER-LEVEL_LINK_SERVICE]
+//
+//  <FTP PROPERTY GROUP>
+//      [FTP_CLIENT]
+//      [FTP_CLIENT_ADDRESS]
+//      [FTP_SERVER]
+//
+//  <SMART ACCESS PROPERTY GROUP>
+//      [ROTARY_SWITCH]
+//
+//  <SECURITY PROPERTY GROUP>
+//      [NETWORK-FILTER]
+//
+//////////////////////////////////////////////////
+<NETWORK PROPERTY GROUP>
+[NETWORK]
+NETWORK_SELECT              = 1             // 1=ETHER
+<CONTROLLER-LINK PROPERTY GROUP>
+[FL-NET]
+FL-NET_IPADR                = 192.168.250.0 // Reserved
+FL-NET_COM1_TOP             = 0             // Reserved
+FL-NET_COM1_SIZE            = 0             // Reserved
+FL-NET_COM2_TOP             = 0             // Reserved
+FL-NET_COM2_SIZE            = 0             // Reserved
+FL-NET_TOKEN_TIMEOUT        = 50            // Reserved
+FL-NET_NODE_NAME            = SP6xNo.000    // Reserved
+FL-NET_MFT                  = 0             // Reserved
+<ETHERNET PROPERTY GROUP>
+[ETHERNET]
+ETHER_MY_IPADDRESS          = 192.168.0.2   // 0.0.0.0 - 255.255.255.255
+ETHER_SUBNET_MASK           = 255.255.255.0 // 0.0.0.0 - 255.255.255.255
+ETHER_DEFAULT_GATEWAY       = 192.168.0.1   // 0.0.0.0 - 255.255.255.255
+ETHER_PRIMARY_DNS           = 192.168.0.1   // 0.0.0.0 - 255.255.255.255
+ETHER_SECONDARY_DNS         = 192.168.0.1   // 0.0.0.0 - 255.255.255.255
+ETHER_MY_HOST_NAME          = FAM3          // ASCII, length <= 64byte
+ETHER_DOMAIN_NAME           =               // ASCII, length <= 64byte
+ETHER_PRI_DOMAIN_SUFIX      =               // ASCII, length <= 64byte
+ETHER_SCN_DOMAIN_SUFIX      =               // ASCII, length <= 64byte
+<SOCKET PROPERTY GROUP>
+[SOCKET]
+SOCKET_UDP_BROADCAST        = 0             // 0=DISABLE, 1=ENABLE
+KEEPALIVE_TIME              = 30            // 0=DON'T USE, 1 - 65535[sec]
+[SOCKET_ADDRESS]
+SOCKET_PORT_1               = 0             // 0-65535
+SOCKET_ADR_IP_1             =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_1       =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_2               = 0             // 0 - 65535
+SOCKET_ADR_IP_2             =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_2       =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_3               = 0             // 0 - 65535
+SOCKET_ADR_IP_3             =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_3       =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_4               = 0             // 0 - 65535
+SOCKET_ADR_IP_4             =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_4       =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_5               = 0             // 0 - 65535
+SOCKET_ADR_IP_5             =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_5       =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_6               = 0             // 0 - 65535
+SOCKET_ADR_IP_6             =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_6       =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_7               = 0             // 0 - 65535
+SOCKET_ADR_IP_7             =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_7       =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_8               = 0             // 0 - 65535
+SOCKET_ADR_IP_8             =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_8       =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_9               = 0             // 0 - 65535
+SOCKET_ADR_IP_9             =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_9       =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_10              = 0             // 0 - 65535
+SOCKET_ADR_IP_10            =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_10      =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_11              = 0             // 0 - 65535
+SOCKET_ADR_IP_11            =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_11      =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_12              = 0             // 0 - 65535
+SOCKET_ADR_IP_12            =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_12      =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_13              = 0             // 0 - 65535
+SOCKET_ADR_IP_13            =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_13      =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_14              = 0             // 0 - 65535
+SOCKET_ADR_IP_14            =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_14      =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_15              = 0             // 0 - 65535
+SOCKET_ADR_IP_15            =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_15      =               // ASCII <= 64byte, ex.)Servername
+SOCKET_PORT_16              = 0             // 0 - 65535
+SOCKET_ADR_IP_16            =               // 0.0.0.0 - 255.255.255.255, ex.)192.168.0.4
+SOCKET_ADR_HOSTNAME_16      =               // ASCII <= 64byte, ex.)Servername
+<HIGHER-LEVEL LINK PROPERTY GROUP>
+[HIGHER-LEVEL_LINK_SERVICE]
+HLLINK_PROTOCOL_A           = 0             // 0=TCP/IP, 1=UDP/IP
+HLLINK_DATA_FORMAT_A        = 0             // 0=ASCII, 1=BINARY
+HLLINK_PROTOCOL_B           = 0             // 0=TCP/IP, 1=UDP/IP
+HLLINK_DATA_FORMAT_B        = 1             // 0=ASCII, 1=BINARY
+HLLINK_PROTECT              = 0             // 0=NON PROTECT 1=PROTECT
+<FTP PROPERTY GROUP>
+[FTP_CLIENT]
+FTPC_NETACK_TOUT            = 60            // 1 - 32767sec, 0=LONGEST(2147483sec)
+FTPC_M3ACK_TOUT             = 60            // Reserved
+FTPC_GATEWAY_INTERVAL_TOUT  = 3600          // Reserved
+FTPC_INUNIT_INFLNET_LOG     = 0             // Reserved
+[FTP_CLIENT_ADDRESS]
+FTPC_SRV_ACCOUNT_1          = anonymous     // ASCII <= 32byte
+FTPC_SRV_PASSWORD_1         = fam3@         // ASCII <= 32byte
+FTPC_SRV_PORT_1             = 21            // 1 - 65535
+FTPC_SRV_IP_1               = 192.168.0.3   // 0.0.0.0 - 255.255.255.255, ex.192.168.0.4, For Ethernet connection
+FTPC_SRV_HOSTNAME_1         =               // ASCII <= 64byte, ex.)Servername, For Ethernet connection
+FTPC_SRV_SEAMLESS_1         =               // Reserved
+FTPC_SRV_ACCOUNT_2          = anonymous     // ASCII <= 32byte
+FTPC_SRV_PASSWORD_2         = fam3@         // ASCII <= 32byte
+FTPC_SRV_PORT_2             = 21            // 1 - 65535
+FTPC_SRV_IP_2               = 192.168.0.3   // 0.0.0.0 - 255.255.255.255, ex.192.168.0.4, For Ethernet connection
+FTPC_SRV_HOSTNAME_2         =               // ASCII <= 64byte, ex.)Servername, For Ethernet connection
+FTPC_SRV_SEAMLESS_2         =               // Reserved
+FTPC_SRV_ACCOUNT_3          = anonymous     // ASCII <= 32byte
+FTPC_SRV_PASSWORD_3         = fam3@         // ASCII <= 32byte
+FTPC_SRV_PORT_3             = 21            // 1 - 65535
+FTPC_SRV_IP_3               = 192.168.0.3   // 0.0.0.0 - 255.255.255.255, ex.192.168.0.4, For Ethernet connection
+FTPC_SRV_HOSTNAME_3         =               // ASCII <= 64byte, ex.)Servername, For Ethernet connection
+FTPC_SRV_SEAMLESS_3         =               // Reserved
+FTPC_SRV_ACCOUNT_4          = anonymous     // ASCII <= 32byte
+FTPC_SRV_PASSWORD_4         = fam3@         // ASCII <= 32byte
+FTPC_SRV_PORT_4             = 21            // 1 - 65535
+FTPC_SRV_IP_4               = 192.168.0.3   // 0.0.0.0 - 255.255.255.255, ex.192.168.0.4, For Ethernet connection
+FTPC_SRV_HOSTNAME_4         =               // ASCII <= 64byte, ex.)Servername, For Ethernet connection
+FTPC_SRV_SEAMLESS_4         =               // Reserved
+[FTP_SERVER]
+FTPS_MY_PORT                = 21            // 1 - 65535
+FTPS_MAX_CLIENT             = 4             // 1 - 4
+FTPS_LOG                    = 1             // 0=DISABLE, 1=ENABLE
+FTPS_ANONYMOUS              = 1             // 0=DISABLE, 1=ENABLE
+FTPS_INTERVAL_TOUT          = 3600          // 1 - 32767sec, 0=LONGEST(2147483sec)
+FTPS_NETACK_TOUT            = 60            // 1 - 32767sec, 0=LONGEST(2147483sec)
+FTPS_M3ACK_TOUT             = 60            // Reserved
+FTPS_PASSWD                 = fam3@         // ASCII <= 32byte
+<SMART ACCESS PROPERTY GROUP>
+[ROTARY_SWITCH]
+SW_NO_0                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_1                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_2                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_3                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_4                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_5                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_6                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_7                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_8                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_9                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_A                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_B                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_C                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_D                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_E                     = 1             // 0=DISABLE, 1=ENABLE
+SW_NO_F                     = 1             // 0=DISABLE, 1=ENABLE
+<SECURITY PROPERTY GROUP>
+[NET_FILTER]
+NET_FILTER_IP_1             =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_1       =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_1           = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_2             =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_2       =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_2           = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_3             =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_3       =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_3           = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_4             =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_4       =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_4           = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_5             =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_5       =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_5           = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_6             =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_6       =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_6           = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_7             =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_7       =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_7           = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_8             =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_8       =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_8           = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_9             =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_9       =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_9           = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_10            =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_10      =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_10          = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_11            =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_11      =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_11          = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_12            =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_12      =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_12          = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_13            =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_13      =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_13          = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_14            =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_14      =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_14          = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_15            =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_15      =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_15          = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0
+NET_FILTER_IP_16            =               // 0.0.0.0 - 255.255.255.255
+NET_FILTER_HOSTNAME_16      =               // ASCII <= 64byte, ex.)Servername
+NET_FILTER_MASK_16          = 0.0.0.0       // 0.0.0.0 - 255.255.255.255, ex.)255.255.255.0

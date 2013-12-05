@@ -1,5 +1,5 @@
 /*************************************************************************
-* Copyright (c) 2008 High Energy Accelerator Reseach Organization (KEK)
+* Copyright (c) 2008 High Energy Accelerator Research Organization (KEK)
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
@@ -9,6 +9,9 @@
 *
 *      Author: Jun-ichi Odagiri 
 *      Date: 31-03-09
+*
+*      Modified: Gregor Kostevc (Cosylab)
+*      Date: Dec. 2013
 */
 #include <stdlib.h>
 #include <stdio.h>
@@ -66,12 +69,15 @@ static long init_record(longinRecord *plongin)
   struct link *plink = &plongin->inp;
   int size;
   char *buf;
+  char *pC;
   F3RP61_SEQ_DPVT *dpvt;
   MCMD_STRUCT *pmcmdStruct;
   MCMD_REQUEST *pmcmdRequest;
   M3_READ_SEQDEV *pM3ReadSeqdev;
   int srcSlot, destSlot, top;
   char device;
+  char option;
+  short BCD = 0;
 
   if (plongin->inp.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)plongin,
@@ -79,11 +85,27 @@ static long init_record(longinRecord *plongin)
     plongin->pact = 1;
     return(S_db_badField);
   }
+
   size = strlen(plink->value.instio.string) + 1;
   buf = (char *) callocMustSucceed(size, sizeof(char), "calloc failed");
   strncpy(buf, plink->value.instio.string, size);
   buf[size - 1] = '\0';
 
+  /* Parse option*/
+    pC = strchr(buf, '&');
+    if (pC) {
+      *pC++ = '\0';
+      if (sscanf(pC, "%c", &option) < 1) {
+        errlogPrintf("devLiF3RP61Seq: can't get option for %s\n", plongin->name);
+        plongin->pact = 1;
+        return (-1);
+      }
+      if (option == 'B') {
+            BCD = 1; /* flag is used for the possible double option case */
+      }
+    }
+
+  /* Parse slot, device and register number*/
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
     errlogPrintf("devLiF3RP61Seq: can't get device addresses for %s\n",
 		 plongin->name);
@@ -91,15 +113,19 @@ static long init_record(longinRecord *plongin)
     return (-1);
   }
 
+  /* Allocate private data storage area*/
   dpvt = (F3RP61_SEQ_DPVT *) callocMustSucceed(1,
 					      sizeof(F3RP61_SEQ_DPVT),
 					      "calloc failed");
 
+  /* Read the slot number of CPU module*/
   if (ioctl(f3rp61_fd, M3IO_GET_MYCPUNO, &srcSlot) < 0) {
     errlogPrintf("devLiF3RP61Seq: ioctl failed [%d]\n", errno);
     plongin->pact = 1;
     return (-1);
   }
+
+  dpvt->BCD = BCD;
   pmcmdStruct = &dpvt->mcmdStruct;
   pmcmdStruct->timeOut = 1;
   pmcmdRequest = &pmcmdStruct->mcmdRequest;
@@ -141,8 +167,11 @@ static long read_longin(longinRecord *plongin)
   F3RP61_SEQ_DPVT *dpvt = (F3RP61_SEQ_DPVT *) plongin->dpvt;
   MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
   MCMD_RESPONSE *pmcmdResponse;
+  unsigned long dataBCD;	/* For storing returned value in binary-coded-decimal format*/
+  unsigned short i, data_temp;	/* Used when calculating BCD value*/
+  short BCD = dpvt->BCD;
 
-  if (plongin->pact) {
+  if (plongin->pact) {		/* If pact=1 this is a completion request.*/
     pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
     if (dpvt->ret < 0) {
@@ -156,18 +185,32 @@ static long read_longin(longinRecord *plongin)
       return (-1);
     }
 
-    plongin->val = (unsigned long) pmcmdResponse->dataBuff.wData[0];
+    /* Get BCD format in case of 'B' option*/
+    if(BCD) {
+    	dataBCD = 0;
+    	i = 0;
+   		data_temp = pmcmdResponse->dataBuff.wData[0];
+   		while(data_temp > 0) {
+    		dataBCD = dataBCD | ((unsigned long) (data_temp % 10)) << (i*4);
+    		data_temp /= 10;
+    		i++;
+    	}
+   		plongin->val = dataBCD;
+    }
+    else {
+    	plongin->val = (unsigned long) pmcmdResponse->dataBuff.wData[0];
+    }
 
     plongin->udf=FALSE;
   }
-  else {
-    if (f3rp61Seq_queueRequest(dpvt) < 0) {
+  else {		/* Arrange callbacks and set pact=1 to let know record support we're waiting for completion*/
+      if (f3rp61Seq_queueRequest(dpvt) < 0) {
       errlogPrintf("devLiF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n",
 		   plongin->name);
       return (-1);
     }
 
-    plongin->pact = 1;
+    plongin->pact = 1;	/* Setting pact to 1 to return to processing*/
   }
 
   return(0);

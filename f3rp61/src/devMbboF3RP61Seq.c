@@ -1,23 +1,20 @@
 /*************************************************************************
-* Copyright (c) 2008 High Energy Accelerator Research Organization (KEK)
+* Copyright (c) 2013 High Energy Accelerator Reseach Organization (KEK)
 *
-* EPICS BASE Versions 3.13.7
+* F3RP61 Device Support 1.3.0
 * and higher are distributed subject to a Software License Agreement found
-* in file LICENSE that is included with this distribution. 
+* in file LICENSE that is included with this distribution.
 **************************************************************************
-* devLoF3RP61Seq.c - Device Support Routines for  F3RP61 Long Output
+* devMbboF3RP61Seq.c - Device Support Routines for  F3RP61 Multi-bit
+* Binary Output
 *
-*      Author: Jun-ichi Odagiri 
-*      Date: 31-03-09
-*
-*      Modified: Gregor Kostevc (Cosylab)
+*      Author: Gregor Kostevc (Cosylab)
 *      Date: Dec. 2013
 */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-#include <math.h>
 
 #include "alarm.h"
 #include "dbDefs.h"
@@ -27,7 +24,7 @@
 #include "recGbl.h"
 #include "recSup.h"
 #include "devSup.h"
-#include "longoutRecord.h"
+#include "mbboRecord.h"
 #include "cantProceed.h"
 #include "errlog.h"
 #include "epicsExport.h"
@@ -42,9 +39,9 @@
 
 extern int f3rp61_fd;
 
-/* Create the dset for devLoF3RP61Seq */
+/* Create the dset for devMbboF3RP61Seq */
 static long init_record();
-static long write_longout();
+static long write_mbbo();
 
 struct {
 	long		number;
@@ -52,38 +49,37 @@ struct {
 	DEVSUPFUN	init;
 	DEVSUPFUN	init_record;
 	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	write_longout;
-}devLoF3RP61Seq={
+	DEVSUPFUN	write_mbbo;
+}devMbboF3RP61Seq={
 	5,
 	NULL,
 	NULL,
 	init_record,
 	NULL,
-	write_longout
+	write_mbbo
 };
-epicsExportAddress(dset,devLoF3RP61Seq);
+epicsExportAddress(dset,devMbboF3RP61Seq);
 
 
-
-static long init_record(longoutRecord *plongout)
+/* Function init_record initializes record - parses INP/OUT field string,
+ * allocates private data storage area and sets initial configure values */
+static long init_record(mbboRecord *pmbbo)
 {
-  struct link *plink = &plongout->out;
+  struct link *plink = &pmbbo->out;
   int size;
   char *buf;
-  char *pC;
   F3RP61_SEQ_DPVT *dpvt;
   MCMD_STRUCT *pmcmdStruct;
   MCMD_REQUEST *pmcmdRequest;
   M3_WRITE_SEQDEV *pM3WriteSeqdev;
   int srcSlot, destSlot, top;
   char device;
-  char option;
-  short BCD = 0;
 
-  if (plongout->out.type != INST_IO) {
-    recGblRecordError(S_db_badField,(void *)plongout,
-		      "devLoF3RP61Seq (init_record) Illegal OUT field");
-    plongout->pact = 1;
+  /* Output link type must be INST_IO */
+  if (pmbbo->out.type != INST_IO) {
+    recGblRecordError(S_db_badField,(void *)pmbbo,
+		      "devMbboF3RP61Seq (init_record) Illegal OUT field");
+    pmbbo->pact = 1;
     return(S_db_badField);
   }
   size = strlen(plink->value.instio.string) + 1;
@@ -91,25 +87,11 @@ static long init_record(longoutRecord *plongout)
   strncpy(buf, plink->value.instio.string, size);
   buf[size - 1] = '\0';
 
-  /* Parse option*/
-  pC = strchr(buf, '&');
-  if (pC) {
-    *pC++ = '\0';
-    if (sscanf(pC, "%c", &option) < 1) {
-      errlogPrintf("devLoF3RP61Seq: can't get option for %s\n", plongout->name);
-      plongout->pact = 1;
-      return (-1);
-      }
-    if (option == 'B') {
-       BCD = 1; /* flag is used for the possible double option case */
-    }
-  }
-
-  /* Parse slot, device and register number*/
+  /* Parse device*/
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-    errlogPrintf("devLoF3RP61Seq: can't get device addresses for %s\n",
-		 plongout->name);
-    plongout->pact = 1;
+    errlogPrintf("devMbboF3RP61Seq: can't get device addresses for %s\n",
+		 pmbbo->name);
+    pmbbo->pact = 1;
     return (-1);
   }
 
@@ -118,12 +100,10 @@ static long init_record(longoutRecord *plongout)
 					      "calloc failed");
 
   if (ioctl(f3rp61_fd, M3IO_GET_MYCPUNO, &srcSlot) < 0) {
-    errlogPrintf("devLoF3RP61Seq: ioctl failed [%d]\n", errno);
-    plongout->pact = 1;
+    errlogPrintf("devMbboF3RP61Seq: ioctl failed [%d]\n", errno);
+    pmbbo->pact = 1;
     return (-1);
   }
-
-  dpvt->BCD = BCD;
   pmcmdStruct = &dpvt->mcmdStruct;
   pmcmdStruct->timeOut = 1;
   pmcmdRequest = &pmcmdStruct->mcmdRequest;
@@ -136,6 +116,8 @@ static long init_record(longoutRecord *plongout)
   pmcmdRequest->dataSize = 12;
   pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
   pM3WriteSeqdev->accessType = 2;
+
+  /* Check device validity*/
   switch (device)
     {
     case 'D':
@@ -145,76 +127,61 @@ static long init_record(longoutRecord *plongout)
       pM3WriteSeqdev->devType = 0x02;
       break;
     default:
-      errlogPrintf("devLoF3RP61Seq: unsupported device in %s\n", plongout->name);
-      plongout->pact = 1;
+      errlogPrintf("devMbboF3RP61Seq: unsupported device in %s\n",
+		   pmbbo->name);
+      pmbbo->pact = 1;
       return (-1);
     }
   pM3WriteSeqdev->dataNum = 1;
   pM3WriteSeqdev->topDevNo = top;
-  callbackSetUser(plongout, &dpvt->callback);
+  callbackSetUser(pmbbo, &dpvt->callback);
 
-  plongout->dpvt = dpvt;
+  pmbbo->dpvt = dpvt;
 
   return(0);
 }
 
 
-
-static long write_longout(longoutRecord *plongout)
+/* Function is called when there was a request to process a record.
+ * When called, it sends the value from the VAL field to the driver
+ * and sets PACT field back to TRUE.
+ *  */
+static long write_mbbo(mbboRecord *pmbbo)
 {
-  F3RP61_SEQ_DPVT *dpvt = (F3RP61_SEQ_DPVT *) plongout->dpvt;
+  F3RP61_SEQ_DPVT *dpvt = (F3RP61_SEQ_DPVT *) pmbbo->dpvt;
   MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
   MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
   MCMD_RESPONSE *pmcmdResponse;
   M3_WRITE_SEQDEV *pM3WriteSeqdev;
-  unsigned short i, dataFromBCD = 0;	/* For storing the value decoded from binary-coded-decimal format*/
-  unsigned long data_temp;	/* Used when decoding from BCD value*/
-  short BCD = dpvt->BCD;
 
-  if (plongout->pact) {
+  if (pmbbo->pact) {	/* Second call (PACT is TRUE) */
     pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
     if (dpvt->ret < 0) {
-      errlogPrintf("devLoF3RP61Seq: write_longout failed for %s\n", plongout->name);
+      errlogPrintf("devMbboF3RP61Seq: write_mbbo failed for %s\n",
+		   pmbbo->name);
       return (-1);
     }
 
     if (pmcmdResponse->errorCode) {
-      errlogPrintf("devLoF3RP61Seq: errorCode %d returned for %s\n",
-		   pmcmdResponse->errorCode, plongout->name);
+      errlogPrintf("devMbboF3RP61Seq: errorCode %d returned for %s\n",
+		   pmcmdResponse->errorCode, pmbbo->name);
       return (-1);
     }
 
-    plongout->udf=FALSE;
+    pmbbo->udf=FALSE;
   }
-
-  else {
-	/* Decode BCD to decimal*/
-	  if(BCD) {
-		  i = 0;
-		  data_temp = (unsigned long) plongout->val;
-		  while(i < 5) {	/* max input number is max 5 ciphers (unsigned short): 65535 (corresponds to 415029 in BCD)*/
-			  dataFromBCD += (unsigned short) ((0x0000000f & data_temp) * pow(10, i));
-			  data_temp = data_temp >> 4;
-			  i++;
-		  }
-	  }
-
+  else {	/* First call (PACT is still FALSE) */
     pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-    if(BCD) {
-    	pM3WriteSeqdev->dataBuff.wData[0] = dataFromBCD;
-    }
-    else {
-    	pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) plongout->val;
-    }
+    pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) pmbbo->rval;
 
     if (f3rp61Seq_queueRequest(dpvt) < 0) {
-      errlogPrintf("devLoF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n",
-		   plongout->name);
+      errlogPrintf("devMbboF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n",
+		   pmbbo->name);
       return (-1);
     }
 
-    plongout->pact = 1;
+    pmbbo->pact = 1;
   }
 
   return(0);

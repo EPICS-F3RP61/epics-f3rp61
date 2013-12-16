@@ -156,7 +156,7 @@ static long read_bo(boRecord *pbo)
 			  break;
 		  }
 	  }
-	  else {			/* When VAL field is 1*/
+	  else if(pbo->val == 1) {	/* When VAL field is 1. Should not use only 'else' because then Invalid Value will be treated as True also*/
 		  switch (led) {
 		  case 'R':		/* Run LED*/
 		  data = RP6X_LED_RUN_ON;

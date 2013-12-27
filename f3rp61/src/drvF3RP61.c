@@ -304,7 +304,7 @@ static void comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, i
   if (cpuno < 0 || cpuno > 3 ||
       nrlys < 0 || nrlys >  2048 || nregs < 0 || nregs > 1024 ||
       ext_nrlys < 0 || ext_nrlys >  2048 || ext_nregs < 0 || ext_nregs > 3072) {
-    errlogPrintf("drvF3RP61: linkDeviceConfigure: parameter out of range\n");
+    errlogPrintf("drvF3RP61: comDeviceConfigure: parameter out of range\n");
     return;
   }
 

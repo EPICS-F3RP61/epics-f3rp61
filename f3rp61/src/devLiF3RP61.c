@@ -228,7 +228,7 @@ static long read_longin(longinRecord *plongin)
   int command = M3IO_READ_REG;
   unsigned short wdata[2];
   unsigned long ldata;
-  unsigned long dataBCD = 0;	 /* For storing returned value in binary-coded-decimal format */
+  unsigned long dataFromBCD = 0;	 /* For storing returned value in binary-coded-decimal format */
   unsigned short i, data_temp;	/* Used when calculating BCD value  */
   void *p = (void *) pdrly;
 
@@ -285,17 +285,16 @@ static long read_longin(longinRecord *plongin)
   }
   plongin->udf=FALSE;
 
-  /* Get BCD format in case of 'B' option*/
-  if(BCD) {
-	  dataBCD = 0;
-	  i = 0;
-	  data_temp = wdata[0];
-	  while(data_temp > 0) {
-	 	dataBCD = dataBCD | (((unsigned long) (data_temp % 10)) << (i*4));
-	 	data_temp /= 10;
-	  	i++;
-	  }
-  }
+  /* Decode BCD to decimal*/
+    if(BCD) {
+  	  i = 0;
+  	  data_temp = wdata[0];
+  	  while(i < 5) {	/* max input number is max 5 ciphers (unsigned short): 65535 (corresponds to 415029 in BCD)*/
+  		  dataFromBCD += ((unsigned short) (0x0000000f & data_temp)) * pow(10, i);
+  		  data_temp = data_temp >> 4;
+  		  i++;
+  	  }
+    }
 
   /* Write to VAL field*/
   switch (device) {
@@ -319,7 +318,7 @@ static long read_longin(longinRecord *plongin)
   case 'W':
   case 'R':
 	if (BCD) {
-		plongin->val = dataBCD;
+		plongin->val = dataFromBCD;
 	}
 	else if (uword) {
 		plongin->val = (long) wdata[0];
@@ -336,7 +335,7 @@ static long read_longin(longinRecord *plongin)
       plongin->val = (long) ((signed long) ldata);
     }
     else if (BCD) {
-       	plongin->val = dataBCD;
+       	plongin->val = dataFromBCD;
     }
     else if (uword) {
       plongin->val = (long) wdata[0];

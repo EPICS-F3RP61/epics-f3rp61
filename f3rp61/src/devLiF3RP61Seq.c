@@ -167,7 +167,7 @@ static long read_longin(longinRecord *plongin)
   F3RP61_SEQ_DPVT *dpvt = (F3RP61_SEQ_DPVT *) plongin->dpvt;
   MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
   MCMD_RESPONSE *pmcmdResponse;
-  unsigned long dataBCD;	/* For storing returned value in binary-coded-decimal format*/
+  unsigned long dataFromBCD = 0;	/* For storing returned value in binary-coded-decimal format*/
   unsigned short i, data_temp;	/* Used when calculating BCD value*/
   short BCD = dpvt->BCD;
 
@@ -187,15 +187,14 @@ static long read_longin(longinRecord *plongin)
 
     /* Get BCD format in case of 'B' option*/
     if(BCD) {
-    	dataBCD = 0;
     	i = 0;
    		data_temp = pmcmdResponse->dataBuff.wData[0];
-   		while(data_temp > 0) {
-    		dataBCD = dataBCD | ((unsigned long) (data_temp % 10)) << (i*4);
-    		data_temp /= 10;
-    		i++;
-    	}
-   		plongin->val = dataBCD;
+   		while(i < 5) {	/* max input number is max 5 ciphers (unsigned short): 65535 (corresponds to 415029 in BCD)*/
+   			dataFromBCD += (unsigned short) ((0x0000000f & data_temp) * pow(10, i));
+   			data_temp = data_temp >> 4;
+   			i++;
+   		}
+   		plongin->val = dataFromBCD;
     }
     else {
     	plongin->val = (unsigned long) pmcmdResponse->dataBuff.wData[0];

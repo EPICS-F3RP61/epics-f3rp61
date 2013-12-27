@@ -1,0 +1,36 @@
+==========================================================================
+Release Notes of Device and Driver Support for Yokogawa's F3RP61
+==========================================================================
+
+-------------
+Version 1.3.0
+-------------
+
+ * Device support has been extended to LED/Rotary Switch driver. Record DTYP
+   must be set to F3RP61SysCtl. It provides the following functionality:
+  - Set/reset RUN, ALARM and ERROR LEDs on F3RP61 module (bo and bi record
+    types)
+  - Read Rotary Switch position (mbbi record type)
+  - Read Status Register (bi record type)
+ 
+
+ * mbbi and mbbo record types are now supported for IO driver (DTYP set to
+   F3RP61) and Seq driver (DTYP set to F3RP61Seq). Supported devices are:
+   - mbbi:
+     - F3RP61: X, Y, A, r, W, L, M, R, E
+     - F3RP61Seq: D, B
+   - mbbo:
+     - F3RP61: Y, A, r, W, L, M, R, E
+     - F3RP61Seq: D, B
+
+
+ * New option for BCD (binary-coded-decimal) was implemented for
+   longin/longout records of DTYPs F3RP61 and F3RP61Seq.
+   To use BCD option append &B to the INP/OUT field.
+   This option is available for the following devices:
+   - longin:
+     - F3RP61: A, r, W, R
+     - F3RP61Seq: D, B
+   - longout:
+     - F3RP61: A, r, W, R
+     - F3RP61Seq: D, B

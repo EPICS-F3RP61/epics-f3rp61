@@ -167,7 +167,7 @@ static long write_longout(longoutRecord *plongout)
   MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
   MCMD_RESPONSE *pmcmdResponse;
   M3_WRITE_SEQDEV *pM3WriteSeqdev;
-  unsigned short i, dataFromBCD = 0;	/* For storing the value decoded from binary-coded-decimal format*/
+  unsigned short i, dataBCD = 0;	/* For storing the value decoded from binary-coded-decimal format*/
   unsigned long data_temp;	/* Used when decoding from BCD value*/
   short BCD = dpvt->BCD;
 
@@ -193,16 +193,16 @@ static long write_longout(longoutRecord *plongout)
 	  if(BCD) {
 		  i = 0;
 		  data_temp = (unsigned long) plongout->val;
-		  while(i < 5) {	/* max input number is max 5 ciphers (unsigned short): 65535 (corresponds to 415029 in BCD)*/
-			  dataFromBCD += (unsigned short) ((0x0000000f & data_temp) * pow(10, i));
-			  data_temp = data_temp >> 4;
-			  i++;
+		  while(data_temp > 0) {
+		   	  dataBCD = dataBCD | (((unsigned long) (data_temp % 10)) << (i*4));
+		      data_temp /= 10;
+		      i++;
 		  }
 	  }
 
     pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
     if(BCD) {
-    	pM3WriteSeqdev->dataBuff.wData[0] = dataFromBCD;
+    	pM3WriteSeqdev->dataBuff.wData[0] = dataBCD;
     }
     else {
     	pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) plongout->val;

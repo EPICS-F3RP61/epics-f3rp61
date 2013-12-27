@@ -97,7 +97,7 @@ static const iocshArg *setLEDArgs[] =
 /* iocshFunction definition */
 static const iocshFuncDef setLEDFuncDef =
   {
-    "setLED",
+    "f3rp61SetLED",
     2,
     setLEDArgs
   };
@@ -117,12 +117,12 @@ static void setLED(char led, int value)
 
 	/* Check 'led' validity*/
 	if (!(led == 'R' || led == 'A' || led == 'E')) {
-		errlogPrintf("drvF3RP61SysCtl: setLED: invalid led\n");
+		errlogPrintf("drvF3RP61SysCtl: f3rp61setLED: invalid led\n");
 		return;
 	}
 	/* Check 'value' validity*/
 	if (!(value == 1 || value == 0)) {
-      errlogPrintf("drvF3RP61SysCtl: setLED: value out of range\n");
+      errlogPrintf("drvF3RP61SysCtl: f3rp61setLED: value out of range\n");
       return;
 	}
 
@@ -156,7 +156,7 @@ static void setLED(char led, int value)
 
   /* Write to the device*/
   if (ioctl(f3rp61SysCtl_fd, RP6X_SYSIOC_SETLED, &data) < 0) {
-    errlogPrintf("drvF3RP61SysCtl: ioctl failed for setLED\n");
+    errlogPrintf("drvF3RP61SysCtl: ioctl failed for f3rp61setLED\n");
     return;
   }
 

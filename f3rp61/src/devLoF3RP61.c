@@ -224,20 +224,20 @@ static long write_longout(longoutRecord *plongout)
   int command = M3IO_WRITE_REG;
   unsigned short wdata[2];
   unsigned long ldata;
-  unsigned short i, dataFromBCD = 0;	/* For storing the value decoded from binary-coded-decimal format*/
+  unsigned short i, dataBCD = 0;	/* For storing the value decoded from binary-coded-decimal format*/
   unsigned long data_temp;		/* Used when decoding from BCD value*/
   void *p = (void *) pdrly;
 
-  /* Decode BCD to decimal*/
-  if(BCD) {
-	  i = 0;
-	  data_temp = (unsigned long) plongout->val;
-	  while(i < 5) {	/* max input number is max 5 ciphers (unsigned short): 65535 (corresponds to 415029 in BCD)*/
-		  dataFromBCD += ((unsigned short) (0x0000000f & data_temp)) * pow(10, i);
-		  data_temp = data_temp >> 4;
-		  i++;
-	  }
-  }
+  /* Get BCD format in case of 'B' option*/
+    if(BCD) {
+  	  i = 0;
+  	  data_temp = (unsigned long) plongout->val;
+  	  while(data_temp > 0) {
+  	 	dataBCD = dataBCD | (((unsigned long) (data_temp % 10)) << (i*4));
+  	 	data_temp /= 10;
+  	  	i++;
+  	  }
+    }
 
   /* Set 'device' specific commands and get data*/
   switch (device) {
@@ -249,7 +249,7 @@ static long write_longout(longoutRecord *plongout)
   case 'r':
     command = M3IO_WRITE_COM;
     if(BCD) {
-    	wdata[0] = dataFromBCD;
+    	wdata[0] = dataBCD;
     }
     else {
     	wdata[0] = (unsigned short) plongout->val;
@@ -264,7 +264,7 @@ static long write_longout(longoutRecord *plongout)
     	wdata[1] = (unsigned short) ((plongout->val >> 16) & 0x0000ffff);
     }
     else if (BCD) {
-    	wdata[0] = dataFromBCD;
+    	wdata[0] = dataBCD;
     }
     else {
     	wdata[0] = (unsigned short) plongout->val;
@@ -277,7 +277,7 @@ static long write_longout(longoutRecord *plongout)
     	pdrly->u.pldata = &ldata;
     }
     else if (BCD) {
-    	wdata[0] = dataFromBCD;
+    	wdata[0] = dataBCD;
     	pdrly->u.pwdata = &wdata[0];
     }
     else {

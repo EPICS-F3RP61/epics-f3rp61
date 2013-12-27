@@ -1,0 +1,98 @@
+record (longin, "TEST:li_X"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@U0,S4,X1")
+}
+
+record (longin, "TEST:li_Y"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@U0,S3,Y1")
+}
+
+record (longin, "TEST:li_r"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@CPU2,R525")
+}
+
+record (longin, "TEST:li_W"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@W00001")
+}
+
+record (longin, "TEST:li_R"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@R00535")
+}
+
+record (longin, "TEST:li_r_optB"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@CPU2,R525&B")
+}
+
+record (longin, "TEST:li_W_optB"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@W00001&B")
+}
+
+record (longin, "TEST:li_R_optB"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@R00535&B")
+}
+
+record (longin, "TEST:li_r_optU"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@CPU2,R525&U")
+}
+
+record (longin, "TEST:li_W_optU"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@W00001&U")
+}
+
+record (longin, "TEST:li_R_optU"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@R00535&U")
+}
+
+record (longin, "TEST:li_r_optL"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@CPU2,R525&L")
+}
+
+record (longin, "TEST:li_W_optL"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@W00001&L")
+}
+
+record (longin, "TEST:li_R_optL"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "@R00535&L")
+}
+

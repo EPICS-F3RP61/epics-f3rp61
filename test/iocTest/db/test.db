@@ -1,0 +1,49 @@
+
+record (bo, "TEST:bo_E"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(ZNAM, "0")
+	field(ONAM, "1")
+	field(OUT, "@E00257")
+}
+
+record (bi, "TEST:bi_E"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(ZNAM, "0")
+	field(ONAM, "1")
+	field(INP, "@E00257")
+}
+record (bi, "TEST:bi_X"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(ZNAM, "0")
+	field(ONAM, "1")
+	field(INP, "@U0,S4,X1")
+}
+
+record (bo, "TEST:bo_Y"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(ZNAM, "0")
+	field(ONAM, "1")
+	field(OUT, "@U0,S3,Y1")
+}
+
+record (bi, "TEST:bi_Y"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(ZNAM, "0")
+	field(ONAM, "1")
+	field(INP, "@U0,S3,Y1")
+}
+
+
+
+
+
+
+

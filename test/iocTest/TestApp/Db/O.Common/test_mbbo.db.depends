@@ -1,0 +1,2 @@
+../O.Common/test_mbbo.db: test_mbbo.template 
+../O.Common/test_mbbo.db:../test_mbbo.template

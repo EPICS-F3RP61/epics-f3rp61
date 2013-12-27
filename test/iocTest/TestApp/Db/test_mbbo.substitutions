@@ -1,0 +1,14 @@
+file test_mbbo.template {
+pattern
+	{ DEV, OUT_FIELD }
+
+	{ "Y", "@U0,S3,Y1"}
+#	{ "A", "@U0,S3,A1"}
+	{ "r", "@CPU2,R518"}
+	{ "W", "@W10001"}
+	{ "L", "@L00001"}
+	{ "M", "@U0,S3,M1"}
+	{ "E", "@E00265"}
+	{ "R", "@R00528"}
+}
+

@@ -1,0 +1,6 @@
+record (longout, "TEST:lo_$(DEV)"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(OUT, "$(OUT_FIELD)")
+}
+

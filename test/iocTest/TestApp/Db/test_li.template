@@ -1,0 +1,7 @@
+record (longin, "TEST:li_$(DEV)"){
+	field(DESC, "")
+	field(DTYP, "F3RP61")
+	field(SCAN, ".1 second")
+	field(INP, "$(INP_FIELD)")
+}
+

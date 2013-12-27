@@ -1,0 +1,15 @@
+# DO NOT EDIT: This file created by mkmf.pl,v 1.5 2002/03/25 21:33:24 jba Exp $ 
+
+TestMain.o : /opt/epics/base/include/epicsExit.h
+TestMain.o : /opt/epics/base/include/epicsThread.h
+TestMain.o : /opt/epics/base/include/iocsh.h
+TestMain.o : /opt/epics/base/include/shareLib.h
+TestMain.o : /opt/epics/base/include/epicsEvent.h
+TestMain.o : /opt/epics/base/include/epicsMutex.h
+TestMain.o : /opt/epics/base/include/os/Linux/osdThread.h
+TestMain.o : /opt/epics/base/include/epicsAssert.h
+TestMain.o : /opt/epics/base/include/os/Linux/osdEvent.h
+TestMain.o : /opt/epics/base/include/compilerDependencies.h
+TestMain.o : /opt/epics/base/include/os/Linux/osdMutex.h
+
+

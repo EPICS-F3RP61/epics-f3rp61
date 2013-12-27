@@ -1,0 +1,20 @@
+file test_lo.template {
+pattern
+	{ DEV, OUT_FIELD }
+
+	{ "Y", "@U0,S3,Y1"}
+#	{ "A", "@U0,S3,A1"}
+	{ "r", "@CPU2,R525"}
+	{ "W", "@W00001"}
+	{ "R", "@R00535"}
+#	{ "A_optB", "@U0,S3,A1&B"}
+	{ "r_optB", "@CPU2,R525&B"}
+	{ "W_optB", "@W00001&B"}
+	{ "R_optB", "@R00535&B"}
+#	{ "A_optL", "@U0,S3,A1&L"}
+	{ "r_optL", "@CPU2,R525&L"}
+	{ "W_optL", "@W00001&L"}
+	{ "R_optL", "@R00535&L"}
+
+}
+

@@ -1,0 +1,15 @@
+TC_Com1 Using f3rp61SetLED command to turn on RUN LED.
++++++ PASS
+
+TC_Com2 Using f3rp61SetLED command to turn on ALARM LED.
++++++ PASS
+
+TC_Com3 Using f3rp61SetLED command to turn on ERROR LED.
++++++ PASS
+
+TC_Com4 Check turned-off state of LEDs.
++++++ PASS
+
+----------------------------
+TOTAL: Passed: 4  Failed: 0
+----------------------------

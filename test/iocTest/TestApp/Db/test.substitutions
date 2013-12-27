@@ -1,0 +1,7 @@
+file test.template {
+pattern
+	{ Slot_OUT_Module, Slot_INP_Module }
+
+	{ "3", "4"}
+}
+

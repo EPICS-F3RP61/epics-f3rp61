@@ -189,10 +189,20 @@ static long write_longout(longoutRecord *plongout)
   }
 
   else {
-	/* Decode BCD to decimal*/
+	  /* Get BCD format in case of 'B' option*/
 	  if(BCD) {
 		  i = 0;
 		  data_temp = (unsigned long) plongout->val;
+		  /* Check data range */
+    	  if (data_temp > 9999) {
+    		  data_temp = 9999;
+    		  recGblSetSevr(plongout,HW_LIMIT_ALARM,INVALID_ALARM);
+    	  }
+    	  else if (data_temp < 0) {
+    		  data_temp = 0;
+    		  recGblSetSevr(plongout,HW_LIMIT_ALARM,INVALID_ALARM);
+    	  }
+
 		  while(data_temp > 0) {
 		   	  dataBCD = dataBCD | (((unsigned long) (data_temp % 10)) << (i*4));
 		      data_temp /= 10;

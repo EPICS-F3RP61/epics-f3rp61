@@ -102,7 +102,7 @@ class manualTest():
         log_.assert_ (ans, pos)#, 'Entered Switch position does not match read position.')
         
     def test_TC_05(self, log_):
-        sys.stderr.write ('TC-05: REGISTER, bi')
+        log_ ('TC-05: REGISTER, bi')
         log_ ('TC-05 Reads register status and acquires user input on it.')
         
         log_ ('Reading register status...')

@@ -185,11 +185,11 @@ static long read_longin(longinRecord *plongin)
       return (-1);
     }
 
-    /* Get BCD format in case of 'B' option*/
+    /* Decode BCD to decimal*/
     if(BCD) {
     	i = 0;
    		data_temp = pmcmdResponse->dataBuff.wData[0];
-   		while(i < 5) {	/* max input number is max 5 ciphers (unsigned short): 65535 (corresponds to 415029 in BCD)*/
+   		while(i < 4) {	/* max is 9999 */
    			dataFromBCD += (unsigned short) ((0x0000000f & data_temp) * pow(10, i));
    			data_temp = data_temp >> 4;
    			i++;

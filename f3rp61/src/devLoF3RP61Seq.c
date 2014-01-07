@@ -168,7 +168,7 @@ static long write_longout(longoutRecord *plongout)
   MCMD_RESPONSE *pmcmdResponse;
   M3_WRITE_SEQDEV *pM3WriteSeqdev;
   unsigned short i, dataBCD = 0;	/* For storing the value decoded from binary-coded-decimal format*/
-  unsigned long data_temp;	/* Used when decoding from BCD value*/
+  long data_temp;			/* Used when decoding from BCD value*/
   short BCD = dpvt->BCD;
 
   if (plongout->pact) {
@@ -192,7 +192,7 @@ static long write_longout(longoutRecord *plongout)
 	  /* Get BCD format in case of 'B' option*/
 	  if(BCD) {
 		  i = 0;
-		  data_temp = (unsigned long) plongout->val;
+		  data_temp = (long) plongout->val;
 		  /* Check data range */
     	  if (data_temp > 9999) {
     		  data_temp = 9999;

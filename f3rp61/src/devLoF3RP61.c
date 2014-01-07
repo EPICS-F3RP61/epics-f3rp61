@@ -225,13 +225,13 @@ static long write_longout(longoutRecord *plongout)
   unsigned short wdata[2];
   unsigned long ldata;
   unsigned short i, dataBCD = 0;	/* For storing the value decoded from binary-coded-decimal format*/
-  unsigned long data_temp;		/* Used when decoding from BCD value*/
+  long data_temp;			/* Used when decoding from BCD value*/
   void *p = (void *) pdrly;
 
   /* Get BCD format in case of 'B' option*/
     if(BCD) {
   	  i = 0;
-  	  data_temp = (unsigned long) plongout->val;
+  	  data_temp = (long) plongout->val;
   	  /* Check data range */
   	  if (data_temp > 9999) {
   		  data_temp = 9999;

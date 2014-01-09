@@ -226,7 +226,7 @@ class IOTest(unittest.TestCase):
         print ('TC-08 tests bo and bi for Y outputs and X inputs')
         print ('bo and bi for Y are tested and bi for X.')
                 
-        new_value = 4
+        new_value = 1
         self.pv_bo_Y.write(new_value, self.SCAN_TIME)
         
         self.assertEqual(self.pv_bi_Y.read(), new_value, 'Read value for Y does not match.')

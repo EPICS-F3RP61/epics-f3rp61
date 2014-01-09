@@ -18,7 +18,7 @@ from manualTestCom import commandTestCases
 from wrapper import log
 
 
-IP="10.5.2.190"
+IP="10.5.2.100"
 PASSWORD="root12"
 
 # Run 'make' command to build the application

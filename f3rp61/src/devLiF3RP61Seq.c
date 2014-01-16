@@ -190,7 +190,13 @@ static long read_longin(longinRecord *plongin)
     	i = 0;
    		data_temp = pmcmdResponse->dataBuff.wData[0];
    		while(i < 4) {	/* max is 9999 */
-   			dataFromBCD += (unsigned short) ((0x0000000f & data_temp) * pow(10, i));
+   			if (((unsigned short) (0x0000000f & data_temp)) > 9) {
+   				dataFromBCD += 9 * pow(10, i);
+   				recGblSetSevr(plongin,HIGH_ALARM,INVALID_ALARM);
+   			}
+   			else{
+   				dataFromBCD += (unsigned short) ((0x0000000f & data_temp) * pow(10, i));
+   			}
    			data_temp = data_temp >> 4;
    			i++;
    		}

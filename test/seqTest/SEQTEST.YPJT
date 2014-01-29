@@ -7,13 +7,6 @@
 [PrgDef]
 Count=1
 Current=1
-[PrgDef-1]
-Name=7 83 76 79 87 77 80 83
-RunMode=0
-MaxBlockNo=1
-BlockName-1=4 77 65 73 78
-BlockRef-1=1
-BlockPath-1=9 77 65 73 78 46 89 66 76 75
 [Project]
 CpuName=F3SP71-4S
 Title=4 84 101 115 116
@@ -116,3 +109,10 @@ IOCmt2FontName=Arial
 IOCmt2CharSet=128
 IOCmt2Height=10
 IOCmt2Visibility=0
+[PrgDef-1]
+Name=7 83 76 79 87 77 80 83
+RunMode=0
+MaxBlockNo=1
+BlockName-1=4 77 65 73 78
+BlockRef-1=1
+BlockPath-1=9 77 65 73 78 46 89 66 76 75

@@ -219,7 +219,9 @@ class IOTest(unittest.TestCase):
         self.pv_mbbo_Y.write(new_value, self.SCAN_TIME)
         
         self.assertEqual(self.pv_mbbi_Y.read(), new_value, 'Read value for Y does not match.')
-        self.assertEqual(self.pv_mbbi_X.read("STRING"), "Xinput_4_65284", 'Read value for X does not match.')
+        #self.assertEqual(self.pv_mbbi_X.read("STRING"), "Xinput_4_65284", 'Read value for X does not match.')
+        # Input modules with 8 inputs have register bits X9-15 set to 1 by default, which gives big numbers
+        self.assertTrue((self.pv_mbbi_X.read("STRING")=="Xinput_4_65284" or self.pv_mbbi_X.read("STRING")=="4"), 'Read value for X does not match.')
         
     def test_TC_08(self):
         print ('TC-08: bo Y, bi Y, bi X')

@@ -4,7 +4,7 @@ record (bo, "TEST:bo_E"){
 	field(DTYP, "F3RP61")
 	field(ZNAM, "0")
 	field(ONAM, "1")
-	field(OUT, "@E00257")
+	field(OUT, "@E00557")
 }
 
 record (bi, "TEST:bi_E"){
@@ -13,7 +13,7 @@ record (bi, "TEST:bi_E"){
 	field(SCAN, ".1 second")
 	field(ZNAM, "0")
 	field(ONAM, "1")
-	field(INP, "@E00257")
+	field(INP, "@E00557")
 }
 record (bi, "TEST:bi_X"){
 	field(DESC, "")

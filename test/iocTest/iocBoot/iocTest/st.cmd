@@ -18,8 +18,8 @@ dbLoadRecords("../../db/test_mbbo.db","user=gregor")
 dbLoadRecords("../../db/testSeq.db","user=gregor")
 dbLoadRecords("../../db/testSysCtl.db","user=gregor")
 
-f3rp61ComDeviceConfigure(0,256,512,0,1024)
-f3rp61ComDeviceConfigure(1,128,512,0,2048)
+f3rp61ComDeviceConfigure(0,512,256,0,1024)
+f3rp61ComDeviceConfigure(1,512,256,0,2048)
 
 f3rp61LinkDeviceConfigure(0, 512, 256)
 f3rp61LinkDeviceConfigure(1, 512, 256)

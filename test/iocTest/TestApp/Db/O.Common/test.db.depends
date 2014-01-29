@@ -1,2 +1,0 @@
-../O.Common/test.db: test.template 
-../O.Common/test.db:../test.template

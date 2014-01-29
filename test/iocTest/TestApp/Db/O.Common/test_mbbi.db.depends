@@ -1,2 +1,0 @@
-../O.Common/test_mbbi.db: test_mbbi.template 
-../O.Common/test_mbbi.db:../test_mbbi.template

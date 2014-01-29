@@ -1,2 +1,0 @@
-../O.Common/test_li.db: test_li.template 
-../O.Common/test_li.db:../test_li.template

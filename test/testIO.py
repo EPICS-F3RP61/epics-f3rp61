@@ -365,4 +365,34 @@ class IOTest(unittest.TestCase):
         self.assertEqual(self.pv_li_r.read(), 100, 'Value for R not written or read properly.')
         self.assertEqual(self.pv_li_r_optB.read(), 64, 'BCD value for R not written or read properly.')
 
+    def test_TC_18(self):
+        print ('TC-18: \'old interface\', longout, longin BCD, alarm, out-of-range')
+        print ('TC-18 uses longout with no options to write to register')
+        print ('a value that will be read as BCD with A, B, C,... so out-of-range')
+        print ('and checks if proper alarm was raised.')
         
+        # Put an out-of-range value to longout (27 is 1B in hex - expected to be coerced to 19 by dev. sup.)
+        self.pv_lo_r.write(27, self.SCAN_TIME)
+	
+        # Read alarm status and severity
+        self.pv_li_r_optB.read_alarm()
+        
+        self.assertEqual(self.pv_li_r_optB.read(), 19, 'BCD value for r not as expected.')
+        self.assertEqual(self.pv_li_r_optB.alarm_severity, 'INVALID', 'Alarm severity not as expected.')
+        self.assertEqual(self.pv_li_r_optB.alarm_status, 'HIGH', 'Alarm status not as expected.')
+    
+    def test_TC_19(self):
+        print ('TC-19: \'old interface\', out-of-range, alarm, longout BCD')
+        print ('TC-19 uses longout BCD to write to register an out-of-range')
+        print ('value (above 9999) and checks if proper alarm was raised.')
+        
+        # Put an out-of-range value to longout
+        self.pv_lo_r_optB.write(99991, self.SCAN_TIME)
+	
+        # Read alarm status and severity
+        self.pv_lo_r_optB.read_alarm()
+        
+        self.assertEqual(self.pv_li_r_optB.read(), 9999, 'Coerced BCD value for r not as expected.')
+        self.assertEqual(self.pv_lo_r_optB.alarm_severity, 'INVALID', 'Alarm severity not as expected.')
+        self.assertEqual(self.pv_lo_r_optB.alarm_status, 'HWLIMIT', 'Alarm status not as expected.')
+

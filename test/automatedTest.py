@@ -77,6 +77,8 @@ def IOsuite():
     suite.addTest(IOTest("test_TC_15"))
     suite.addTest(IOTest("test_TC_16"))
     suite.addTest(IOTest("test_TC_17"))
+    suite.addTest(IOTest("test_TC_18"))
+    suite.addTest(IOTest("test_TC_19"))
     return suite
 
 def runTest():

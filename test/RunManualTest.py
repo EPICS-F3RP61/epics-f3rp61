@@ -26,10 +26,10 @@ def main():
         
     os.system(sys.executable + " manualTest.py")# &> reports/automatedTest_Output.txt")
     
-    #p.terminate()   # this cannot be done in a nicer way
+    #p.terminate()
 
 if __name__ == "__main__":
     main()
-    #print "\n\n\n\n***********************************************"
+    print "\n\n***********************************************"
     print "**********  FINISHED  **********"
-    #print "***********************************************\n\n\n\n"
+    print "***********************************************\n\n"

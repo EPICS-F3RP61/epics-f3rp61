@@ -24,6 +24,8 @@ class pv():
         try:
             self.pv = CaChannel()
             self.pv.searchw(pvname)
+            self.alarm_status = "n/a"	# used to store severity provided by callback
+            self.alarm_severity = "n/a"	# used to store severity provided by callback
         except :
             raise Exception("****** PV not found - "+pvname+" ******")
         #return pv
@@ -73,10 +75,27 @@ class pv():
             val = self.pv.getw()
             print("***R: Read PV "+self.pv.name()+" value "+str(val))
             return val
+            
+    # Wrapper for getw() with CALLBACK for alarm status/severity
+    def read_alarm(self):
+        self.pv.array_get_callback(ca.dbf_type_to_DBR_STS(self.pv.field_type()), None, Callback, self)
+        self.pv.flush_io()
+        for i in range(20):
+            self.pv.pend_event()
     
     # Wrapper for name()
     def name(self):
         return self.pv.name()
+        
+#------------------------------------------------------------------------------
+# CALLBACKS - needed when we want to read alarm status and severity of the record
+
+def Callback(epics_args, user_args):
+    user_args[0].alarm_severity = ca.alarmSeverityString(epics_args['pv_severity'])
+    user_args[0].alarm_status = ca.alarmStatusString(epics_args['pv_status'])
+    print ('***R: Read PV '+user_args[0].name()+' alarm severity ' + ca.alarmSeverityString(epics_args['pv_severity']))
+    print ('***R: Read PV '+user_args[0].name()+' alarm status ' + ca.alarmStatusString(epics_args['pv_status']))
+
 #------------------------------------------------------------------------------
 
 # USED IN MANUAL TEST FOR ECHOING STDOUT TO FILE

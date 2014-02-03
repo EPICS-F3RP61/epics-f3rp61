@@ -8,6 +8,7 @@
 
 
 import time
+import datetime
 import sys
 
 from wrapper import pv
@@ -118,11 +119,15 @@ class manualTest():
             ans = 'OK'
         log_.assert_ (ans, status)#, 'Entered status does not match read status.')
 
-
-
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
     
 if __name__ == '__main__':
     log = log("manualTest_Report.txt")
+    # Write timestamp to log
+    start = datetime.datetime.now()
+    log("Manual Test started on " + start.strftime("%Y-%m-%d %H:%M:%S"))
+    # start the test
     manualTest = manualTest()
     
     # Add new test cases to this list in order for them to be run

@@ -126,7 +126,9 @@ if __name__ == '__main__':
     log = log("manualTest_Report.txt")
     # Write timestamp to log
     start = datetime.datetime.now()
+    log("--------------------------------------------------")
     log("Manual Test started on " + start.strftime("%Y-%m-%d %H:%M:%S"))
+    log("--------------------------------------------------\n")
     # start the test
     manualTest = manualTest()
     

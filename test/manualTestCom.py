@@ -17,6 +17,11 @@ def commandTestCases(sshh_, log_): # NOT TO BE ADDED TO Test_Cases list but call
     log_("Manual Command Test started on " + start.strftime("%Y-%m-%d %H:%M:%S"))
     log_("--------------------------------------------------\n")
 
+    # Setup Procedure: Set the records you are going to use in the test to
+    # some expected initial values (for example - turn off all LEDs)
+    # TODO
+    #
+
     # RUN LED
     sshh_.sendline('f3rp61SetLED R 1')
     log_ ('TC_Com1 Using f3rp61SetLED command to turn on RUN LED.')

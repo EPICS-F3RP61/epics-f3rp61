@@ -189,9 +189,9 @@ function showOutput(id, name) {
 
 <div class='heading'>
 <h1>F3RP61 EPICS Device Support Automated Test Report</h1>
-<p class='attribute'><strong>Start Time:</strong> 2013-12-27 16:43:20</p>
-<p class='attribute'><strong>Duration:</strong> 0:00:27.891594</p>
-<p class='attribute'><strong>Status:</strong> Pass 27 Failure 2</p>
+<p class='attribute'><strong>Start Time:</strong> 2014-03-21 16:12:58</p>
+<p class='attribute'><strong>Duration:</strong> 0:00:28.760007</p>
+<p class='attribute'><strong>Status:</strong> Pass 27</p>
 
 <p class='description'></p>
 </div>
@@ -674,13 +674,13 @@ Clean up.
     </td>
 </tr>
 
-<tr class='failClass'>
+<tr class='passClass'>
     <td>testIO.IOTest</td>
-    <td>16</td>
     <td>14</td>
-    <td>2</td>
+    <td>14</td>
     <td>0</td>
-    <td><a href="javascript:showClassDetail('c3',16)">Detail</a></td>
+    <td>0</td>
+    <td><a href="javascript:showClassDetail('c3',14)">Detail</a></td>
 </tr>
 
 <tr id='pt3.1' class='hiddenRow'>
@@ -888,31 +888,30 @@ Clean up.
     </td>
 </tr>
 
-<tr id='ft3.7' class='none'>
-    <td class='failCase'><div class='testcase'>test_TC_07</div></td>
+<tr id='pt3.7' class='hiddenRow'>
+    <td class='none'><div class='testcase'>test_TC_07</div></td>
     <td colspan='5' align='center'>
 
     <!--css div popup start-->
-    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_ft3.7')" >
-        fail</a>
+    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.7')" >
+        pass</a>
 
-    <div id='div_ft3.7' class="popup_window">
+    <div id='div_pt3.7' class="popup_window">
         <div style='text-align: right; color:red;cursor:pointer'>
-        <a onfocus='this.blur();' onclick="document.getElementById('div_ft3.7').style.display = 'none' " >
+        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.7').style.display = 'none' " >
            [x]</a>
         </div>
         <pre>
         
-ft3.7: Set up.
+pt3.7: Set up.
 TC-07: mbbo Y, mbbi Y, mbbi X
 TC-07 tests mbbo and mbbi for Y outputs and X inputs
 mbbo and mbbi for Y are tested and mbbi for X.
 ***W: Set  PV TEST:mbbo_Y to    4
-***R: Read PV TEST:mbbi_Y value 0
-Traceback (most recent call last):
-  File "/mnt/hgfs/share_f3rp61/workspace_cel_svn_dir/Test/testIO.py", line 221, in test_TC_07
-    self.assertEqual(self.pv_mbbi_Y.read(), new_value, 'Read value for Y does not match.')
-AssertionError: Read value for Y does not match.
+***R: Read PV TEST:mbbi_Y value 4
+***R: Read PV TEST:mbbi_X value Xinput_4_65284
+
+Clean up.
 
 
         </pre>
@@ -922,31 +921,30 @@ AssertionError: Read value for Y does not match.
     </td>
 </tr>
 
-<tr id='ft3.8' class='none'>
-    <td class='failCase'><div class='testcase'>test_TC_08</div></td>
+<tr id='pt3.8' class='hiddenRow'>
+    <td class='none'><div class='testcase'>test_TC_08</div></td>
     <td colspan='5' align='center'>
 
     <!--css div popup start-->
-    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_ft3.8')" >
-        fail</a>
+    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.8')" >
+        pass</a>
 
-    <div id='div_ft3.8' class="popup_window">
+    <div id='div_pt3.8' class="popup_window">
         <div style='text-align: right; color:red;cursor:pointer'>
-        <a onfocus='this.blur();' onclick="document.getElementById('div_ft3.8').style.display = 'none' " >
+        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.8').style.display = 'none' " >
            [x]</a>
         </div>
         <pre>
         
-ft3.8: Set up.
+pt3.8: Set up.
 TC-08: bo Y, bi Y, bi X
 TC-08 tests bo and bi for Y outputs and X inputs
 bo and bi for Y are tested and bi for X.
-***W: Set  PV TEST:bo_Y to    4
-***R: Read PV TEST:bi_Y value 0
-Traceback (most recent call last):
-  File "/mnt/hgfs/share_f3rp61/workspace_cel_svn_dir/Test/testIO.py", line 232, in test_TC_08
-    self.assertEqual(self.pv_bi_Y.read(), new_value, 'Read value for Y does not match.')
-AssertionError: Read value for Y does not match.
+***W: Set  PV TEST:bo_Y to    1
+***R: Read PV TEST:bi_Y value 1
+***R: Read PV TEST:bi_X value 1
+
+Clean up.
 
 
         </pre>
@@ -957,7 +955,7 @@ AssertionError: Read value for Y does not match.
 </tr>
 
 <tr id='pt3.9' class='hiddenRow'>
-    <td class='none'><div class='testcase'>test_TC_09</div></td>
+    <td class='none'><div class='testcase'>test_TC_14</div></td>
     <td colspan='5' align='center'>
 
     <!--css div popup start-->
@@ -972,180 +970,6 @@ AssertionError: Read value for Y does not match.
         <pre>
         
 pt3.9: Set up.
-TC-09: Y, mbbi
-TC-09 tests mbbi input for Y
-ONLY tests INPUT!
-It uses ladder program to set outputs on Y.
-***W: Set  PV TEST:bo_E to    1
-***W: Set  PV TEST:mbbo_E to    4
-***R: Read PV TEST:mbbi_Y value 4
-
-Clean up.
-
-
-        </pre>
-    </div>
-    <!--css div popup end-->
-
-    </td>
-</tr>
-
-<tr id='pt3.10' class='hiddenRow'>
-    <td class='none'><div class='testcase'>test_TC_10</div></td>
-    <td colspan='5' align='center'>
-
-    <!--css div popup start-->
-    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.10')" >
-        pass</a>
-
-    <div id='div_pt3.10' class="popup_window">
-        <div style='text-align: right; color:red;cursor:pointer'>
-        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.10').style.display = 'none' " >
-           [x]</a>
-        </div>
-        <pre>
-        
-pt3.10: Set up.
-TC-10: X, mbbi
-TC-10 tests mbbi input for X
-ONLY tests INPUT!
-It uses ladder program to set outputs on Y which have loopback to X.
-***W: Set  PV TEST:bo_E to    1
-***W: Set  PV TEST:mbbo_E to    4
-***R: Read PV TEST:mbbi_X value Xinput_4_65284
-
-Clean up.
-
-
-        </pre>
-    </div>
-    <!--css div popup end-->
-
-    </td>
-</tr>
-
-<tr id='pt3.11' class='hiddenRow'>
-    <td class='none'><div class='testcase'>test_TC_11</div></td>
-    <td colspan='5' align='center'>
-
-    <!--css div popup start-->
-    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.11')" >
-        pass</a>
-
-    <div id='div_pt3.11' class="popup_window">
-        <div style='text-align: right; color:red;cursor:pointer'>
-        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.11').style.display = 'none' " >
-           [x]</a>
-        </div>
-        <pre>
-        
-pt3.11: Set up.
-TC-11: X, invalid enum, mbbi
-TC-11 tests mbbi input for X for Invalid Value (not recognized by enum)
-ONLY tests INPUT!
-It uses ladder program to set outputs on Y which have loopback to X.
-***W: Set  PV TEST:bo_E to    1
-***W: Set  PV TEST:mbbo_E to    40
-***R: Read PV TEST:mbbi_X value 65535
-
-Clean up.
-
-
-        </pre>
-    </div>
-    <!--css div popup end-->
-
-    </td>
-</tr>
-
-<tr id='pt3.12' class='hiddenRow'>
-    <td class='none'><div class='testcase'>test_TC_12</div></td>
-    <td colspan='5' align='center'>
-
-    <!--css div popup start-->
-    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.12')" >
-        pass</a>
-
-    <div id='div_pt3.12' class="popup_window">
-        <div style='text-align: right; color:red;cursor:pointer'>
-        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.12').style.display = 'none' " >
-           [x]</a>
-        </div>
-        <pre>
-        
-pt3.12: Set up.
-TC-12: Y, bi
-TC-12 tests bi input for Y
-ONLY tests INPUT!
-It uses ladder program to set outputs on Y.
-***W: Set  PV TEST:bo_E to    1
-***W: Set  PV TEST:mbbo_E to    5
-***R: Read PV TEST:bi_Y value 1
-***W: Set  PV TEST:mbbo_E to    4
-***R: Read PV TEST:bi_Y value 0
-
-Clean up.
-
-
-        </pre>
-    </div>
-    <!--css div popup end-->
-
-    </td>
-</tr>
-
-<tr id='pt3.13' class='hiddenRow'>
-    <td class='none'><div class='testcase'>test_TC_13</div></td>
-    <td colspan='5' align='center'>
-
-    <!--css div popup start-->
-    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.13')" >
-        pass</a>
-
-    <div id='div_pt3.13' class="popup_window">
-        <div style='text-align: right; color:red;cursor:pointer'>
-        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.13').style.display = 'none' " >
-           [x]</a>
-        </div>
-        <pre>
-        
-pt3.13: Set up.
-TC-13: X, bi
-TC-13 tests bi input for X
-ONLY tests INPUT!
-It uses ladder program to set outputs on Y which have loopback to X.
-***W: Set  PV TEST:bo_E to    1
-***W: Set  PV TEST:mbbo_E to    5
-***R: Read PV TEST:bi_X value 1
-***W: Set  PV TEST:mbbo_E to    4
-***R: Read PV TEST:bi_X value 0
-
-Clean up.
-
-
-        </pre>
-    </div>
-    <!--css div popup end-->
-
-    </td>
-</tr>
-
-<tr id='pt3.14' class='hiddenRow'>
-    <td class='none'><div class='testcase'>test_TC_14</div></td>
-    <td colspan='5' align='center'>
-
-    <!--css div popup start-->
-    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.14')" >
-        pass</a>
-
-    <div id='div_pt3.14' class="popup_window">
-        <div style='text-align: right; color:red;cursor:pointer'>
-        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.14').style.display = 'none' " >
-           [x]</a>
-        </div>
-        <pre>
-        
-pt3.14: Set up.
 TC-14: R, longout BCD, longin BCD, longin
 TC-14 uses longout with BCD option to write to register R
 and longin record to read that value from
@@ -1164,22 +988,22 @@ Clean up.
     </td>
 </tr>
 
-<tr id='pt3.15' class='hiddenRow'>
+<tr id='pt3.10' class='hiddenRow'>
     <td class='none'><div class='testcase'>test_TC_15</div></td>
     <td colspan='5' align='center'>
 
     <!--css div popup start-->
-    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.15')" >
+    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.10')" >
         pass</a>
 
-    <div id='div_pt3.15' class="popup_window">
+    <div id='div_pt3.10' class="popup_window">
         <div style='text-align: right; color:red;cursor:pointer'>
-        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.15').style.display = 'none' " >
+        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.10').style.display = 'none' " >
            [x]</a>
         </div>
         <pre>
         
-pt3.15: Set up.
+pt3.10: Set up.
 TC-15: R, longout, longin, longin BCD
 TC-15 uses longout with no options to write to register R
 and longin to read that value as BCD and decimal, respectively.
@@ -1197,22 +1021,22 @@ Clean up.
     </td>
 </tr>
 
-<tr id='pt3.16' class='hiddenRow'>
+<tr id='pt3.11' class='hiddenRow'>
     <td class='none'><div class='testcase'>test_TC_16</div></td>
     <td colspan='5' align='center'>
 
     <!--css div popup start-->
-    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.16')" >
+    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.11')" >
         pass</a>
 
-    <div id='div_pt3.16' class="popup_window">
+    <div id='div_pt3.11' class="popup_window">
         <div style='text-align: right; color:red;cursor:pointer'>
-        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.16').style.display = 'none' " >
+        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.11').style.display = 'none' " >
            [x]</a>
         </div>
         <pre>
         
-pt3.16: Set up.
+pt3.11: Set up.
 TC-16: 'old interface', longout BCD, longin BCD, longin
 TC-16 uses longout with BCD option to write to register
 using 'old interface' and longin record to read that value from
@@ -1231,11 +1055,114 @@ Clean up.
     </td>
 </tr>
 
+<tr id='pt3.12' class='hiddenRow'>
+    <td class='none'><div class='testcase'>test_TC_17</div></td>
+    <td colspan='5' align='center'>
+
+    <!--css div popup start-->
+    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.12')" >
+        pass</a>
+
+    <div id='div_pt3.12' class="popup_window">
+        <div style='text-align: right; color:red;cursor:pointer'>
+        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.12').style.display = 'none' " >
+           [x]</a>
+        </div>
+        <pre>
+        
+pt3.12: Set up.
+TC-17: 'old interface', longout, longin, longin BCD
+TC-17 uses longout with no options to write to register
+using 'old interface' and longin to read that value
+as BCD and decimal, respectively.
+***W: Set  PV TEST:lo_r to    100
+***R: Read PV TEST:li_r value 100
+***R: Read PV TEST:li_r_optB value 64
+
+Clean up.
+
+
+        </pre>
+    </div>
+    <!--css div popup end-->
+
+    </td>
+</tr>
+
+<tr id='pt3.13' class='hiddenRow'>
+    <td class='none'><div class='testcase'>test_TC_18</div></td>
+    <td colspan='5' align='center'>
+
+    <!--css div popup start-->
+    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.13')" >
+        pass</a>
+
+    <div id='div_pt3.13' class="popup_window">
+        <div style='text-align: right; color:red;cursor:pointer'>
+        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.13').style.display = 'none' " >
+           [x]</a>
+        </div>
+        <pre>
+        
+pt3.13: Set up.
+TC-18: 'old interface', longout, longin BCD, alarm, out-of-range
+TC-18 uses longout with no options to write to register
+a value that will be read as BCD with A, B, C,... so out-of-range
+and checks if proper alarm was raised.
+***W: Set  PV TEST:lo_r to    27
+***R: Read PV TEST:li_r_optB alarm severity INVALID
+***R: Read PV TEST:li_r_optB alarm status HIGH
+***R: Read PV TEST:li_r_optB value 19
+
+Clean up.
+
+
+        </pre>
+    </div>
+    <!--css div popup end-->
+
+    </td>
+</tr>
+
+<tr id='pt3.14' class='hiddenRow'>
+    <td class='none'><div class='testcase'>test_TC_19</div></td>
+    <td colspan='5' align='center'>
+
+    <!--css div popup start-->
+    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt3.14')" >
+        pass</a>
+
+    <div id='div_pt3.14' class="popup_window">
+        <div style='text-align: right; color:red;cursor:pointer'>
+        <a onfocus='this.blur();' onclick="document.getElementById('div_pt3.14').style.display = 'none' " >
+           [x]</a>
+        </div>
+        <pre>
+        
+pt3.14: Set up.
+TC-19: 'old interface', out-of-range, alarm, longout BCD
+TC-19 uses longout BCD to write to register an out-of-range
+value (above 9999) and checks if proper alarm was raised.
+***W: Set  PV TEST:lo_r_optB to    99991
+***R: Read PV TEST:lo_r_optB alarm severity INVALID
+***R: Read PV TEST:lo_r_optB alarm status HWLIMIT
+***R: Read PV TEST:li_r_optB value 9999
+
+Clean up.
+
+
+        </pre>
+    </div>
+    <!--css div popup end-->
+
+    </td>
+</tr>
+
 <tr id='total_row'>
     <td>Total</td>
-    <td>29</td>
     <td>27</td>
-    <td>2</td>
+    <td>27</td>
+    <td>0</td>
     <td>0</td>
     <td>&nbsp;</td>
 </tr>

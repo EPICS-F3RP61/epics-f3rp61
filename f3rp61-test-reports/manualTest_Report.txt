@@ -1,3 +1,7 @@
+--------------------------------------------------
+Manual Test started on 2014-03-21 16:07:44
+--------------------------------------------------
+
 TC-01: RUN LED, bo
 TC-01 Turns RUN LED on and acquires user input on the LED status.
 Turning on RUN LED...
@@ -18,6 +22,7 @@ TC-04 Reads switch position and acquires user input on it.
 Reading switch position...
 +++++ PASS
 
+TC-05: REGISTER, bi
 TC-05 Reads register status and acquires user input on it.
 Reading register status...
 +++++ PASS

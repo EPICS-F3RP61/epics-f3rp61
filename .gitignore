@@ -1,2 +1,6 @@
 .svn
 *~
+lib
+dbd
+O.linux-*
+O.Common

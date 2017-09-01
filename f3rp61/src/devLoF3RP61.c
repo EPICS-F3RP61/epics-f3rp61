@@ -218,7 +218,9 @@ static long write_longout(longoutRecord *plongout)
   M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
   M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
   char device = dpvt->device;
+  /*
   char option = dpvt->option;
+  */
   int lng = dpvt->lng;			/* &L option flag */
   int BCD = dpvt->BCD;			/* BCD flag*/			/* Using flags for possible multi-option case in the future */
   int command = M3IO_WRITE_REG;

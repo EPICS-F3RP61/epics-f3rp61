@@ -36,6 +36,12 @@
 #include <epicsExport.h>
 #include "drvF3RP61.h"
 
+#define F3RP61_NUM_CPUS   4
+/*
+#define F3RP61_NUM_LINKS  2
+*/
+#define F3RP61_NUM_LINKS  1
+
 static long report();
 static long init();
 
@@ -54,7 +60,6 @@ struct
 epicsExportAddress(drvet,drvF3RP61);
 
 int f3rp61_fd;
-int use_flnet;
 
 static M3IO_MODULE_INFORMATION module_info[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
 static F3RP61_IO_INTR io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
@@ -95,18 +100,42 @@ static long init(void)
       module_info[i][j].unitno = i;
       module_info[i][j].slotno = j;
       ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info[i][j]);
+
     }
   }
 
-  if (use_flnet) {
-    if (setM3FlnSysNo(0, NULL) < 0) {
-      errlogPrintf("drvF3RP61: setM3FlnSysNo failed [%d]\n", errno);
-      return (-1);
-    }
+  for (i = 0; i < F3RP61_NUM_CPUS; i++) {
+    if (com_data_config.wNumberOfRelay[i] || com_data_config.wNumberOfRegister[i] ||
+	ext_com_data_config.wNumberOfRelay[i] || ext_com_data_config.wNumberOfRegister[i]) {
 
-    if (m3rfrsTsk(10) < 0) {
-      errlogPrintf("drvF3RP61: m3rfrsTsk failed [%d]\n", errno);
-      return (-1);
+      if (setM3ComDataConfig(&com_data_config, &ext_com_data_config) < 0) {
+	errlogPrintf("drvF3RP61: setM3ComDataConfig failed [%d]\n", errno);
+	return (-1);
+      }
+
+      break;
+    }
+  }
+
+  for (i = 0; i < F3RP61_NUM_LINKS; i++) {
+    if (link_data_config.wNumberOfRelay[i] || link_data_config.wNumberOfRegister[i]) {
+
+      if (setM3LinkDeviceConfig(&link_data_config) < 0) {
+	errlogPrintf("drvF3RP61: setM3LinkDeviceConfig failed [%d]\n", errno);
+	return (-1);
+      }
+
+      if (setM3FlnSysNo(0, NULL) < 0) {
+	errlogPrintf("drvF3RP61: setM3FlnSysNo failed [%d]\n", errno);
+	return (-1);
+      }
+
+      if (m3rfrsTsk(10) < 0) {
+	errlogPrintf("drvF3RP61: m3rfrsTsk failed [%d]\n", errno);
+	return (-1);
+      }
+
+      break;
     }
   }
 
@@ -255,20 +284,16 @@ static void linkDeviceConfigureCallFunc(const iocshArgBuf *args)
 
 static void linkDeviceConfigure(int sysno, int nrlys, int nregs)
 {
+  /*
   if (sysno < 0 || sysno > 1 || nrlys < 1 || nrlys > 8192 || nregs < 1 || nregs > 8192) {
+  */
+  if (sysno < 0 || sysno > 0 || nrlys < 1 || nrlys > 8192 || nregs < 1 || nregs > 8192) {
     errlogPrintf("drvF3RP61: linkDeviceConfigure: parameter out of range\n");
     return;
   }
 
   link_data_config.wNumberOfRelay[sysno] = nrlys;
   link_data_config.wNumberOfRegister[sysno] = nregs;
-
-  if (setM3LinkDeviceConfig(&link_data_config) < 0) {
-    errlogPrintf("drvF3RP61: setM3LinkDeviceConfig failed [%d]\n", errno);
-    return;
-  }
-
-  use_flnet = 1;
 }
 
 
@@ -304,7 +329,7 @@ static void comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, i
   if (cpuno < 0 || cpuno > 3 ||
       nrlys < 0 || nrlys >  2048 || nregs < 0 || nregs > 1024 ||
       ext_nrlys < 0 || ext_nrlys >  2048 || ext_nregs < 0 || ext_nregs > 3072) {
-    errlogPrintf("drvF3RP61: comDeviceConfigure: parameter out of range\n");
+    errlogPrintf("drvF3RP61: linkDeviceConfigure: parameter out of range\n");
     return;
   }
 
@@ -312,11 +337,6 @@ static void comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, i
   com_data_config.wNumberOfRegister[cpuno] = nregs;
   ext_com_data_config.wNumberOfRelay[cpuno] = ext_nrlys;
   ext_com_data_config.wNumberOfRegister[cpuno] = ext_nregs;
-
-  if (setM3ComDataConfig(&com_data_config, &ext_com_data_config) < 0) {
-    errlogPrintf("drvF3RP61: setM3ComDataConfig failed [%d]\n", errno);
-    return;
-  }
 }
 
 static void drvF3RP61RegisterCommands(void)

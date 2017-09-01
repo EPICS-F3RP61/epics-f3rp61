@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <math.h>
 
 #include "alarm.h"
 #include "dbDefs.h"
@@ -330,7 +331,10 @@ static long read_longin(longinRecord *plongin)
 		plongin->val = (long) wdata[0];
     }
     else if (lng) {
+      /*
     	plongin->val = (long) ((wdata[1] << 16) & 0xffff0000  |  wdata[0] & 0x0000ffff);
+      */
+        plongin->val = (long) (((wdata[1] << 16) & 0xffff0000) | (wdata[0] & 0x0000ffff));
     }
     else {
     	plongin->val = (long) ((signed short) wdata[0]);

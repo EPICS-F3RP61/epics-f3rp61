@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <sys/msg.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include <asm/fam3rtos/m3iodrv.h>
 #include <asm/fam3rtos/m3lib.h>
 
@@ -40,6 +41,7 @@
 /*
 #define F3RP61_NUM_LINKS  2
 */
+#define F3RP61_NUM_UNit   7
 #define F3RP61_NUM_LINKS  1
 
 static long report();
@@ -61,7 +63,7 @@ epicsExportAddress(drvet,drvF3RP61);
 
 int f3rp61_fd;
 
-static M3IO_MODULE_INFORMATION module_info[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
+static M3IO_MODULE_INFORMATION info;
 static F3RP61_IO_INTR io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
 static int init_flag;
 static void msgrcv_thread(void *);
@@ -70,8 +72,10 @@ static M3COMDATACONFIG com_data_config;
 static M3COMDATACONFIG ext_com_data_config;
 static void linkDeviceConfigureCallFunc(const iocshArgBuf *);
 static void comDeviceConfigureCallFunc(const iocshArgBuf *);
+static void getModuleInfoCallFunc(const iocshArgBuf *);
 static void linkDeviceConfigure(int, int, int);
 static void comDeviceConfigure(int, int, int, int, int);
+static void getModuleInfo(void);
 static void drvF3RP61RegisterCommands(void);
 
 
@@ -84,7 +88,7 @@ static long report(void)
 
 static long init(void)
 {
-  int i, j;
+  int i;
   
   if (init_flag) return (0);
   init_flag = 1;
@@ -93,15 +97,6 @@ static long init(void)
   if (f3rp61_fd < 0) {
     errlogPrintf("drvF3RP61: can't open /dev/m3io [%d]\n", errno);
     return (-1);
-  }
-
-  for (i = 0; i < M3IO_NUM_UNIT; i++) {
-    for (j = 1; j < (M3IO_NUM_SLOT + 1); j++) {
-      module_info[i][j].unitno = i;
-      module_info[i][j].slotno = j;
-      ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info[i][j]);
-
-    }
   }
 
   for (i = 0; i < F3RP61_NUM_CPUS; i++) {
@@ -339,13 +334,71 @@ static void comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, i
   ext_com_data_config.wNumberOfRegister[cpuno] = ext_nregs;
 }
 
+
+
+static const iocshFuncDef getModuleInfoFuncDef = {"f3rp61GetModuleInfo",0,NULL};
+static void getModuleInfoCallFunc(const iocshArgBuf *args)
+{
+  getModuleInfo();
+}
+
+static void getModuleInfo(void)
+{
+  int i, j, k;
+  int enable;
+
+  for (i = 0; i < M3IO_NUM_UNIT; i++) {
+
+    for (j = 1; j < M3IO_NUM_SLOT + 1; j++) {
+
+      info.unitno = i;
+      info.slotno = j;
+
+      ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &info);
+
+      printf("unitno: %0d  ", info.unitno);
+      printf("slotno: %02d  ", info.slotno);
+      if (info.enable) {
+	enable = 1;
+	printf("enable: %d  ", enable);
+      }
+      else {
+	enable = 0;
+	printf("enable: %d  ", enable);
+      }
+
+      for (k = 0; k < 4; k++) {
+
+	if (isalnum(info.name[k])) {
+	  printf("%c", info.name[k]);
+	}
+	else {
+	  printf("%c", ' ');
+	}
+
+      }
+
+      printf("  msize: %5d  ", info.msize);
+      printf("  num_xreg: %02d  ", info.num_xreg);
+      printf("  num_yreg: %02d  ", info.num_yreg);
+      printf("  num_dreg: %02d  ", info.num_dreg);
+      printf("\n");
+
+    }
+
+  }
+
+}
+
+
 static void drvF3RP61RegisterCommands(void)
 {
   static int firstTime = 1;
 
   if (firstTime) {
-    iocshRegister(&linkDeviceConfigureFuncDef, linkDeviceConfigureCallFunc);
+    iocshRegister(&getModuleInfoFuncDef, getModuleInfoCallFunc);
     iocshRegister(&comDeviceConfigureFuncDef, comDeviceConfigureCallFunc);
+    iocshRegister(&linkDeviceConfigureFuncDef, linkDeviceConfigureCallFunc);
     firstTime = 0;
   }
 }

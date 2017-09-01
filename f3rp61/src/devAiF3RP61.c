@@ -293,10 +293,7 @@ static long read_ai(aiRecord *pai)
 	pai->val = (double) fval;
 	return(2);
       case 'L':
-	/*
 	pai->rval = (long) ((wdata[1] << 16) & 0xffff0000  |  wdata[0] & 0x0000ffff);
-	*/
-	pai->rval = (long) (((wdata[1] << 16) & 0xffff0000) | (wdata[0] & 0x0000ffff));
 	break;
       default:
 	pai->rval = (long) ((signed short) wdata[0]);

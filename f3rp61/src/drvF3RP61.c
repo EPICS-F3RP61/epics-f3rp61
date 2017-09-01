@@ -37,12 +37,11 @@
 #include <epicsExport.h>
 #include "drvF3RP61.h"
 
-#define F3RP61_NUM_CPUS   4
+#define M3IO_NUM_CPUS   4
 /*
-#define F3RP61_NUM_LINKS  2
+#define M3IO_NUM_LINKS  2
 */
-#define F3RP61_NUM_UNit   7
-#define F3RP61_NUM_LINKS  1
+#define M3IO_NUM_LINKS  1
 
 static long report();
 static long init();
@@ -63,7 +62,7 @@ epicsExportAddress(drvet,drvF3RP61);
 
 int f3rp61_fd;
 
-static M3IO_MODULE_INFORMATION info;
+static M3IO_MODULE_INFORMATION module_info;
 static F3RP61_IO_INTR io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
 static int init_flag;
 static void msgrcv_thread(void *);
@@ -99,7 +98,7 @@ static long init(void)
     return (-1);
   }
 
-  for (i = 0; i < F3RP61_NUM_CPUS; i++) {
+  for (i = 0; i < M3IO_NUM_CPUS; i++) {
     if (com_data_config.wNumberOfRelay[i] || com_data_config.wNumberOfRegister[i] ||
 	ext_com_data_config.wNumberOfRelay[i] || ext_com_data_config.wNumberOfRegister[i]) {
 
@@ -112,7 +111,7 @@ static long init(void)
     }
   }
 
-  for (i = 0; i < F3RP61_NUM_LINKS; i++) {
+  for (i = 0; i < M3IO_NUM_LINKS; i++) {
     if (link_data_config.wNumberOfRelay[i] || link_data_config.wNumberOfRegister[i]) {
 
       if (setM3LinkDeviceConfig(&link_data_config) < 0) {
@@ -324,7 +323,7 @@ static void comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, i
   if (cpuno < 0 || cpuno > 3 ||
       nrlys < 0 || nrlys >  2048 || nregs < 0 || nregs > 1024 ||
       ext_nrlys < 0 || ext_nrlys >  2048 || ext_nregs < 0 || ext_nregs > 3072) {
-    errlogPrintf("drvF3RP61: linkDeviceConfigure: parameter out of range\n");
+    errlogPrintf("drvF3RP61: comDeviceConfigure: parameter out of range\n");
     return;
   }
 
@@ -351,14 +350,14 @@ static void getModuleInfo(void)
 
     for (j = 1; j < M3IO_NUM_SLOT + 1; j++) {
 
-      info.unitno = i;
-      info.slotno = j;
+      module_info.unitno = i;
+      module_info.slotno = j;
 
-      ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &info);
+      ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info);
 
-      printf("unitno: %0d  ", info.unitno);
-      printf("slotno: %02d  ", info.slotno);
-      if (info.enable) {
+      printf("unitno: %0d  ", module_info.unitno);
+      printf("slotno: %02d  ", module_info.slotno);
+      if (module_info.enable) {
 	enable = 1;
 	printf("enable: %d  ", enable);
       }
@@ -369,8 +368,8 @@ static void getModuleInfo(void)
 
       for (k = 0; k < 4; k++) {
 
-	if (isalnum(info.name[k])) {
-	  printf("%c", info.name[k]);
+	if (isalnum(module_info.name[k])) {
+	  printf("%c", module_info.name[k]);
 	}
 	else {
 	  printf("%c", ' ');
@@ -378,10 +377,10 @@ static void getModuleInfo(void)
 
       }
 
-      printf("  msize: %5d  ", info.msize);
-      printf("  num_xreg: %02d  ", info.num_xreg);
-      printf("  num_yreg: %02d  ", info.num_yreg);
-      printf("  num_dreg: %02d  ", info.num_dreg);
+      printf("  msize: %5d  ", module_info.msize);
+      printf("  num_xreg: %02d  ", module_info.num_xreg);
+      printf("  num_yreg: %02d  ", module_info.num_yreg);
+      printf("  num_dreg: %02d  ", module_info.num_dreg);
       printf("\n");
 
     }

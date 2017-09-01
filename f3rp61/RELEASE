@@ -3,8 +3,10 @@ Release Notes of Device and Driver Support for Yokogawa's F3RP61
 ==========================================================================
 
 -------------
-Version 1.3.0
+Version 1.6.0
 -------------
+ * Device support 1.3.0 and 1.5.0 has been merged manually. So, this version
+   could be a bit buggy.
 
  * Device support has been extended to LED/Rotary Switch driver. Record DTYP
    must be set to F3RP61SysCtl. It provides the following functionality:

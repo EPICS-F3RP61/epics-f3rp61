@@ -3,11 +3,11 @@
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
-* in file LICENSE that is included with this distribution. 
+* in file LICENSE that is included with this distribution.
 **************************************************************************
 * devSoF3RP61.c - Device Support Routines for F3RP61 String Output
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 6-30-08
 */
 #include <stdlib.h>
@@ -31,7 +31,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#else
+#  error
+#endif
 #include "drvF3RP61.h"
 
 extern int f3rp61_fd;
@@ -41,22 +47,23 @@ static long init_record();
 static long write_so();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	write_so;
-	DEVSUPFUN	special_linconv;
-}devSoF3RP61={
-	6,
-	NULL,
-	NULL,
-	init_record,
-	f3rp61GetIoIntInfo,
-	write_so,
-	NULL
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  write_so;
+  DEVSUPFUN  special_linconv;
+} devSoF3RP61 = {
+  6,
+  NULL,
+  NULL,
+  init_record,
+  f3rp61GetIoIntInfo,
+  write_so,
+  NULL
 };
+
 epicsExportAddress(dset,devSoF3RP61);
 
 extern F3RP61_IO_INTR f3rp61_io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
@@ -82,7 +89,7 @@ static long init_record(stringoutRecord *pso)
   /* bi.out must be an INST_IO */
   if (pso->out.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)pso,
-		      "devSoF3RP61 (init_record) Illegal OUT field");
+                      "devSoF3RP61 (init_record) Illegal OUT field");
     pso->pact = 1;
     return(S_db_badField);
   }
@@ -119,8 +126,8 @@ static long init_record(stringoutRecord *pso)
   }
 
   dpvt = (F3RP61_SO_DPVT *) callocMustSucceed(1,
-					      sizeof(F3RP61_SO_DPVT),
-					      "calloc failed");
+                                              sizeof(F3RP61_SO_DPVT),
+                                              "calloc failed");
   dpvt->device = device;
   pdrly = &dpvt->drly;
   pdrly->unitno = (unsigned short) unitno;
@@ -132,8 +139,8 @@ static long init_record(stringoutRecord *pso)
                                                         "calloc failed");
   */
   pdrly->u.pwdata = (unsigned short *) callocMustSucceed(40,
-							 sizeof(char),
-							 "calloc failed");
+                                                         sizeof(char),
+                                                         "calloc failed");
 
   /*
   pdrly->count = (unsigned short) 40;

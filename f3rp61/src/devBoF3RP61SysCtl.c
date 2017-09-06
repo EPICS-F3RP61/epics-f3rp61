@@ -31,9 +31,22 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/fam3rtos_sysctl.h>
-#include <asm/fam3rtos/m3lib.h>
-
+#if defined(_arm_)
+#  include <m3sysctl.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/fam3rtos_sysctl.h>
+#  include <asm/fam3rtos/m3lib.h>
+#  define M3SC_SET_LED      RP6X_SYSIOC_SETLED
+#  define M3SC_LED_RUN_OFF  RP6X_LED_RUN_OFF
+#  define M3SC_LED_ALM_OFF  RP6X_LED_ALM_OFF
+#  define M3SC_LED_ERR_OFF  RP6X_LED_ERR_OFF
+#  define M3SC_LED_RUN_ON   RP6X_LED_RUN_ON
+#  define M3SC_LED_ALM_ON   RP6X_LED_ALM_ON
+#  define M3SC_LED_ERR_ON   RP6X_LED_ERR_ON
+#else
+#  error
+#endif
 
 extern int f3rp61SysCtl_fd;
 
@@ -42,22 +55,23 @@ static long init_record();
 static long read_bo();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	read_bo;
-	DEVSUPFUN	special_linconv;
-}devBoF3RP61SysCtl={
-	6,
-	NULL,
-	NULL,
-	init_record,
-	NULL,
-	read_bo,
-	NULL
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  read_bo;
+  DEVSUPFUN  special_linconv;
+} devBoF3RP61SysCtl = {
+  6,
+  NULL,
+  NULL,
+  init_record,
+  NULL,
+  read_bo,
+  NULL
 };
+
 epicsExportAddress(dset,devBoF3RP61SysCtl);
 
 typedef struct {
@@ -78,7 +92,7 @@ static long init_record(boRecord *pbo)
 
   if (pbo->out.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)pbo,
-		      "devBoF3RP61SysCtl (init_record) Illegal OUT field");
+                      "devBoF3RP61SysCtl (init_record) Illegal OUT field");
     pbo->pact = 1;
     return(S_db_badField);
   }
@@ -89,37 +103,37 @@ static long init_record(boRecord *pbo)
   buf[size - 1] = '\0';
 
   /* Parse 'device' and possibly 'led'*/
-    if (sscanf(buf, "SYS,%c%c,", &device, &led) < 2) {
-      if (sscanf(buf, "SYS,%c", &device) < 1) {
-        errlogPrintf("devBoF3RP61SysCtl: can't get device for %s\n", pbo->name);
-        pbo->pact = 1;
-        return (-1);
-      }
+  if (sscanf(buf, "SYS,%c%c,", &device, &led) < 2) {
+    if (sscanf(buf, "SYS,%c", &device) < 1) {
+      errlogPrintf("devBoF3RP61SysCtl: can't get device for %s\n", pbo->name);
+      pbo->pact = 1;
+      return (-1);
     }
+  }
 
   /* Check device validity*/
   if (!(device == 'L')) {
     errlogPrintf("devBoF3RP61SysCtl: illegal device for %s\n",
-		 pbo->name);
+                 pbo->name);
     pbo->pact = 1;
     return (-1);
   }
 
   /* Check 'led' validity*/
-    if(device == 'L') {
-    	  if (!(led == 'R' || led == 'A' || led == 'E')) {
-    		  errlogPrintf("devBoF3RP61SysCtl: illegal LED address for %s\n", pbo->name);
-    		  pbo->pact = 1;
-    		  return (-1);
-    	  }
+  if (device == 'L') {
+    if (!(led == 'R' || led == 'A' || led == 'E')) {
+      errlogPrintf("devBoF3RP61SysCtl: illegal LED address for %s\n", pbo->name);
+      pbo->pact = 1;
+      return (-1);
     }
+  }
 
   dpvt = (F3RP61SysCtl_BO_DPVT *) callocMustSucceed(1,
-						      sizeof(F3RP61SysCtl_BO_DPVT),
-						      "calloc failed");
+                  sizeof(F3RP61SysCtl_BO_DPVT),
+                  "calloc failed");
   dpvt->device = device;
   if (device == 'L') {
-      dpvt->led = led;
+    dpvt->led = led;
   }
 
   pbo->dpvt = dpvt;
@@ -142,37 +156,37 @@ static long read_bo(boRecord *pbo)
   /* Set command and data*/
   switch (device) {
   case 'L':
-	  command = RP6X_SYSIOC_SETLED;
-	  if(!(pbo->val)) {	/* When VAL field is 0*/
-		  switch (led) {
-		  case 'R':		/* Run LED*/
-			  data = RP6X_LED_RUN_OFF;
-			  break;
-		  case 'A':		/* Alarm LED*/
-			  data = RP6X_LED_ALM_OFF;
-			  break;
-		  default:		/* For 'E' Error LED*/
-			  data = RP6X_LED_ERR_OFF;
-			  break;
-		  }
-	  }
-	  else if(pbo->val == 1) {	/* When VAL field is 1. Should not use only 'else' because then Invalid Value will be treated as True also*/
-		  switch (led) {
-		  case 'R':		/* Run LED*/
-		  data = RP6X_LED_RUN_ON;
-		      break;
-		  case 'A':		/* Alarm LED*/
-		  	  data = RP6X_LED_ALM_ON;
-		  	  break;
-		  default:		/* For 'E' Error LED*/
-		  	  data = RP6X_LED_ERR_ON;
-		  	  break;
-		  }
-	  }
-	  break;
+    command = M3SC_SET_LED;
+    if (!(pbo->val)) {  /* When VAL field is 0*/
+      switch (led) {
+      case 'R':  /* Run LED*/
+        data = M3SC_LED_RUN_OFF;
+        break;
+      case 'A':  /* Alarm LED*/
+        data = M3SC_LED_ALM_OFF;
+        break;
+      default:   /* For 'E' Error LED*/
+        data = M3SC_LED_ERR_OFF;
+        break;
+      }
+    }
+    else if(pbo->val == 1) {  /* When VAL field is 1. Should not use only 'else' because then Invalid Value will be treated as True also*/
+      switch (led) {
+      case 'R':  /* Run LED*/
+        data = M3SC_LED_RUN_ON;
+        break;
+      case 'A':  /* Alarm LED*/
+        data = M3SC_LED_ALM_ON;
+        break;
+      default:   /* For 'E' Error LED*/
+        data = M3SC_LED_ERR_ON;
+        break;
+      }
+    }
+    break;
   default:
-	  command = RP6X_SYSIOC_SETLED;
-	  break;
+    command = M3SC_SET_LED;
+    break;
   }
 
   /* Write to device*/

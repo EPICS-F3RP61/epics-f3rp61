@@ -3,12 +3,12 @@
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
-* in file LICENSE that is included with this distribution. 
+* in file LICENSE that is included with this distribution.
 **************************************************************************
 * devMbboDirectF3RP61.c - Device Support Routines for F3RP61 multi-bit binary
 * Output
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 6-30-08
 */
 #include <stdlib.h>
@@ -32,8 +32,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3lib.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3lib.h>
+#else
+#  error
+#endif
 #include "drvF3RP61.h"
 
 extern int f3rp61_fd;
@@ -43,22 +50,23 @@ static long init_record();
 static long write_mbboDirect();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	write_mbboDirect;
-	DEVSUPFUN	special_linconv;
-}devMbboDirectF3RP61={
-	6,
-	NULL,
-	NULL,
-	init_record,
-	f3rp61GetIoIntInfo,
-	write_mbboDirect,
-	NULL
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  write_mbboDirect;
+  DEVSUPFUN  special_linconv;
+} devMbboDirectF3RP61 = {
+  6,
+  NULL,
+  NULL,
+  init_record,
+  f3rp61GetIoIntInfo,
+  write_mbboDirect,
+  NULL
 };
+
 epicsExportAddress(dset,devMbboDirectF3RP61);
 
 extern F3RP61_IO_INTR f3rp61_io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
@@ -88,7 +96,7 @@ static long init_record(mbboDirectRecord *pmbboDirect)
   /* bi.out must be an INST_IO */
   if (pmbboDirect->out.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)pmbboDirect,
-		      "devMbboDirectF3RP61 (init_record) Illegal OUT field");
+                      "devMbboDirectF3RP61 (init_record) Illegal OUT field");
     pmbboDirect->pact = 1;
     return(S_db_badField);
   }
@@ -116,15 +124,15 @@ static long init_record(mbboDirectRecord *pmbboDirect)
   if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
     if (sscanf(buf, "CPU%d,R%d", &cpuno, &start) < 2) {
       if (sscanf(buf, "%c%d", &device, &start) < 2) {
-	errlogPrintf("devMbboDirectF3RP61: can't get I/O address for %s\n", pmbboDirect->name);
-	pmbboDirect->pact = 1;
-	return (-1);
+        errlogPrintf("devMbboDirectF3RP61: can't get I/O address for %s\n", pmbboDirect->name);
+        pmbboDirect->pact = 1;
+        return (-1);
       }
       else if (device != 'W' && device != 'L' && device != 'R' && device != 'E') {
-	errlogPrintf("devMbboDirectF3RP61: unsupported device \'%c\' for %s\n", device,
-		     pmbboDirect->name);
-	pmbboDirect->pact = 1;
-	return (-1);
+        errlogPrintf("devMbboDirectF3RP61: unsupported device \'%c\' for %s\n", device,
+                     pmbboDirect->name);
+        pmbboDirect->pact = 1;
+        return (-1);
       }
     }
     else {
@@ -132,15 +140,15 @@ static long init_record(mbboDirectRecord *pmbboDirect)
     }
   }
   if (!(device == 'Y' || device == 'A' || device == 'r' || device == 'W' ||
-	device == 'L' || device == 'M' || device == 'R' || device == 'E')) {
+        device == 'L' || device == 'M' || device == 'R' || device == 'E')) {
     errlogPrintf("devMbboDirectF3RP61: illegal I/O address for %s\n", pmbboDirect->name);
     pmbboDirect->pact = 1;
     return (-1);
   }
 
   dpvt = (F3RP61_LO_DPVT *) callocMustSucceed(1,
-					      sizeof(F3RP61_LO_DPVT),
-					      "calloc failed");
+                                              sizeof(F3RP61_LO_DPVT),
+                                              "calloc failed");
   dpvt->device = device;
 
   if (device == 'r') {
@@ -215,28 +223,28 @@ static long write_mbboDirect(mbboDirectRecord *pmbboDirect)
   else if (device == 'W') {
     if (writeM3LinkRegister((int) pacom->start, 1, &wdata) < 0) {
       errlogPrintf("devMbboDirectF3RP61: writeM3LinkRegister failed [%d] for %s\n",
-		   errno, pmbboDirect->name);
+                   errno, pmbboDirect->name);
       return (-1);
     }
   }
   else if (device == 'R') {
     if (writeM3ComRegister((int) pacom->start, 1, &wdata) < 0) {
       errlogPrintf("devMbboDirectF3RP61: writeM3ComRegister failed [%d] for %s\n",
-		   errno, pmbboDirect->name);
+                   errno, pmbboDirect->name);
       return (-1);
     }
   }
   else if (device == 'L') {
     if (writeM3LinkRelay((int) pacom->start, 1, &wdata) < 0) {
       errlogPrintf("devMbboDirectF3RP61: writeM3LinkRelay failed [%d] for %s\n",
-		   errno, pmbboDirect->name);
+                   errno, pmbboDirect->name);
       return (-1);
     }
   }
   else {
     if (writeM3ComRelay((int) pacom->start, 1, &wdata) < 0) {
       errlogPrintf("devMbboDirectF3RP61: writeM3ComRelay failed [%d] for %s\n",
-		   errno, pmbboDirect->name);
+                   errno, pmbboDirect->name);
       return (-1);
     }
   }

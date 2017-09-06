@@ -3,11 +3,11 @@
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
-* in file LICENSE that is included with this distribution. 
+* in file LICENSE that is included with this distribution.
 **************************************************************************
 * devLoF3RP61.c - Device Support Routines for F3RP61 Long Output
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 6-30-08
 *
 *      Modified: Gregor Kostevc (Cosylab)
@@ -35,8 +35,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3lib.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3lib.h>
+#else
+#  error
+#endif
 #include "drvF3RP61.h"
 
 extern int f3rp61_fd;
@@ -46,21 +53,21 @@ static long init_record();
 static long write_longout();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	write_longout;
-	DEVSUPFUN	special_linconv;
-}devLoF3RP61={
-	6,
-	NULL,
-	NULL,
-	init_record,
-	f3rp61GetIoIntInfo,
-	write_longout,
-	NULL
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  write_longout;
+  DEVSUPFUN  special_linconv;
+} devLoF3RP61 = {
+  6,
+  NULL,
+  NULL,
+  init_record,
+  f3rp61GetIoIntInfo,
+  write_longout,
+  NULL
 };
 epicsExportAddress(dset,devLoF3RP61);
 
@@ -74,8 +81,8 @@ typedef struct {
   } u;
   char device;
   char option;
-  int lng;	/* &L option flag */
-  int BCD;	/* Binary Coded Decimal format flag*/
+  int lng;  /* &L option flag */
+  int BCD;  /* Binary Coded Decimal format flag*/
 } F3RP61_LO_DPVT;
 
 
@@ -90,19 +97,19 @@ static long init_record(longoutRecord *plongout)
   M3IO_ACCESS_REG *pdrly;
   int unitno, slotno, cpuno, start;
   char device;
-  char option = 'W';	/* 'W' as default option when nothing is passed*/
+  char option = 'W';  /* 'W' as default option when nothing is passed*/
   int lng = 0;
   int BCD = 0;
 
   /* bi.out must be an INST_IO */
   if (plongout->out.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)plongout,
-		      "devLoF3RP61 (init_record) Illegal OUT field");
+                      "devLoF3RP61 (init_record) Illegal OUT field");
     plongout->pact = 1;
     return(S_db_badField);
   }
 
-  size = strlen(plink->value.instio.string) + 1;	/* + 1 for appending the NULL character*/
+  size = strlen(plink->value.instio.string) + 1;  /* + 1 for appending the NULL character*/
 
   buf = (char *) callocMustSucceed(size, sizeof(char), "calloc failed");
   strncpy(buf, plink->value.instio.string, size);
@@ -118,15 +125,15 @@ static long init_record(longoutRecord *plongout)
       return (-1);
     }
     if (option == 'B') {
-    	BCD = 1; /* BCD flag is used for the possible double option case in the future */
+      BCD = 1; /* BCD flag is used for the possible double option case in the future */
     }
     else if (option == 'L') {
-    	lng = 1;
+      lng = 1;
     }
-    else {		/* Option was read, but it is not B nor L */
-    	errlogPrintf("devLoF3RP61: illegal option for %s\n", plongout->name);
-    	plongout->pact = 1;
-    	return (-1);
+    else {  /* Option was read, but it is not B nor L */
+      errlogPrintf("devLoF3RP61: illegal option for %s\n", plongout->name);
+      plongout->pact = 1;
+      return (-1);
     }
   }
 
@@ -150,14 +157,14 @@ static long init_record(longoutRecord *plongout)
   if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
     if (sscanf(buf, "CPU%d,R%d", &cpuno, &start) < 2) {
       if (sscanf(buf, "%c%d", &device, &start) < 2) {
-	errlogPrintf("devLoF3RP61: can't get I/O address for %s\n", plongout->name);
-	plongout->pact = 1;
-	return (-1);
+        errlogPrintf("devLoF3RP61: can't get I/O address for %s\n", plongout->name);
+        plongout->pact = 1;
+        return (-1);
       }
       else if (device != 'W' && device != 'R') {
-	errlogPrintf("devLoF3RP61: unsupported device \'%c\' for %s\n", device,
-		     plongout->name);
-	plongout->pact = 1;
+        errlogPrintf("devLoF3RP61: unsupported device \'%c\' for %s\n", device,
+                     plongout->name);
+        plongout->pact = 1;
       }
     }
     else {
@@ -167,7 +174,7 @@ static long init_record(longoutRecord *plongout)
 
   /* Check 'device' validity*/
   if (!(device == 'Y' || device == 'A' || device == 'r' || device == 'W' ||
-	device == 'R')) {
+        device == 'R')) {
     errlogPrintf("devLoF3RP61: illegal I/O address for %s\n", plongout->name);
     plongout->pact = 1;
     return (-1);
@@ -175,8 +182,8 @@ static long init_record(longoutRecord *plongout)
 
   /* Allocate private data storage area*/
   dpvt = (F3RP61_LO_DPVT *) callocMustSucceed(1,
-					      sizeof(F3RP61_LO_DPVT),
-					      "calloc failed");
+                                              sizeof(F3RP61_LO_DPVT),
+                                              "calloc failed");
   dpvt->device = device;
   dpvt->option = option;
   dpvt->lng = lng;
@@ -195,7 +202,7 @@ static long init_record(longoutRecord *plongout)
     case 'L':
       pacom->count = 2;
       break;
-    default:	/* Option either 'B' or 'W' (default when not passed) */
+    default:  /* Option either 'B' or 'W' (default when not passed) */
       pacom->count = 1;
     }
   }
@@ -218,36 +225,36 @@ static long write_longout(longoutRecord *plongout)
   M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
   M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
   char device = dpvt->device;
-  char option = dpvt->option;
-  int lng = dpvt->lng;			/* &L option flag */
-  int BCD = dpvt->BCD;			/* BCD flag*/			/* Using flags for possible multi-option case in the future */
+  //char option = dpvt->option;
+  int lng = dpvt->lng;  /* &L option flag */
+  int BCD = dpvt->BCD;  //* BCD flag*/  /* Using flags for possible multi-option case in the future */
   int command = M3IO_WRITE_REG;
   unsigned short wdata[2];
   unsigned long ldata;
-  unsigned short i, dataBCD = 0;	/* For storing the value decoded from binary-coded-decimal format*/
-  long data_temp;			/* Used when decoding from BCD value*/
+  unsigned short i, dataBCD = 0;  /* For storing the value decoded from binary-coded-decimal format*/
+  long data_temp;  /* Used when decoding from BCD value*/
   void *p = (void *) pdrly;
 
   /* Get BCD format in case of 'B' option*/
-    if(BCD) {
-  	  i = 0;
-  	  data_temp = (long) plongout->val;
-  	  /* Check data range */
-  	  if (data_temp > 9999) {
-  		  data_temp = 9999;
-  		  recGblSetSevr(plongout,HW_LIMIT_ALARM,INVALID_ALARM);
-  	  }
-  	  else if (data_temp < 0) {
-  		  data_temp = 0;
-  		  recGblSetSevr(plongout,HW_LIMIT_ALARM,INVALID_ALARM);
-  	  }
-
-  	  while(data_temp > 0) {
-  	 	dataBCD = dataBCD | (((unsigned long) (data_temp % 10)) << (i*4));
-  	 	data_temp /= 10;
-  	  	i++;
-  	  }
+  if (BCD) {
+    i = 0;
+    data_temp = (long) plongout->val;
+    /* Check data range */
+    if (data_temp > 9999) {
+      data_temp = 9999;
+      recGblSetSevr(plongout,HW_LIMIT_ALARM,INVALID_ALARM);
     }
+    else if (data_temp < 0) {
+      data_temp = 0;
+      recGblSetSevr(plongout,HW_LIMIT_ALARM,INVALID_ALARM);
+    }
+
+    while(data_temp > 0) {
+      dataBCD = dataBCD | (((unsigned long) (data_temp % 10)) << (i*4));
+      data_temp /= 10;
+      i++;
+    }
+  }
 
   /* Set 'device' specific commands and get data*/
   switch (device) {
@@ -259,40 +266,40 @@ static long write_longout(longoutRecord *plongout)
   case 'r':
     command = M3IO_WRITE_COM;
     if(BCD) {
-    	wdata[0] = dataBCD;
+      wdata[0] = dataBCD;
     }
     else {
-    	wdata[0] = (unsigned short) plongout->val;
+      wdata[0] = (unsigned short) plongout->val;
     }
     pacom->pdata = &wdata[0];
     p = (void *) pacom;
     break;
   case 'W':
   case 'R':
-    if (lng) {
-    	wdata[0] = (unsigned short) (plongout->val & 0x0000ffff);
-    	wdata[1] = (unsigned short) ((plongout->val >> 16) & 0x0000ffff);
-    }
-    else if (BCD) {
-    	wdata[0] = dataBCD;
-    }
-    else {
-    	wdata[0] = (unsigned short) plongout->val;
+      if (lng) {
+        wdata[0] = (unsigned short) (plongout->val & 0x0000ffff);
+        wdata[1] = (unsigned short) ((plongout->val >> 16) & 0x0000ffff);
+      }
+      else if (BCD) {
+        wdata[0] = dataBCD;
+      }
+      else {
+        wdata[0] = (unsigned short) plongout->val;
     }
     break;
-  default:		/* for device 'A'*/
+  default:  /* for device 'A'*/
     if (lng) {
-    	command = M3IO_WRITE_REG_L;
-    	ldata = (unsigned long) plongout->val;
-    	pdrly->u.pldata = &ldata;
+      command = M3IO_WRITE_REG_L;
+      ldata = (unsigned long) plongout->val;
+      pdrly->u.pldata = &ldata;
     }
     else if (BCD) {
-    	wdata[0] = dataBCD;
-    	pdrly->u.pwdata = &wdata[0];
+      wdata[0] = dataBCD;
+      pdrly->u.pwdata = &wdata[0];
     }
     else {
-    	wdata[0] = (unsigned short) plongout->val;
-    	pdrly->u.pwdata = &wdata[0];
+      wdata[0] = (unsigned short) plongout->val;
+      pdrly->u.pwdata = &wdata[0];
     }
   }
 

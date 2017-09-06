@@ -3,11 +3,11 @@
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
-* in file LICENSE that is included with this distribution. 
+* in file LICENSE that is included with this distribution.
 **************************************************************************
 * devBoF3RP61.c - Device Support Routines for  F3RP61 Binary Output
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 6-30-08
 */
 #include <stdlib.h>
@@ -31,8 +31,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3lib.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3lib.h>
+#else
+#  error
+#endif
 #include "drvF3RP61.h"
 
 extern int f3rp61_fd;
@@ -42,20 +49,21 @@ static long init_record();
 static long write_bo();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	write_bo;
-}devBoF3RP61={
-	5,
-	NULL,
-	NULL,
-	init_record,
-	f3rp61GetIoIntInfo,
-	write_bo
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  write_bo;
+} devBoF3RP61 = {
+  5,
+  NULL,
+  NULL,
+  init_record,
+  f3rp61GetIoIntInfo,
+  write_bo
 };
+
 epicsExportAddress(dset,devBoF3RP61);
 
 typedef struct {
@@ -78,7 +86,7 @@ static long init_record(boRecord *pbo)
 
   if (pbo->out.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)pbo,
-		      "devBoF3RP61 (init_record) Illegal OUT field");
+                      "devBoF3RP61 (init_record) Illegal OUT field");
     pbo->pact = 1;
     return(S_db_badField);
   }
@@ -109,9 +117,9 @@ static long init_record(boRecord *pbo)
       return (-1);
     }
     else if (device != 'L' && device != 'E') {
-	errlogPrintf("devBoF3RP61: unsupported device \'%c\' for %s\n", device,
-		     pbo->name);
-	pbo->pact = 1;
+      errlogPrintf("devBoF3RP61: unsupported device \'%c\' for %s\n", device,
+                   pbo->name);
+      pbo->pact = 1;
     }
   }
   if (!(device == 'Y' || device == 'L' || device == 'E')) {
@@ -121,8 +129,8 @@ static long init_record(boRecord *pbo)
   }
 
   dpvt = (F3RP61_BO_DPVT *) callocMustSucceed(1,
-					      sizeof(F3RP61_BO_DPVT),
-					      "calloc failed");
+                                              sizeof(F3RP61_BO_DPVT),
+                                              "calloc failed");
   dpvt->device = device;
 
   if (device == 'L' || device == 'E') {

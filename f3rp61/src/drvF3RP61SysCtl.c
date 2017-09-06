@@ -3,7 +3,7 @@
 *
 * F3RP61 Device Support 1.3.0
 * and higher are distributed subject to a Software License Agreement found
-* in file LICENSE that is included with this distribution. 
+* in file LICENSE that is included with this distribution.
 **************************************************************************
 * drvF3RP61.c - Driver Support Routines for F3RP61
 *
@@ -20,8 +20,22 @@
 #include <sys/stat.h>
 #include <sys/msg.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/fam3rtos_sysctl.h>
-#include <asm/fam3rtos/m3lib.h>
+#if defined(_arm_)
+#  include <m3sysctl.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/fam3rtos_sysctl.h>
+#  include <asm/fam3rtos/m3lib.h>
+#  define M3SC_SET_LED      RP6X_SYSIOC_SETLED
+#  define M3SC_LED_RUN_OFF  RP6X_LED_RUN_OFF
+#  define M3SC_LED_ALM_OFF  RP6X_LED_ALM_OFF
+#  define M3SC_LED_ERR_OFF  RP6X_LED_ERR_OFF
+#  define M3SC_LED_RUN_ON   RP6X_LED_RUN_ON
+#  define M3SC_LED_ALM_ON   RP6X_LED_ALM_ON
+#  define M3SC_LED_ERR_ON   RP6X_LED_ERR_ON
+#else
+#  error
+#endif
 
 #include <dbCommon.h>
 #include <dbScan.h>
@@ -43,8 +57,7 @@ struct
   long      number;
   DRVSUPFUN report;
   DRVSUPFUN init;
-} drvF3RP61SysCtl =
-{
+} drvF3RP61SysCtl = {
   2L,
   report,
   init,
@@ -69,7 +82,6 @@ static long report(void)
 /* Function opens driver m3sysctl and stores returned file descriptor */
 static long init(void)
 {
-  
   if (init_flag) return (0);
   init_flag = 1;
 
@@ -88,19 +100,17 @@ static long init(void)
 /* Function arguments */
 static const iocshArg setLEDArg0 = { "led",iocshArgString};
 static const iocshArg setLEDArg1 = { "value",iocshArgInt};
-static const iocshArg *setLEDArgs[] =
-  {
-    &setLEDArg0,
-    &setLEDArg1
-  };
+static const iocshArg *setLEDArgs[] = {
+  &setLEDArg0,
+  &setLEDArg1
+};
 
 /* iocshFunction definition */
-static const iocshFuncDef setLEDFuncDef =
-  {
-    "f3rp61SetLED",
-    2,
-    setLEDArgs
-  };
+static const iocshFuncDef setLEDFuncDef = {
+  "f3rp61SetLED",
+  2,
+  setLEDArgs
+};
 
 /* Callback function */
 static void setLEDCallFunc(const iocshArgBuf *args)
@@ -113,49 +123,49 @@ static void setLEDCallFunc(const iocshArgBuf *args)
  * and sets LEDs on f3rp61 module accordingly */
 static void setLED(char led, int value)
 {
-	unsigned long data;
+  unsigned long data;
 
-	/* Check 'led' validity*/
-	if (!(led == 'R' || led == 'A' || led == 'E')) {
-		errlogPrintf("drvF3RP61SysCtl: f3rp61setLED: invalid led\n");
-		return;
-	}
-	/* Check 'value' validity*/
-	if (!(value == 1 || value == 0)) {
-      errlogPrintf("drvF3RP61SysCtl: f3rp61setLED: value out of range\n");
-      return;
-	}
+  /* Check 'led' validity*/
+  if (!(led == 'R' || led == 'A' || led == 'E')) {
+    errlogPrintf("drvF3RP61SysCtl: f3rp61setLED: invalid led\n");
+    return;
+  }
+  /* Check 'value' validity*/
+  if (!(value == 1 || value == 0)) {
+    errlogPrintf("drvF3RP61SysCtl: f3rp61setLED: value out of range\n");
+    return;
+  }
 
   /* Set 'data' accordingly to 'led' and 'value'*/
-  if(!value) {	/* When VAL field is 0*/
-	 switch (led) {
-	 case 'R':		/* Run LED*/
-		 data = RP6X_LED_RUN_OFF;
-		 break;
-	 case 'A':		/* Alarm LED*/
-		 data = RP6X_LED_ALM_OFF;
-		 break;
-	 default:	/* For 'E' Error LED*/
-		 data = RP6X_LED_ERR_OFF;
-		 break;
-	 }
+  if (!value) {  /* When VAL field is 0*/
+    switch (led) {
+    case 'R':  /* Run LED*/
+      data = M3SC_LED_RUN_OFF;
+      break;
+    case 'A':  /* Alarm LED*/
+      data = M3SC_LED_ALM_OFF;
+      break;
+    default:   /* For 'E' Error LED*/
+      data = M3SC_LED_ERR_OFF;
+      break;
+    }
   }
-  else {		/* When VAL field is 1*/
-	  switch (led) {
-	  case 'R':		/* Run LED*/
-	  data = RP6X_LED_RUN_ON;
-	      break;
-	  case 'A':		/* Alarm LED*/
-	  	  data = RP6X_LED_ALM_ON;
-	  	  break;
-	  default:	/* For 'E' Error LED*/
-	  	  data = RP6X_LED_ERR_ON;
-	  	  break;
-	  }
+  else {  /* When VAL field is 1*/
+    switch (led) {
+    case 'R':  /* Run LED*/
+      data = M3SC_LED_RUN_ON;
+      break;
+    case 'A':  /* Alarm LED*/
+      data = M3SC_LED_ALM_ON;
+      break;
+    default:  /* For 'E' Error LED*/
+      data = M3SC_LED_ERR_ON;
+      break;
+    }
   }
 
   /* Write to the device*/
-  if (ioctl(f3rp61SysCtl_fd, RP6X_SYSIOC_SETLED, &data) < 0) {
+  if (ioctl(f3rp61SysCtl_fd, M3SC_SET_LED, &data) < 0) {
     errlogPrintf("drvF3RP61SysCtl: ioctl failed for f3rp61setLED\n");
     return;
   }

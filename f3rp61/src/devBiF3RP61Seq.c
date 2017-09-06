@@ -3,11 +3,11 @@
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
-* in file LICENSE that is included with this distribution. 
+* in file LICENSE that is included with this distribution.
 **************************************************************************
 * devBiF3RP61Seq.c - Device Support Routines for  F3RP61 Binary Input
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 31-03-09
 */
 #include <stdlib.h>
@@ -32,8 +32,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3mcmd.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3mcmd.h>
+#else
+#  error
+#endif
 #include "drvF3RP61Seq.h"
 
 extern int f3rp61_fd;
@@ -43,20 +50,21 @@ static long init_record();
 static long read_bi();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	read_bi;
-}devBiF3RP61Seq={
-	5,
-	NULL,
-	NULL,
-	init_record,
-	NULL,
-	read_bi
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  read_bi;
+} devBiF3RP61Seq = {
+  5,
+  NULL,
+  NULL,
+  init_record,
+  NULL,
+  read_bi
 };
+
 epicsExportAddress(dset,devBiF3RP61Seq);
 
 
@@ -75,7 +83,7 @@ static long init_record(biRecord *pbi)
 
   if (pbi->inp.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)pbi,
-		      "devBiF3RP61Seq (init_record) Illegal INP field");
+                      "devBiF3RP61Seq (init_record) Illegal INP field");
     pbi->pact = 1;
     return(S_db_badField);
   }
@@ -91,8 +99,8 @@ static long init_record(biRecord *pbi)
   }
 
   dpvt = (F3RP61_SEQ_DPVT *) callocMustSucceed(1,
-					      sizeof(F3RP61_SEQ_DPVT),
-					      "calloc failed");
+                                               sizeof(F3RP61_SEQ_DPVT),
+                                               "calloc failed");
 
   if (ioctl(f3rp61_fd, M3IO_GET_MYCPUNO, &srcSlot) < 0) {
     errlogPrintf("devBiF3RP61Seq: ioctl failed [%d]\n", errno);
@@ -112,15 +120,15 @@ static long init_record(biRecord *pbi)
   pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
   pM3ReadSeqdev->accessType = 0;
   switch (device)
-    {
-    case 'I':
-      pM3ReadSeqdev->devType = 0x09;
-      break;
-    default:
-      errlogPrintf("devAiF3RP61Seq: unsupported device in %s\n", pbi->name);
-      pbi->pact = 1;
-      return (-1);
-    }
+  {
+  case 'I':
+    pM3ReadSeqdev->devType = 0x09;
+    break;
+  default:
+    errlogPrintf("devAiF3RP61Seq: unsupported device in %s\n", pbi->name);
+    pbi->pact = 1;
+    return (-1);
+  }
   pM3ReadSeqdev->devType = 0x09;
   pM3ReadSeqdev->dataNum = 1;
   pM3ReadSeqdev->topDevNo = top;
@@ -149,7 +157,7 @@ static long read_bi(biRecord *pbi)
 
     if (pmcmdResponse->errorCode) {
       errlogPrintf("devBiF3RP61Seq: errorCode %d returned for %s\n",
-		   pmcmdResponse->errorCode, pbi->name);
+                   pmcmdResponse->errorCode, pbi->name);
       return (-1);
     }
 

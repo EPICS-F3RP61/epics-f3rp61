@@ -1,0 +1,10 @@
+#  CONFIG.linux-f3rp71.linux-f3rp71
+#
+#
+# Definitions for linux-f3rp71 host - linux-f3rp71 target builds
+# Sites may override these definitions in CONFIG_SITE.linux-f3rp71.linux-f3rp71
+#-------------------------------------------------------
+
+# Include common gnu compiler definitions
+include $(CONFIG)/CONFIG.gnuCommon
+

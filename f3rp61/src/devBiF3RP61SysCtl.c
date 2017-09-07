@@ -113,26 +113,39 @@ static long init_record(biRecord *pbi)
   }
 
   /* Check Device validity*/
-  if (!(device == 'L' || device == 'R')) {
+  if (device != 'L' && device != 'R'
+#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
+      && device != 'U'
+#endif
+      ) {
     errlogPrintf("devBiF3RP61SysCtl: illegal device for %s\n", pbi->name);
     pbi->pact = 1;
     return (-1);
   }
 
   /* Check 'led' validity*/
-  if(device == 'L') {
-    if (!(led == 'R' || led == 'A' || led == 'E')) {
+  if (device == 'L') {
+    if (led != 'R' && led != 'A' && led != 'E' ) {
       errlogPrintf("devBiF3RP61SysCtl: illegal LED address for %s\n", pbi->name);
       pbi->pact = 1;
       return (-1);
     }
   }
+#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
+  else if (device == 'U') {
+    if (led != '1' && led != '2' && led != '3') {
+      errlogPrintf("devBiF3RP61SysCtl: illegal USER LED address for %s\n", pbi->name);
+      pbi->pact = 1;
+      return (-1);
+    }
+  }
+#endif
 
   dpvt = (F3RP61SysCtl_BI_DPVT *) callocMustSucceed(1,
                           sizeof(F3RP61SysCtl_BI_DPVT),
                           "calloc failed");
   dpvt->device = device;
-  if (device == 'L') {
+  if (device == 'L' || device == 'U') {
     dpvt->led = led;
   }
 
@@ -157,29 +170,26 @@ static long read_bi(biRecord *pbi)
   case 'L':
     command = M3SC_GET_LED;
     break;
+#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
+  case 'U': /* For User LED */
+    command = M3SC_GET_US_LED;
+    break;
+#endif
   default: /* For device 'R'*/
     command = M3SC_CHECK_BAT;
     break;
   }
 
-  if (device == 'L') {
-    if (ioctl(f3rp61SysCtl_fd, command, &data) < 0) {
-      errlogPrintf("devBiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, pbi->name);
-      return (-1);
-    }
-  }
-  else if (device == 'R') {
-    if (ioctl(f3rp61SysCtl_fd, command, &data) < 0) {
-      errlogPrintf("devBiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, pbi->name);
-      return (-1);
-    }
+  if (ioctl(f3rp61SysCtl_fd, command, &data) < 0) {
+     errlogPrintf("devBiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, pbi->name);
+     return (-1);
   }
 
   pbi->udf=FALSE;
 
   switch (device) {
   case 'L':
-    switch(led) {
+    switch (led) {
     case 'R':
       pbi->rval = (unsigned long) (data & LED_RUN_FLG);
       break;
@@ -191,6 +201,21 @@ static long read_bi(biRecord *pbi)
       break;
     }
     break;
+#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
+  case 'U':
+    switch (led) {
+    case '1':
+      pbi->rval = (unsigned long) (data & LED_US1_FLG);
+      break;
+    case '2':
+      pbi->rval = (unsigned long) (data & LED_US2_FLG);
+      break;
+    case '3':
+      pbi->rval = (unsigned long) (data & LED_US3_FLG);
+      break;
+    }
+    break;
+#endif
   case 'R':
     pbi->rval = (unsigned long) (data & 0x00000004);
     break;

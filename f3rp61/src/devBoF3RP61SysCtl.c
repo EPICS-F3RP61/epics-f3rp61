@@ -112,7 +112,11 @@ static long init_record(boRecord *pbo)
   }
 
   /* Check device validity*/
-  if (!(device == 'L')) {
+  if (device != 'L'
+#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
+      && device != 'U'
+#endif
+) {
     errlogPrintf("devBoF3RP61SysCtl: illegal device for %s\n",
                  pbo->name);
     pbo->pact = 1;
@@ -127,12 +131,21 @@ static long init_record(boRecord *pbo)
       return (-1);
     }
   }
+#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
+  else if (device == 'U') {
+    if (!(led == '1' || led == '2' || led == '3')) {
+      errlogPrintf("devBoF3RP61SysCtl: illegal LED address for %s\n", pbo->name);
+      pbo->pact = 1;
+      return (-1);
+    }
+  }
+#endif
 
   dpvt = (F3RP61SysCtl_BO_DPVT *) callocMustSucceed(1,
                   sizeof(F3RP61SysCtl_BO_DPVT),
                   "calloc failed");
   dpvt->device = device;
-  if (device == 'L') {
+  if (device == 'L' || device == 'U') {
     dpvt->led = led;
   }
 
@@ -184,13 +197,44 @@ static long read_bo(boRecord *pbo)
       }
     }
     break;
+#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
+  case 'U':
+    command = M3SC_SET_US_LED;
+    if (!(pbo->val)) {  /* When VAL field is 0*/
+      switch (led) {
+      case '1':  /* US1 LED*/
+        data = M3SC_LED_US1_OFF;
+        break;
+      case '2':  /* US2 LED*/
+        data = M3SC_LED_US2_OFF;
+        break;
+      default:   /* For '3' US3 LED*/
+        data = M3SC_LED_US3_OFF;
+        break;
+      }
+    }
+    else if(pbo->val == 1) {  /* When VAL field is 1. Should not use only 'else' because then Invalid Value will be treated as True also*/
+      switch (led) {
+      case '1':  /* US1 LED*/
+        data = M3SC_LED_US1_ON;
+        break;
+      case '2':  /* US2 LED*/
+        data = M3SC_LED_US2_ON;
+        break;
+      default:   /* For '3' US3 LED*/
+        data = M3SC_LED_US3_ON;
+        break;
+      }
+    }
+    break;
+#endif
   default:
     command = M3SC_SET_LED;
     break;
   }
 
   /* Write to device*/
-  if (device == 'L') {
+  if (device == 'L' || device == 'U') {
     if (ioctl(f3rp61SysCtl_fd, command, &data) < 0) {
       errlogPrintf("devBoF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, pbo->name);
       return (-1);

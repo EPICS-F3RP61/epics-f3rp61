@@ -123,10 +123,15 @@ static void setLEDCallFunc(const iocshArgBuf *args)
  * and sets LEDs on f3rp61 module accordingly */
 static void setLED(char led, int value)
 {
+  unsigned long cmd = M3SC_SET_LED;
   unsigned long data;
 
   /* Check 'led' validity*/
-  if (!(led == 'R' || led == 'A' || led == 'E')) {
+  if (led != 'R' && led != 'A' && led != 'E'
+#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
+      && led != '1' && led != '2' && led != '3'
+#endif
+      ) {
     errlogPrintf("drvF3RP61SysCtl: f3rp61setLED: invalid led\n");
     return;
   }
@@ -139,6 +144,20 @@ static void setLED(char led, int value)
   /* Set 'data' accordingly to 'led' and 'value'*/
   if (!value) {  /* When VAL field is 0*/
     switch (led) {
+#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
+    case '1':  /* US1 LED */
+      cmd = M3SC_SET_US_LED;
+      data = M3SC_LED_US1_OFF;
+      break;
+    case '2':  /* US2 LED */
+      cmd = M3SC_SET_US_LED;
+      data = M3SC_LED_US2_OFF;
+      break;
+    case '3':  /* US3 LED */
+      cmd = M3SC_SET_US_LED;
+      data = M3SC_LED_US3_OFF;
+      break;
+#endif
     case 'R':  /* Run LED*/
       data = M3SC_LED_RUN_OFF;
       break;
@@ -152,6 +171,20 @@ static void setLED(char led, int value)
   }
   else {  /* When VAL field is 1*/
     switch (led) {
+#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
+    case '1':  /* US1 LED */
+      cmd = M3SC_SET_US_LED;
+      data = M3SC_LED_US1_ON;
+      break;
+    case '2':  /* US2 LED */
+      cmd = M3SC_SET_US_LED;
+      data = M3SC_LED_US2_ON;
+      break;
+    case '3':  /* US3 LED */
+      cmd = M3SC_SET_US_LED;
+      data = M3SC_LED_US3_ON;
+      break;
+#endif
     case 'R':  /* Run LED*/
       data = M3SC_LED_RUN_ON;
       break;
@@ -165,7 +198,7 @@ static void setLED(char led, int value)
   }
 
   /* Write to the device*/
-  if (ioctl(f3rp61SysCtl_fd, M3SC_SET_LED, &data) < 0) {
+  if (ioctl(f3rp61SysCtl_fd, cmd, &data) < 0) {
     errlogPrintf("drvF3RP61SysCtl: ioctl failed for f3rp61setLED\n");
     return;
   }

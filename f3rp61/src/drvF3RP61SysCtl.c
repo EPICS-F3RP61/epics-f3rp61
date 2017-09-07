@@ -98,8 +98,8 @@ static long init(void)
 /* Register iocsh command setLED*/
 
 /* Function arguments */
-static const iocshArg setLEDArg0 = { "led",iocshArgString};
-static const iocshArg setLEDArg1 = { "value",iocshArgInt};
+static const iocshArg setLEDArg0 = {"led",   iocshArgString};
+static const iocshArg setLEDArg1 = {"value", iocshArgInt};
 static const iocshArg *setLEDArgs[] = {
   &setLEDArg0,
   &setLEDArg1
@@ -115,6 +115,10 @@ static const iocshFuncDef setLEDFuncDef = {
 /* Callback function */
 static void setLEDCallFunc(const iocshArgBuf *args)
 {
+  if (! args[0].sval) {
+    printf("Usage: %s %s %s\n", setLEDFuncDef.name, setLEDArg0.name, setLEDArg1.name);
+    return;
+  }
   setLED(args[0].sval[0], args[1].ival);
 }
 
@@ -132,12 +136,12 @@ static void setLED(char led, int value)
       && led != '1' && led != '2' && led != '3'
 #endif
       ) {
-    errlogPrintf("drvF3RP61SysCtl: f3rp61setLED: invalid led\n");
+    errlogPrintf("drvF3RP61SysCtl: f3rp61SetLED: invalid led\n");
     return;
   }
   /* Check 'value' validity*/
   if (!(value == 1 || value == 0)) {
-    errlogPrintf("drvF3RP61SysCtl: f3rp61setLED: value out of range\n");
+    errlogPrintf("drvF3RP61SysCtl: f3rp61SetLED: value out of range\n");
     return;
   }
 

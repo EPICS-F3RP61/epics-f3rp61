@@ -32,8 +32,16 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/fam3rtos_sysctl.h>
-#include <asm/fam3rtos/m3lib.h>
+#if defined(_arm_)
+#  include <m3sysctl.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/fam3rtos_sysctl.h>
+#  include <asm/fam3rtos/m3lib.h>
+#  define M3SC_GET_SW RP6X_SYSIOC_GETSW
+#else
+#  error
+#endif
 
 
 extern int f3rp61SysCtl_fd;
@@ -43,22 +51,23 @@ static long init_record();
 static long read_mbbi();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	read_mbbi;
-	DEVSUPFUN	special_linconv;
-}devMbbiF3RP61SysCtl={
-	6,
-	NULL,
-	NULL,
-	init_record,
-	NULL,
-	read_mbbi,
-	NULL
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  read_mbbi;
+  DEVSUPFUN  special_linconv;
+} devMbbiF3RP61SysCtl = {
+  6,
+  NULL,
+  NULL,
+  init_record,
+  NULL,
+  read_mbbi,
+  NULL
 };
+
 epicsExportAddress(dset,devMbbiF3RP61SysCtl);
 
 typedef struct {
@@ -77,7 +86,7 @@ static long init_record(mbbiRecord *pmbbi)
 
   if (pmbbi->inp.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)pmbbi,
-		      "devMbbiF3RP61SysCtl (init_record) Illegal INP field");
+                      "devMbbiF3RP61SysCtl (init_record) Illegal INP field");
     pmbbi->pact = 1;
     return(S_db_badField);
   }
@@ -97,14 +106,14 @@ static long init_record(mbbiRecord *pmbbi)
   /* Check device validity*/
   if (!(device == 'S')) {
     errlogPrintf("devMbbiF3RP61SysCtl: illegal device for %s\n",
-		 pmbbi->name);
+                 pmbbi->name);
     pmbbi->pact = 1;
     return (-1);
   }
 
   dpvt = (F3RP61SysCtl_MBBI_DPVT *) callocMustSucceed(1,
-						      sizeof(F3RP61SysCtl_MBBI_DPVT),
-						      "calloc failed");
+                                                      sizeof(F3RP61SysCtl_MBBI_DPVT),
+                                                      "calloc failed");
   dpvt->device = device;
 
   pmbbi->dpvt = dpvt;
@@ -122,24 +131,24 @@ static long read_mbbi(mbbiRecord *pmbbi)
 
   switch (device) {
   case 'S':
-	  command = RP6X_SYSIOC_GETSW;
-	  break;
+    command = M3SC_GET_SW;
+    break;
   default:
-	  command = RP6X_SYSIOC_GETSW;
-	  break;
+    command = M3SC_GET_SW;
+    break;
   }
 
-  /* printf("Data before %ld \n", data); */ 	/*Debug output*/
+  /* printf("Data before %ld \n", data); */  /*Debug output*/
 
   if (device == 'S') {
-	if (ioctl(f3rp61SysCtl_fd, command, &data) < 0) {
+    if (ioctl(f3rp61SysCtl_fd, command, &data) < 0) {
       errlogPrintf("devMbbiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, pmbbi->name);
       return (-1);
     }
   }
   pmbbi->udf=FALSE;
 
-  /* printf("Data after %ld \n", data); */	/*Debug output*/
+  /* printf("Data after %ld \n", data); */  /*Debug output*/
 
   switch (device) {
   case 'S':

@@ -3,11 +3,11 @@
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
-* in file LICENSE that is included with this distribution. 
+* in file LICENSE that is included with this distribution.
 **************************************************************************
 * drvF3RP61.c - Driver Support Routines for F3RP61
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 6-30-08
 */
 
@@ -21,8 +21,15 @@
 #include <sys/msg.h>
 #include <fcntl.h>
 #include <ctype.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3lib.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3lib.h>
+#else
+#  error
+#endif
 
 #include <dbCommon.h>
 #include <dbScan.h>
@@ -51,8 +58,7 @@ struct
   long      number;
   DRVSUPFUN report;
   DRVSUPFUN init;
-} drvF3RP61 =
-{
+} drvF3RP61 = {
   2L,
   report,
   init,
@@ -80,7 +86,6 @@ static void drvF3RP61RegisterCommands(void);
 
 static long report(void)
 {
-
   return (0);
 }
 
@@ -88,7 +93,7 @@ static long report(void)
 static long init(void)
 {
   int i;
-  
+
   if (init_flag) return (0);
   init_flag = 1;
 
@@ -100,11 +105,11 @@ static long init(void)
 
   for (i = 0; i < M3IO_NUM_CPUS; i++) {
     if (com_data_config.wNumberOfRelay[i] || com_data_config.wNumberOfRegister[i] ||
-	ext_com_data_config.wNumberOfRelay[i] || ext_com_data_config.wNumberOfRegister[i]) {
+        ext_com_data_config.wNumberOfRelay[i] || ext_com_data_config.wNumberOfRegister[i]) {
 
       if (setM3ComDataConfig(&com_data_config, &ext_com_data_config) < 0) {
-	errlogPrintf("drvF3RP61: setM3ComDataConfig failed [%d]\n", errno);
-	return (-1);
+        errlogPrintf("drvF3RP61: setM3ComDataConfig failed [%d]\n", errno);
+        return (-1);
       }
 
       break;
@@ -115,18 +120,18 @@ static long init(void)
     if (link_data_config.wNumberOfRelay[i] || link_data_config.wNumberOfRegister[i]) {
 
       if (setM3LinkDeviceConfig(&link_data_config) < 0) {
-	errlogPrintf("drvF3RP61: setM3LinkDeviceConfig failed [%d]\n", errno);
-	return (-1);
+        errlogPrintf("drvF3RP61: setM3LinkDeviceConfig failed [%d]\n", errno);
+        return (-1);
       }
 
       if (setM3FlnSysNo(0, NULL) < 0) {
-	errlogPrintf("drvF3RP61: setM3FlnSysNo failed [%d]\n", errno);
-	return (-1);
+        errlogPrintf("drvF3RP61: setM3FlnSysNo failed [%d]\n", errno);
+        return (-1);
       }
 
       if (m3rfrsTsk(10) < 0) {
-	errlogPrintf("drvF3RP61: m3rfrsTsk failed [%d]\n", errno);
-	return (-1);
+        errlogPrintf("drvF3RP61: m3rfrsTsk failed [%d]\n", errno);
+        return (-1);
       }
 
       break;
@@ -158,15 +163,15 @@ static void msgrcv_thread(void *arg)
 
     for (i = 0; i < io_intr[unit][slot].count; i++) {
       if (io_intr[unit][slot].ioscan[i].channel == channel) {
-	prec = io_intr[unit][slot].ioscan[i].prec;
-	if (!prec) {
-	  errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,C%d)\n", unit, slot, channel);
-	  break;
-	}
-	ioscanpvt = *((IOSCANPVT *) prec->dpvt);
-	if (prec->scan == SCAN_IO_EVENT) {
-	  scanIoRequest(ioscanpvt);
-	}
+        prec = io_intr[unit][slot].ioscan[i].prec;
+        if (!prec) {
+          errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,C%d)\n", unit, slot, channel);
+          break;
+        }
+        ioscanpvt = *((IOSCANPVT *) prec->dpvt);
+        if (prec->scan == SCAN_IO_EVENT) {
+          scanIoRequest(ioscanpvt);
+        }
       }
     }
   }
@@ -191,19 +196,19 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
       errlogPrintf("drvF3RP61: msgget failed [%d]\n", errno);
       return (-1);
     }
-  /* Add Start */
+    /* Add Start */
     if ((msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666)) == -1) {
       errlogPrintf("drvF3RP61: msgget failed[ %d]\n", errno);
       return (-1);
     }
-  /* Add End */
+    /* Add End */
 
     sprintf(thread_name, "msgrcvr%d", msqid);
     if ((epicsThreadCreate(thread_name,
-			   epicsThreadPriorityHigh,
-			   epicsThreadGetStackSize(epicsThreadStackSmall),
-			   (EPICSTHREADFUNC) msgrcv_thread,
-			   (void *) msqid)) == (epicsThreadId) 0) {
+                           epicsThreadPriorityHigh,
+                           epicsThreadGetStackSize(epicsThreadStackSmall),
+                           (EPICSTHREADFUNC) msgrcv_thread,
+                           (void *) msqid)) == (epicsThreadId) 0) {
       errlogPrintf("drvF3RP61: epicsThreadCreate failed\n");
       return (-1);
     }
@@ -225,7 +230,7 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
   arg.msgQId = msqid;
 
   if (ioctl(f3rp61_fd, M3IO_ENABLE_INTER, &arg) < 0) {
-    errlogPrintf("devBiF3RP61: ioctl failed [%d]\n", errno);		        
+    errlogPrintf("devBiF3RP61: ioctl failed [%d]\n", errno);
     return (-1);
   }
 
@@ -257,19 +262,17 @@ long f3rp61GetIoIntInfo(int cmd, dbCommon * pxx, IOSCANPVT *ppvt)
 static const iocshArg linkDeviceConfigureArg0 = { "sysNo",iocshArgInt};
 static const iocshArg linkDeviceConfigureArg1 = { "nRlys",iocshArgInt};
 static const iocshArg linkDeviceConfigureArg2 = { "nRegs",iocshArgInt};
-static const iocshArg *linkDeviceConfigureArgs[] =
-  {
-    &linkDeviceConfigureArg0,
-    &linkDeviceConfigureArg1,
-    &linkDeviceConfigureArg2
-  };
+static const iocshArg *linkDeviceConfigureArgs[] = {
+  &linkDeviceConfigureArg0,
+  &linkDeviceConfigureArg1,
+  &linkDeviceConfigureArg2
+};
 
-static const iocshFuncDef linkDeviceConfigureFuncDef =
-  {
-    "f3rp61LinkDeviceConfigure",
-    3,
-    linkDeviceConfigureArgs
-  };
+static const iocshFuncDef linkDeviceConfigureFuncDef = {
+  "f3rp61LinkDeviceConfigure",
+  3,
+  linkDeviceConfigureArgs
+};
 
 static void linkDeviceConfigureCallFunc(const iocshArgBuf *args)
 {
@@ -291,27 +294,24 @@ static void linkDeviceConfigure(int sysno, int nrlys, int nregs)
 }
 
 
+static const iocshArg comDeviceConfigureArg0 = { "cpuNo",     iocshArgInt};
+static const iocshArg comDeviceConfigureArg1 = { "nRlys",     iocshArgInt};
+static const iocshArg comDeviceConfigureArg2 = { "ext_nRlys", iocshArgInt};
+static const iocshArg comDeviceConfigureArg3 = { "nRegs",     iocshArgInt};
+static const iocshArg comDeviceConfigureArg4 = { "ext_nRegs", iocshArgInt};
+static const iocshArg *comDeviceConfigureArgs[] = {
+  &comDeviceConfigureArg0,
+  &comDeviceConfigureArg1,
+  &comDeviceConfigureArg2,
+  &comDeviceConfigureArg3,
+  &comDeviceConfigureArg4
+};
 
-static const iocshArg comDeviceConfigureArg0 = { "cpuNo",iocshArgInt};
-static const iocshArg comDeviceConfigureArg1 = { "nRlys",iocshArgInt};
-static const iocshArg comDeviceConfigureArg2 = { "ext_nRlys",iocshArgInt};
-static const iocshArg comDeviceConfigureArg3 = { "nRegs",iocshArgInt};
-static const iocshArg comDeviceConfigureArg4 = { "ext_nRegs",iocshArgInt};
-static const iocshArg *comDeviceConfigureArgs[] =
-  {
-    &comDeviceConfigureArg0,
-    &comDeviceConfigureArg1,
-    &comDeviceConfigureArg2,
-    &comDeviceConfigureArg3,
-    &comDeviceConfigureArg4
-  };
-
-static const iocshFuncDef comDeviceConfigureFuncDef =
-  {
-    "f3rp61ComDeviceConfigure",
-    5,
-    comDeviceConfigureArgs
-  };
+static const iocshFuncDef comDeviceConfigureFuncDef = {
+  "f3rp61ComDeviceConfigure",
+  5,
+  comDeviceConfigureArgs
+};
 
 static void comDeviceConfigureCallFunc(const iocshArgBuf *args)
 {
@@ -332,7 +332,6 @@ static void comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, i
   ext_com_data_config.wNumberOfRelay[cpuno] = ext_nrlys;
   ext_com_data_config.wNumberOfRegister[cpuno] = ext_nregs;
 }
-
 
 
 static const iocshFuncDef getModuleInfoFuncDef = {"f3rp61GetModuleInfo",0,NULL};
@@ -358,23 +357,22 @@ static void getModuleInfo(void)
       printf("unitno: %0d  ", module_info.unitno);
       printf("slotno: %02d  ", module_info.slotno);
       if (module_info.enable) {
-	enable = 1;
-	printf("enable: %d  ", enable);
+        enable = 1;
+        printf("enable: %d  ", enable);
       }
       else {
-	enable = 0;
-	printf("enable: %d  ", enable);
+        enable = 0;
+        printf("enable: %d  ", enable);
       }
 
       for (k = 0; k < 4; k++) {
 
-	if (isalnum(module_info.name[k])) {
-	  printf("%c", module_info.name[k]);
-	}
-	else {
-	  printf("%c", ' ');
-	}
-
+        if (isalnum(module_info.name[k])) {
+          printf("%c", module_info.name[k]);
+        }
+        else {
+          printf("%c", ' ');
+        }
       }
 
       printf("  msize: %5d  ", module_info.msize);
@@ -384,9 +382,7 @@ static void getModuleInfo(void)
       printf("\n");
 
     }
-
   }
-
 }
 
 

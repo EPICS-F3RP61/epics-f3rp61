@@ -7,7 +7,7 @@
 **************************************************************************
 * devBiF3RP61.c - Device Support Routines for  F3RP61 Binary Input
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 6-30-08
 */
 #include <stdlib.h>
@@ -31,8 +31,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3lib.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3lib.h>
+#else
+#  error
+#endif
 #include "drvF3RP61.h"
 
 extern int f3rp61_fd;
@@ -42,20 +49,21 @@ extern int f3rp61_msqid[M3IO_NUM_SLOT];
 static long init_record();
 static long read_bi();
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	read_bi;
-}devBiF3RP61={
-	5,
-	NULL,
-	NULL,
-	init_record,
-	f3rp61GetIoIntInfo,
-	read_bi
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  read_bi;
+} devBiF3RP61 = {
+  5,
+  NULL,
+  NULL,
+  init_record,
+  f3rp61GetIoIntInfo,
+  read_bi
 };
+
 epicsExportAddress(dset,devBiF3RP61);
 
 typedef struct {
@@ -84,7 +92,7 @@ static long init_record(biRecord *pbi)
 
   if (pbi->inp.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)pbi,
-		      "devBiF3RP61 (init_record) Illegal INP field");
+                      "devBiF3RP61 (init_record) Illegal INP field");
     pbi->pact = 1;
     return(S_db_badField);
   }
@@ -115,9 +123,9 @@ static long init_record(biRecord *pbi)
       return (-1);
     }
     else if (device != 'L' && device != 'E') {
-	errlogPrintf("devBiF3RP61: unsupported device \'%c\' for %s\n", device,
-		     pbi->name);
-	pbi->pact = 1;
+      errlogPrintf("devBiF3RP61: unsupported device \'%c\' for %s\n", device,
+                   pbi->name);
+      pbi->pact = 1;
     }
   }
   if (!(device == 'X' || device == 'Y' || device == 'L' || device == 'E')) {
@@ -127,8 +135,8 @@ static long init_record(biRecord *pbi)
   }
 
   dpvt = (F3RP61_BI_DPVT *) callocMustSucceed(1,
-					      sizeof(F3RP61_BI_DPVT),
-					      "calloc failed");
+                                              sizeof(F3RP61_BI_DPVT),
+                                              "calloc failed");
   dpvt->device = device;
 
   if (device == 'Y') {

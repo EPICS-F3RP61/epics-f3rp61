@@ -7,7 +7,7 @@
 **************************************************************************
 * devAoF3RP61Seq.c - Device Support Routines for  F3RP61 Analog Output
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 31-03-09
 */
 #include <stdlib.h>
@@ -32,8 +32,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3mcmd.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3mcmd.h>
+#else
+#  error
+#endif
 #include "drvF3RP61Seq.h"
 
 extern int f3rp61_fd;
@@ -43,22 +50,23 @@ static long init_record();
 static long write_ao();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	write_ao;
-	DEVSUPFUN	special_linconv;
-}devAoF3RP61Seq={
-	6,
-	NULL,
-	NULL,
-	init_record,
-	NULL,
-	write_ao,
-	NULL
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  write_ao;
+  DEVSUPFUN  special_linconv;
+} devAoF3RP61Seq = {
+  6,
+  NULL,
+  NULL,
+  init_record,
+  NULL,
+  write_ao,
+  NULL
 };
+
 epicsExportAddress(dset,devAoF3RP61Seq);
 
 
@@ -77,7 +85,7 @@ static long init_record(aoRecord *pao)
 
   if (pao->out.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)pao,
-		      "devAoF3RP61Seq (init_record) Illegal OUT field");
+                      "devAoF3RP61Seq (init_record) Illegal OUT field");
     pao->pact = 1;
     return(S_db_badField);
   }
@@ -93,8 +101,8 @@ static long init_record(aoRecord *pao)
   }
 
   dpvt = (F3RP61_SEQ_DPVT *) callocMustSucceed(1,
-					      sizeof(F3RP61_SEQ_DPVT),
-					      "calloc failed");
+                                               sizeof(F3RP61_SEQ_DPVT),
+                                               "calloc failed");
 
   if (ioctl(f3rp61_fd, M3IO_GET_MYCPUNO, &srcSlot) < 0) {
     errlogPrintf("devAoF3RP61Seq: ioctl failed [%d]\n", errno);
@@ -114,18 +122,18 @@ static long init_record(aoRecord *pao)
   pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
   pM3WriteSeqdev->accessType = 2;
   switch (device)
-    {
-    case 'D':
-      pM3WriteSeqdev->devType = 0x04;
-      break;
-    case 'B':
-      pM3WriteSeqdev->devType = 0x02;
-      break;
-    default:
-      errlogPrintf("devAoF3RP61Seq: unsupported device in %s\n", pao->name);
-      pao->pact = 1;
-      return (-1);
-    }
+  {
+  case 'D':
+    pM3WriteSeqdev->devType = 0x04;
+    break;
+  case 'B':
+    pM3WriteSeqdev->devType = 0x02;
+    break;
+  default:
+    errlogPrintf("devAoF3RP61Seq: unsupported device in %s\n", pao->name);
+    pao->pact = 1;
+    return (-1);
+  }
   pM3WriteSeqdev->dataNum = 1;
   pM3WriteSeqdev->topDevNo = top;
   callbackSetUser(pao, &dpvt->callback);
@@ -155,7 +163,7 @@ static long write_ao(aoRecord *pao)
 
     if (pmcmdResponse->errorCode) {
       errlogPrintf("devAoF3RP61Seq: errorCode %d returned for %s\n",
-		   pmcmdResponse->errorCode, pao->name);
+                   pmcmdResponse->errorCode, pao->name);
       return (-1);
     }
 

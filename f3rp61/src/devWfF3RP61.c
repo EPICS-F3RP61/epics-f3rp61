@@ -3,11 +3,11 @@
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
-* in file LICENSE that is included with this distribution. 
+* in file LICENSE that is included with this distribution.
 **************************************************************************
 * devWfF3RP61.c - Device Support Routines for F3RP61 Analog Input
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 6-30-08
 */
 #include <stdlib.h>
@@ -33,8 +33,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3lib.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3lib.h>
+#else
+#  error
+#endif
 #include "drvF3RP61.h"
 
 extern int f3rp61_fd;
@@ -44,22 +51,23 @@ static long init_record();
 static long read_wf();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	read_wf;
-	DEVSUPFUN	special_linconv;
-}devWfF3RP61={
-	6,
-	NULL,
-	NULL,
-	init_record,
-	f3rp61GetIoIntInfo,
-	read_wf,
-	NULL
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  read_wf;
+  DEVSUPFUN  special_linconv;
+} devWfF3RP61 = {
+  6,
+  NULL,
+  NULL,
+  init_record,
+  f3rp61GetIoIntInfo,
+  read_wf,
+  NULL
 };
+
 epicsExportAddress(dset,devWfF3RP61);
 
 extern F3RP61_IO_INTR f3rp61_io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
@@ -92,7 +100,7 @@ static long init_record(waveformRecord *pwf)
 
   if (pwf->inp.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)pwf,
-		      "devWfF3RP61 (init_record) Illegal INP field");
+                      "devWfF3RP61 (init_record) Illegal INP field");
     pwf->pact = 1;
     return(S_db_badField);
   }
@@ -119,14 +127,14 @@ static long init_record(waveformRecord *pwf)
   if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
     if (sscanf(buf, "CPU%d,R%d", &cpuno, &start) < 2) {
       if (sscanf(buf, "%c%d", &device, &start) < 2) {
-	errlogPrintf("devWfF3RP61: can't get I/O address for %s\n", pwf->name);
-	pwf->pact = 1;
-	return (-1);
+        errlogPrintf("devWfF3RP61: can't get I/O address for %s\n", pwf->name);
+        pwf->pact = 1;
+        return (-1);
       }
       else if (device != 'W' && device != 'R') {
-	errlogPrintf("devWfF3RP61: unsupported device \'%c\' for %s\n", device,
-		     pwf->name);
-	pwf->pact = 1;
+        errlogPrintf("devWfF3RP61: unsupported device \'%c\' for %s\n", device,
+                     pwf->name);
+        pwf->pact = 1;
       }
     }
     else {
@@ -145,8 +153,8 @@ static long init_record(waveformRecord *pwf)
   }
 
   dpvt = (F3RP61_WF_DPVT *) callocMustSucceed(1,
-					      sizeof(F3RP61_WF_DPVT),
-					      "calloc failed");
+                                              sizeof(F3RP61_WF_DPVT),
+                                              "calloc failed");
   dpvt->device = device;
 
   pdata = callocMustSucceed(pwf->nelm, dbValueSize(pwf->ftvl), "calloc failed");
@@ -257,31 +265,31 @@ static long read_wf(waveformRecord *pwf)
     case DBF_DOUBLE:
       p1 = (unsigned char *) pwf->bptr;
       for (i = 0; i < pwf->nelm; i++) {
-	*p1++ = (pwdata[3 + (4 * i)] >> 8) & 0xff; *p1++ = pwdata[3 + (4 * i)] & 0xff;
-	*p1++ = (pwdata[2 + (4 * i)] >> 8) & 0xff; *p1++ = pwdata[2 + (4 * i)] & 0xff;
-	*p1++ = (pwdata[1 + (4 * i)] >> 8) & 0xff; *p1++ = pwdata[1 + (4 * i)] & 0xff;
-	*p1++ = (pwdata[0 + (4 * i)] >> 8) & 0xff; *p1++ = pwdata[0 + (4 * i)] & 0xff;
+        *p1++ = (pwdata[3 + (4 * i)] >> 8) & 0xff; *p1++ = pwdata[3 + (4 * i)] & 0xff;
+        *p1++ = (pwdata[2 + (4 * i)] >> 8) & 0xff; *p1++ = pwdata[2 + (4 * i)] & 0xff;
+        *p1++ = (pwdata[1 + (4 * i)] >> 8) & 0xff; *p1++ = pwdata[1 + (4 * i)] & 0xff;
+        *p1++ = (pwdata[0 + (4 * i)] >> 8) & 0xff; *p1++ = pwdata[0 + (4 * i)] & 0xff;
       }
       break;
     case DBF_FLOAT:
       p1 = (unsigned char *) pwf->bptr;
       for (i = 0; i < pwf->nelm; i++) {
-	*p1++ = (pwdata[1 + (2 * i)] >> 8) & 0xff; *p1++ = pwdata[1 + (2 * i)] & 0xff;
-	*p1++ = (pwdata[0 + (2 * i)] >> 8) & 0xff; *p1++ = pwdata[0 + (2 * i)] & 0xff;
+        *p1++ = (pwdata[1 + (2 * i)] >> 8) & 0xff; *p1++ = pwdata[1 + (2 * i)] & 0xff;
+        *p1++ = (pwdata[0 + (2 * i)] >> 8) & 0xff; *p1++ = pwdata[0 + (2 * i)] & 0xff;
       }
       break;
     case DBF_ULONG:
     case DBF_LONG:
       p2 = (unsigned long *) pwf->bptr;
       for (i = 0; i < pwf->nelm; i++) {
-	p2[i] = ((pwdata[1 + (2 *i)] << 16) & 0xffff0000)  |  (pwdata[0 + (2 * i)] & 0x0000ffff);
+        p2[i] = ((pwdata[1 + (2 *i)] << 16) & 0xffff0000)  |  (pwdata[0 + (2 * i)] & 0x0000ffff);
       }
       break;
     case DBF_USHORT:
     case DBF_SHORT:
       p3 = (unsigned short *) pwf->bptr;
       for (i = 0; i < pwf->nelm; i++) {
-	p3[i] = pwdata[0 + (1 * i)];
+        p3[i] = pwdata[0 + (1 * i)];
       }
       break;
     default:
@@ -295,14 +303,14 @@ static long read_wf(waveformRecord *pwf)
     case DBF_ULONG:
       p2 = (unsigned long *) pwf->bptr;
       for (i = 0; i < pwf->nelm; i++) {
-	p2[i] = pldata[i];
+        p2[i] = pldata[i];
       }
       break;
     case DBF_USHORT:
     case DBF_SHORT:
       p3 = (unsigned short *) pwf->bptr;
       for (i = 0; i < pwf->nelm; i++) {
-	p3[i] = pwdata[i];
+        p3[i] = pwdata[i];
       }
       break;
     default:

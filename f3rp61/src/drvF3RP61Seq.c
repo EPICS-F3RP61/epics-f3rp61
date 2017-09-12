@@ -3,11 +3,11 @@
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
-* in file LICENSE that is included with this distribution. 
+* in file LICENSE that is included with this distribution.
 **************************************************************************
 * drvF3RP61Seq.c - Driver Support Routines for F3RP61 Sequence device
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 09-02-08
 */
 
@@ -20,7 +20,15 @@
 #include <sys/stat.h>
 #include <sys/msg.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3mcmd.h>
+#if defined(_arm_)
+#  include <m3cpu.h>
+#  define DEVFILE "/dev/m3cpu"
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3mcmd.h>
+#  define DEVFILE "/dev/m3mcmd"
+#else
+#  error
+#endif
 
 #include <dbCommon.h>
 #include <dbScan.h>
@@ -43,15 +51,15 @@ static long init();
 
 struct
 {
-  long      number;
-  DRVSUPFUN report;
-  DRVSUPFUN init;
-} drvF3RP61Seq =
-{
+  long       number;
+  DRVSUPFUN  report;
+  DRVSUPFUN  init;
+} drvF3RP61Seq = {
   2L,
   report,
   init,
 };
+
 epicsExportAddress(drvet,drvF3RP61Seq);
 
 int f3rp61Seq_fd;
@@ -85,9 +93,9 @@ static long init(void)
   if (init_flag) return (0);
   init_flag = 1;
 
-  f3rp61Seq_fd = open("/dev/m3mcmd", O_RDWR);
+  f3rp61Seq_fd = open(DEVFILE, O_RDWR);
   if (f3rp61Seq_fd < 0) {
-    errlogPrintf("drvF3RP61Seq: can't open /dev/m3mcmd\n");
+    errlogPrintf("drvF3RP61Seq: can't open " DEVFILE "\n");
     return (-1);
   }
 
@@ -104,10 +112,10 @@ static long init(void)
   ellInit(&f3rp61Seq_queueList);
 
   if ((epicsThreadCreate("f3rp61Seq_mcmd",
-			 epicsThreadPriorityHigh,
-			 epicsThreadGetStackSize(epicsThreadStackSmall),
-			 (EPICSTHREADFUNC) mcmd_thread,
-			 (void *) NULL)) == (epicsThreadId) 0) {
+                         epicsThreadPriorityHigh,
+                         epicsThreadGetStackSize(epicsThreadStackSmall),
+                         (EPICSTHREADFUNC) mcmd_thread,
+                         (void *) NULL)) == (epicsThreadId) 0) {
     errlogPrintf("drvF3RP61Seq: epicsThreadCreate failed\n");
     return (-1);
   }
@@ -137,13 +145,13 @@ static void mcmd_thread(void *arg)
       if (debug_flag) dump_mcmd_request(pmcmdStruct);
 
       if (ioctl(f3rp61Seq_fd, MCMD_ACCS, pmcmdStruct) < 0) {
-	errlogPrintf("drvF3RP61Seq: ioctl failed [%d]\n", errno);
-	dpvt->ret = -1;
+        errlogPrintf("drvF3RP61Seq: ioctl failed [%d]\n", errno);
+        dpvt->ret = -1;
       }
 
       if (pmcmdStruct->mcmdResponse.comId != request_id) {
-	errlogPrintf("drvF3RP61Seq: comId does not match\n");
-	dpvt->ret = -1;
+        errlogPrintf("drvF3RP61Seq: comId does not match\n");
+        dpvt->ret = -1;
       }
 
       pcallback = &dpvt->callback;
@@ -205,12 +213,10 @@ static void dump_mcmd_request(MCMD_STRUCT *pmcmdStruct)
 }
 
 
-
 void showreq(const iocshArgBuf *args)
 {
   debug_flag = 1;
 }
-
 
 
 void stopshow(const iocshArgBuf *args)

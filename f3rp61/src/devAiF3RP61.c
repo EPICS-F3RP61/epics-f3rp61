@@ -7,7 +7,7 @@
 **************************************************************************
 * devAiF3RP61.c - Device Support Routines for F3RP61 Analog Input
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 6-30-08
 */
 #include <stdlib.h>
@@ -31,8 +31,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3lib.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3lib.h>
+#else
+#  error
+#endif
 #include "drvF3RP61.h"
 
 extern int f3rp61_fd;
@@ -42,22 +49,23 @@ static long init_record();
 static long read_ai();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	read_ai;
-	DEVSUPFUN	special_linconv;
-}devAiF3RP61={
-	6,
-	NULL,
-	NULL,
-	init_record,
-	f3rp61GetIoIntInfo,
-	read_ai,
-	NULL
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  read_ai;
+  DEVSUPFUN  special_linconv;
+} devAiF3RP61 = {
+  6,
+  NULL,
+  NULL,
+  init_record,
+  f3rp61GetIoIntInfo,
+  read_ai,
+  NULL
 };
+
 epicsExportAddress(dset,devAiF3RP61);
 
 extern F3RP61_IO_INTR f3rp61_io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
@@ -90,7 +98,7 @@ static long init_record(aiRecord *pai)
 
   if (pai->inp.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)pai,
-		      "devAiF3RP61 (init_record) Illegal INP field");
+                      "devAiF3RP61 (init_record) Illegal INP field");
     pai->pact = 1;
     return(S_db_badField);
   }
@@ -129,14 +137,14 @@ static long init_record(aiRecord *pai)
   if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
     if (sscanf(buf, "CPU%d,R%d", &cpuno, &start) < 2) {
       if (sscanf(buf, "%c%d", &device, &start) < 2) {
-	errlogPrintf("devAiF3RP61: can't get I/O address for %s\n", pai->name);
-	pai->pact = 1;
-	return (-1);
+        errlogPrintf("devAiF3RP61: can't get I/O address for %s\n", pai->name);
+        pai->pact = 1;
+        return (-1);
       }
       else if (device != 'W' && device != 'R') {
-	errlogPrintf("devAiF3RP61: unsupported device \'%c\' for %s\n", device,
-		     pai->name);
-	pai->pact = 1;
+        errlogPrintf("devAiF3RP61: unsupported device \'%c\' for %s\n", device,
+                     pai->name);
+        pai->pact = 1;
       }
     }
     else {
@@ -144,7 +152,7 @@ static long init_record(aiRecord *pai)
     }
   }
   if (!(device == 'X' || device == 'Y' || device == 'A' ||device == 'r' ||
-	device == 'W' || device == 'R')) {
+        device == 'W' || device == 'R')) {
     errlogPrintf("devAiF3RP61: illegal I/O address for %s\n", pai->name);
     pai->pact = 1;
     return (-1);
@@ -156,8 +164,8 @@ static long init_record(aiRecord *pai)
   }
 
   dpvt = (F3RP61_AI_DPVT *) callocMustSucceed(1,
-					      sizeof(F3RP61_AI_DPVT),
-					      "calloc failed");
+                                              sizeof(F3RP61_AI_DPVT),
+                                              "calloc failed");
   dpvt->device = device;
   dpvt->option = option;
   dpvt->uword = uword;
@@ -177,7 +185,7 @@ static long init_record(aiRecord *pai)
       break;
     case 'F':
     case 'L':
-      pacom->count = 2;
+        pacom->count = 2;
       break;
     default:
       pacom->count = 1;
@@ -277,26 +285,26 @@ static long read_ai(aiRecord *pai)
       pai->rval = (long) wdata[0];
     } else {
       switch (option) {
-	float fval;
-	unsigned char *p;
+        float fval;
+        unsigned char *p;
       case 'D':
-	p = (unsigned char *) &pai->val;
-	*p++ = (wdata[3] >> 8) & 0xff; *p++ = wdata[3] & 0xff;
-	*p++ = (wdata[2] >> 8) & 0xff; *p++ = wdata[2] & 0xff;
-	*p++ = (wdata[1] >> 8) & 0xff; *p++ = wdata[1] & 0xff;
-	*p++ = (wdata[0] >> 8) & 0xff; *p++ = wdata[0] & 0xff;
-	return(2);
+        p = (unsigned char *) &pai->val;
+        *p++ = (wdata[3] >> 8) & 0xff; *p++ = wdata[3] & 0xff;
+        *p++ = (wdata[2] >> 8) & 0xff; *p++ = wdata[2] & 0xff;
+        *p++ = (wdata[1] >> 8) & 0xff; *p++ = wdata[1] & 0xff;
+        *p++ = (wdata[0] >> 8) & 0xff; *p++ = wdata[0] & 0xff;
+        return(2);
       case 'F':
-	p = (unsigned char *) &fval;
-	*p++ = (wdata[1] >> 8) & 0xff; *p++ = wdata[1] & 0xff;
-	*p++ = (wdata[0] >> 8) & 0xff; *p++ = wdata[0] & 0xff;
-	pai->val = (double) fval;
-	return(2);
+        p = (unsigned char *) &fval;
+        *p++ = (wdata[1] >> 8) & 0xff; *p++ = wdata[1] & 0xff;
+        *p++ = (wdata[0] >> 8) & 0xff; *p++ = wdata[0] & 0xff;
+        pai->val = (double) fval;
+        return(2);
       case 'L':
-	pai->rval = (long) ((wdata[1] << 16) & 0xffff0000  |  wdata[0] & 0x0000ffff);
-	break;
+        pai->rval = (long) (((wdata[1] << 16) & 0xffff0000) | (wdata[0] & 0x0000ffff));
+        break;
       default:
-	pai->rval = (long) ((signed short) wdata[0]);
+        pai->rval = (long) ((signed short) wdata[0]);
       }
     }
     break;
@@ -307,9 +315,9 @@ static long read_ai(aiRecord *pai)
       break;
     default:
       if (uword) {
-	pai->rval = (long) wdata[0];
+        pai->rval = (long) wdata[0];
       } else {
-	pai->rval = (long) ((signed short) wdata[0]);
+        pai->rval = (long) ((signed short) wdata[0]);
       }
     }
   }

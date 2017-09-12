@@ -7,7 +7,7 @@
 **************************************************************************
 * devAiF3RP61Seq.c - Device Support Routines for  F3RP61 Analog Input
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 31-03-09
 */
 #include <stdlib.h>
@@ -32,8 +32,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3mcmd.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3mcmd.h>
+#else
+#  error
+#endif
 #include "drvF3RP61Seq.h"
 
 extern int f3rp61_fd;
@@ -43,22 +50,23 @@ static long init_record();
 static long read_ai();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	read_ai;
-	DEVSUPFUN	special_linconv;
-}devAiF3RP61Seq={
-	6,
-	NULL,
-	NULL,
-	init_record,
-	NULL,
-	read_ai,
-	NULL
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  read_ai;
+  DEVSUPFUN  special_linconv;
+} devAiF3RP61Seq = {
+  6,
+  NULL,
+  NULL,
+  init_record,
+  NULL,
+  read_ai,
+  NULL
 };
+
 epicsExportAddress(dset,devAiF3RP61Seq);
 
 
@@ -77,7 +85,7 @@ static long init_record(aiRecord *pai)
 
   if (pai->inp.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)pai,
-		      "devAiF3RP61Seq (init_record) Illegal INP field");
+                      "devAiF3RP61Seq (init_record) Illegal INP field");
     pai->pact = 1;
     return(S_db_badField);
   }
@@ -93,8 +101,8 @@ static long init_record(aiRecord *pai)
   }
 
   dpvt = (F3RP61_SEQ_DPVT *) callocMustSucceed(1,
-					      sizeof(F3RP61_SEQ_DPVT),
-					      "calloc failed");
+                                               sizeof(F3RP61_SEQ_DPVT),
+                                               "calloc failed");
 
   if (ioctl(f3rp61_fd, M3IO_GET_MYCPUNO, &srcSlot) < 0) {
     errlogPrintf("devAiF3RP61Seq: ioctl failed [%d]\n", errno);
@@ -114,18 +122,18 @@ static long init_record(aiRecord *pai)
   pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
   pM3ReadSeqdev->accessType = 2;
   switch (device)
-    {
-    case 'D':
-      pM3ReadSeqdev->devType = 0x04;
-      break;
-    case 'B':
-      pM3ReadSeqdev->devType = 0x02;
-      break;
-    default:
-      errlogPrintf("devAiF3RP61Seq: unsupported device in %s\n", pai->name);
-      pai->pact = 1;
-      return (-1);
-    }
+  {
+  case 'D':
+    pM3ReadSeqdev->devType = 0x04;
+    break;
+  case 'B':
+    pM3ReadSeqdev->devType = 0x02;
+    break;
+  default:
+    errlogPrintf("devAiF3RP61Seq: unsupported device in %s\n", pai->name);
+    pai->pact = 1;
+    return (-1);
+  }
   pM3ReadSeqdev->dataNum = 1;
   pM3ReadSeqdev->topDevNo = top;
   callbackSetUser(pai, &dpvt->callback);
@@ -153,7 +161,7 @@ static long read_ai(aiRecord *pai)
 
     if (pmcmdResponse->errorCode) {
       errlogPrintf("devAiF3RP61Seq: errorCode %d returned for %s\n",
-		   pmcmdResponse->errorCode, pai->name);
+                   pmcmdResponse->errorCode, pai->name);
       return (-1);
     }
 

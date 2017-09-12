@@ -7,7 +7,7 @@
 **************************************************************************
 * devLiF3RP61Seq.c - Device Support Routines for  F3RP61 Long Input
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 31-03-09
 *
 *      Modified: Gregor Kostevc (Cosylab)
@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <math.h>
 
 #include "alarm.h"
 #include "dbDefs.h"
@@ -35,8 +36,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3mcmd.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3mcmd.h>
+#else
+#  error
+#endif
 #include "drvF3RP61Seq.h"
 
 extern int f3rp61_fd;
@@ -46,20 +54,21 @@ static long init_record();
 static long read_longin();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	read_longin;
-}devLiF3RP61Seq={
-	5,
-	NULL,
-	NULL,
-	init_record,
-	NULL,
-	read_longin
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  read_longin;
+} devLiF3RP61Seq = {
+  5,
+  NULL,
+  NULL,
+  init_record,
+  NULL,
+  read_longin
 };
+
 epicsExportAddress(dset,devLiF3RP61Seq);
 
 
@@ -81,7 +90,7 @@ static long init_record(longinRecord *plongin)
 
   if (plongin->inp.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)plongin,
-		      "devLiF3RP61Seq (init_record) Illegal INP field");
+                      "devLiF3RP61Seq (init_record) Illegal INP field");
     plongin->pact = 1;
     return(S_db_badField);
   }
@@ -92,31 +101,31 @@ static long init_record(longinRecord *plongin)
   buf[size - 1] = '\0';
 
   /* Parse option*/
-    pC = strchr(buf, '&');
-    if (pC) {
-      *pC++ = '\0';
-      if (sscanf(pC, "%c", &option) < 1) {
-        errlogPrintf("devLiF3RP61Seq: can't get option for %s\n", plongin->name);
-        plongin->pact = 1;
-        return (-1);
-      }
-      if (option == 'B') {
-            BCD = 1; /* flag is used for the possible double option case */
-      }
+  pC = strchr(buf, '&');
+  if (pC) {
+    *pC++ = '\0';
+    if (sscanf(pC, "%c", &option) < 1) {
+      errlogPrintf("devLiF3RP61Seq: can't get option for %s\n", plongin->name);
+      plongin->pact = 1;
+      return (-1);
     }
+    if (option == 'B') {
+      BCD = 1; /* flag is used for the possible double option case */
+    }
+  }
 
   /* Parse slot, device and register number*/
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
     errlogPrintf("devLiF3RP61Seq: can't get device addresses for %s\n",
-		 plongin->name);
+                 plongin->name);
     plongin->pact = 1;
     return (-1);
   }
 
   /* Allocate private data storage area*/
   dpvt = (F3RP61_SEQ_DPVT *) callocMustSucceed(1,
-					      sizeof(F3RP61_SEQ_DPVT),
-					      "calloc failed");
+                                               sizeof(F3RP61_SEQ_DPVT),
+                                               "calloc failed");
 
   /* Read the slot number of CPU module*/
   if (ioctl(f3rp61_fd, M3IO_GET_MYCPUNO, &srcSlot) < 0) {
@@ -139,18 +148,18 @@ static long init_record(longinRecord *plongin)
   pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
   pM3ReadSeqdev->accessType = 2;
   switch (device)
-    {
-    case 'D':
-      pM3ReadSeqdev->devType = 0x04;
-      break;
-    case 'B':
-      pM3ReadSeqdev->devType = 0x02;
-      break;
-    default:
-      errlogPrintf("devLiF3RP61Seq: unsupported device in %s\n", plongin->name);
-      plongin->pact = 1;
-      return (-1);
-    }
+  {
+  case 'D':
+    pM3ReadSeqdev->devType = 0x04;
+    break;
+  case 'B':
+    pM3ReadSeqdev->devType = 0x02;
+    break;
+  default:
+    errlogPrintf("devLiF3RP61Seq: unsupported device in %s\n", plongin->name);
+    plongin->pact = 1;
+    return (-1);
+  }
   pM3ReadSeqdev->dataNum = 1;
   pM3ReadSeqdev->topDevNo = top;
   callbackSetUser(plongin, &dpvt->callback);
@@ -167,11 +176,11 @@ static long read_longin(longinRecord *plongin)
   F3RP61_SEQ_DPVT *dpvt = (F3RP61_SEQ_DPVT *) plongin->dpvt;
   MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
   MCMD_RESPONSE *pmcmdResponse;
-  unsigned long dataFromBCD = 0;	/* For storing returned value in binary-coded-decimal format*/
-  unsigned short i, data_temp;	/* Used when calculating BCD value*/
+  unsigned long dataFromBCD = 0;  /* For storing returned value in binary-coded-decimal format*/
+  unsigned short i, data_temp;  /* Used when calculating BCD value*/
   short BCD = dpvt->BCD;
 
-  if (plongin->pact) {		/* If pact=1 this is a completion request.*/
+  if (plongin->pact) {  /* If pact=1 this is a completion request.*/
     pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
     if (dpvt->ret < 0) {
@@ -181,41 +190,41 @@ static long read_longin(longinRecord *plongin)
 
     if (pmcmdResponse->errorCode) {
       errlogPrintf("devLiF3RP61Seq: errorCode %d returned for %s\n",
-		   pmcmdResponse->errorCode, plongin->name);
+                   pmcmdResponse->errorCode, plongin->name);
       return (-1);
     }
 
     /* Decode BCD to decimal*/
-    if(BCD) {
-    	i = 0;
-   		data_temp = pmcmdResponse->dataBuff.wData[0];
-   		while(i < 4) {	/* max is 9999 */
-   			if (((unsigned short) (0x0000000f & data_temp)) > 9) {
-   				dataFromBCD += 9 * pow(10, i);
-   				recGblSetSevr(plongin,HIGH_ALARM,INVALID_ALARM);
-   			}
-   			else{
-   				dataFromBCD += (unsigned short) ((0x0000000f & data_temp) * pow(10, i));
-   			}
-   			data_temp = data_temp >> 4;
-   			i++;
-   		}
-   		plongin->val = dataFromBCD;
+    if (BCD) {
+      i = 0;
+      data_temp = pmcmdResponse->dataBuff.wData[0];
+      while (i < 4) {  /* max is 9999 */
+        if (((unsigned short) (0x0000000f & data_temp)) > 9) {
+          dataFromBCD += 9 * pow(10, i);
+          recGblSetSevr(plongin,HIGH_ALARM,INVALID_ALARM);
+        }
+        else {
+          dataFromBCD += (unsigned short) ((0x0000000f & data_temp) * pow(10, i));
+        }
+        data_temp = data_temp >> 4;
+        i++;
+      }
+      plongin->val = dataFromBCD;
     }
     else {
-    	plongin->val = (unsigned long) pmcmdResponse->dataBuff.wData[0];
+      plongin->val = (unsigned long) pmcmdResponse->dataBuff.wData[0];
     }
 
     plongin->udf=FALSE;
   }
-  else {		/* Arrange callbacks and set pact=1 to let know record support we're waiting for completion*/
-      if (f3rp61Seq_queueRequest(dpvt) < 0) {
+  else {  /* Arrange callbacks and set pact=1 to let know record support we're waiting for completion*/
+    if (f3rp61Seq_queueRequest(dpvt) < 0) {
       errlogPrintf("devLiF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n",
-		   plongin->name);
+                   plongin->name);
       return (-1);
     }
 
-    plongin->pact = 1;	/* Setting pact to 1 to return to processing*/
+    plongin->pact = 1;  /* Setting pact to 1 to return to processing*/
   }
 
   return(0);

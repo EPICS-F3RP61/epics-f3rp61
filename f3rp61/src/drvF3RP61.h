@@ -12,7 +12,13 @@ typedef struct {
 
 typedef struct {
   long mtype;
+#if defined(_arm_)
+  M3IO_MSG_IO mtext;
+#elif defined(_ppc_)
   M3IO_IO_EVENT mtext;
+#else
+#  error
+#endif
 } MSG_BUF;
 
 

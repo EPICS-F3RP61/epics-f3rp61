@@ -3,11 +3,11 @@
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
-* in file LICENSE that is included with this distribution. 
+* in file LICENSE that is included with this distribution.
 **************************************************************************
 * devLoF3RP61Seq.c - Device Support Routines for  F3RP61 Long Output
 *
-*      Author: Jun-ichi Odagiri 
+*      Author: Jun-ichi Odagiri
 *      Date: 31-03-09
 *
 *      Modified: Gregor Kostevc (Cosylab)
@@ -36,8 +36,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3mcmd.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3mcmd.h>
+#else
+#  error
+#endif
 #include "drvF3RP61Seq.h"
 
 extern int f3rp61_fd;
@@ -47,20 +54,21 @@ static long init_record();
 static long write_longout();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	write_longout;
-}devLoF3RP61Seq={
-	5,
-	NULL,
-	NULL,
-	init_record,
-	NULL,
-	write_longout
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  write_longout;
+} devLoF3RP61Seq = {
+  5,
+  NULL,
+  NULL,
+  init_record,
+  NULL,
+  write_longout
 };
+
 epicsExportAddress(dset,devLoF3RP61Seq);
 
 
@@ -82,7 +90,7 @@ static long init_record(longoutRecord *plongout)
 
   if (plongout->out.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)plongout,
-		      "devLoF3RP61Seq (init_record) Illegal OUT field");
+                      "devLoF3RP61Seq (init_record) Illegal OUT field");
     plongout->pact = 1;
     return(S_db_badField);
   }
@@ -99,23 +107,23 @@ static long init_record(longoutRecord *plongout)
       errlogPrintf("devLoF3RP61Seq: can't get option for %s\n", plongout->name);
       plongout->pact = 1;
       return (-1);
-      }
+    }
     if (option == 'B') {
-       BCD = 1; /* flag is used for the possible double option case */
+      BCD = 1; /* flag is used for the possible double option case */
     }
   }
 
   /* Parse slot, device and register number*/
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
     errlogPrintf("devLoF3RP61Seq: can't get device addresses for %s\n",
-		 plongout->name);
+                 plongout->name);
     plongout->pact = 1;
     return (-1);
   }
 
   dpvt = (F3RP61_SEQ_DPVT *) callocMustSucceed(1,
-					      sizeof(F3RP61_SEQ_DPVT),
-					      "calloc failed");
+                                               sizeof(F3RP61_SEQ_DPVT),
+                                               "calloc failed");
 
   if (ioctl(f3rp61_fd, M3IO_GET_MYCPUNO, &srcSlot) < 0) {
     errlogPrintf("devLoF3RP61Seq: ioctl failed [%d]\n", errno);
@@ -137,18 +145,18 @@ static long init_record(longoutRecord *plongout)
   pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
   pM3WriteSeqdev->accessType = 2;
   switch (device)
-    {
-    case 'D':
-      pM3WriteSeqdev->devType = 0x04;
-      break;
-    case 'B':
-      pM3WriteSeqdev->devType = 0x02;
-      break;
-    default:
-      errlogPrintf("devLoF3RP61Seq: unsupported device in %s\n", plongout->name);
-      plongout->pact = 1;
-      return (-1);
-    }
+  {
+  case 'D':
+    pM3WriteSeqdev->devType = 0x04;
+    break;
+  case 'B':
+    pM3WriteSeqdev->devType = 0x02;
+    break;
+  default:
+    errlogPrintf("devLoF3RP61Seq: unsupported device in %s\n", plongout->name);
+    plongout->pact = 1;
+    return (-1);
+  }
   pM3WriteSeqdev->dataNum = 1;
   pM3WriteSeqdev->topDevNo = top;
   callbackSetUser(plongout, &dpvt->callback);
@@ -167,8 +175,8 @@ static long write_longout(longoutRecord *plongout)
   MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
   MCMD_RESPONSE *pmcmdResponse;
   M3_WRITE_SEQDEV *pM3WriteSeqdev;
-  unsigned short i, dataBCD = 0;	/* For storing the value decoded from binary-coded-decimal format*/
-  long data_temp;			/* Used when decoding from BCD value*/
+  unsigned short i, dataBCD = 0;  /* For storing the value decoded from binary-coded-decimal format*/
+  long data_temp;  /* Used when decoding from BCD value*/
   short BCD = dpvt->BCD;
 
   if (plongout->pact) {
@@ -181,7 +189,7 @@ static long write_longout(longoutRecord *plongout)
 
     if (pmcmdResponse->errorCode) {
       errlogPrintf("devLoF3RP61Seq: errorCode %d returned for %s\n",
-		   pmcmdResponse->errorCode, plongout->name);
+                   pmcmdResponse->errorCode, plongout->name);
       return (-1);
     }
 
@@ -189,38 +197,38 @@ static long write_longout(longoutRecord *plongout)
   }
 
   else {
-	  /* Get BCD format in case of 'B' option*/
-	  if(BCD) {
-		  i = 0;
-		  data_temp = (long) plongout->val;
-		  /* Check data range */
-    	  if (data_temp > 9999) {
-    		  data_temp = 9999;
-    		  recGblSetSevr(plongout,HW_LIMIT_ALARM,INVALID_ALARM);
-    	  }
-    	  else if (data_temp < 0) {
-    		  data_temp = 0;
-    		  recGblSetSevr(plongout,HW_LIMIT_ALARM,INVALID_ALARM);
-    	  }
+    /* Get BCD format in case of 'B' option*/
+    if (BCD) {
+      i = 0;
+      data_temp = (long) plongout->val;
+      /* Check data range */
+      if (data_temp > 9999) {
+        data_temp = 9999;
+        recGblSetSevr(plongout,HW_LIMIT_ALARM,INVALID_ALARM);
+      }
+      else if (data_temp < 0) {
+        data_temp = 0;
+        recGblSetSevr(plongout,HW_LIMIT_ALARM,INVALID_ALARM);
+      }
 
-		  while(data_temp > 0) {
-		   	  dataBCD = dataBCD | (((unsigned long) (data_temp % 10)) << (i*4));
-		      data_temp /= 10;
-		      i++;
-		  }
-	  }
+      while (data_temp > 0) {
+        dataBCD = dataBCD | (((unsigned long) (data_temp % 10)) << (i*4));
+        data_temp /= 10;
+        i++;
+      }
+    }
 
     pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-    if(BCD) {
-    	pM3WriteSeqdev->dataBuff.wData[0] = dataBCD;
+    if (BCD) {
+      pM3WriteSeqdev->dataBuff.wData[0] = dataBCD;
     }
     else {
-    	pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) plongout->val;
+      pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) plongout->val;
     }
 
     if (f3rp61Seq_queueRequest(dpvt) < 0) {
       errlogPrintf("devLoF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n",
-		   plongout->name);
+                   plongout->name);
       return (-1);
     }
 

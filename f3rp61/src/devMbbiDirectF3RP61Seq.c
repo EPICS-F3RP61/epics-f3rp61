@@ -33,8 +33,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3mcmd.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3mcmd.h>
+#else
+#  error
+#endif
 #include "drvF3RP61Seq.h"
 
 extern int f3rp61_fd;
@@ -44,20 +51,21 @@ static long init_record();
 static long read_mbbiDirect();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	read_mbbiDirect;
-}devMbbiDirectF3RP61Seq={
-	5,
-	NULL,
-	NULL,
-	init_record,
-	NULL,
-	read_mbbiDirect
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  read_mbbiDirect;
+} devMbbiDirectF3RP61Seq = {
+  5,
+  NULL,
+  NULL,
+  init_record,
+  NULL,
+  read_mbbiDirect
 };
+
 epicsExportAddress(dset,devMbbiDirectF3RP61Seq);
 
 
@@ -76,7 +84,7 @@ static long init_record(mbbiDirectRecord *pmbbiDirect)
 
   if (pmbbiDirect->inp.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)pmbbiDirect,
-		      "devMbbiDirectF3RP61Seq (init_record) Illegal INP field");
+                      "devMbbiDirectF3RP61Seq (init_record) Illegal INP field");
     pmbbiDirect->pact = 1;
     return(S_db_badField);
   }
@@ -87,14 +95,14 @@ static long init_record(mbbiDirectRecord *pmbbiDirect)
 
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
     errlogPrintf("devMbbiDirectF3RP61Seq: can't get device addresses for %s\n",
-		 pmbbiDirect->name);
+                 pmbbiDirect->name);
     pmbbiDirect->pact = 1;
     return (-1);
   }
 
   dpvt = (F3RP61_SEQ_DPVT *) callocMustSucceed(1,
-					      sizeof(F3RP61_SEQ_DPVT),
-					      "calloc failed");
+                                               sizeof(F3RP61_SEQ_DPVT),
+                                               "calloc failed");
 
   if (ioctl(f3rp61_fd, M3IO_GET_MYCPUNO, &srcSlot) < 0) {
     errlogPrintf("devMbbiDirectF3RP61Seq: ioctl failed [%d]\n", errno);
@@ -114,19 +122,19 @@ static long init_record(mbbiDirectRecord *pmbbiDirect)
   pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
   pM3ReadSeqdev->accessType = 2;
   switch (device)
-    {
-    case 'D':
-      pM3ReadSeqdev->devType = 0x04;
-      break;
-    case 'B':
-      pM3ReadSeqdev->devType = 0x02;
-      break;
-    default:
-      errlogPrintf("devMbbiDirectF3RP61Seq: unsupported device in %s\n",
-		   pmbbiDirect->name);
-      pmbbiDirect->pact = 1;
-      return (-1);
-    }
+  {
+  case 'D':
+    pM3ReadSeqdev->devType = 0x04;
+    break;
+  case 'B':
+    pM3ReadSeqdev->devType = 0x02;
+    break;
+  default:
+    errlogPrintf("devMbbiDirectF3RP61Seq: unsupported device in %s\n",
+                 pmbbiDirect->name);
+    pmbbiDirect->pact = 1;
+    return (-1);
+  }
   pM3ReadSeqdev->dataNum = 1;
   pM3ReadSeqdev->topDevNo = top;
   callbackSetUser(pmbbiDirect, &dpvt->callback);
@@ -149,13 +157,13 @@ static long read_mbbiDirect(mbbiDirectRecord *pmbbiDirect)
 
     if (dpvt->ret < 0) {
       errlogPrintf("devMbbiDirectF3RP61Seq: read_mbbiDirect failed for %s\n",
-		   pmbbiDirect->name);
+                   pmbbiDirect->name);
       return (-1);
     }
 
     if (pmcmdResponse->errorCode) {
       errlogPrintf("devMbbiDirectF3RP61Seq: errorCode %d returned for %s\n",
-		   pmcmdResponse->errorCode, pmbbiDirect->name);
+                   pmcmdResponse->errorCode, pmbbiDirect->name);
       return (-1);
     }
 
@@ -166,7 +174,7 @@ static long read_mbbiDirect(mbbiDirectRecord *pmbbiDirect)
   else {
     if (f3rp61Seq_queueRequest(dpvt) < 0) {
       errlogPrintf("devMbbiDirectF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n",
-		   pmbbiDirect->name);
+                   pmbbiDirect->name);
       return (-1);
     }
 

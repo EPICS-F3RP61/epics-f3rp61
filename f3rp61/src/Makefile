@@ -8,8 +8,11 @@ include $(TOP)/configure/CONFIG
 #==================================================
 # build a support library
 
-ifeq ($(T_A),linux-f3rp61)
 
+#
+USR_CFLAGS += -Wall
+
+ifneq ($(filter $(T_A), linux-f3rp61 linux-f3rp71),)
 LIBRARY_IOC += f3rp61
 
 # install devXxxSoft.dbd into <top>/dbd

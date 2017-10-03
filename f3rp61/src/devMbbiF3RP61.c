@@ -32,8 +32,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <asm/fam3rtos/m3iodrv.h>
-#include <asm/fam3rtos/m3lib.h>
+#if defined(_arm_)
+#  include <m3io.h>
+#  include <m3lib.h>
+#elif defined(_ppc_)
+#  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3lib.h>
+#else
+#  error
+#endif
 #include "drvF3RP61.h"
 
 extern int f3rp61_fd;
@@ -43,22 +50,23 @@ static long init_record();
 static long read_mbbi();
 
 struct {
-	long		number;
-	DEVSUPFUN	report;
-	DEVSUPFUN	init;
-	DEVSUPFUN	init_record;
-	DEVSUPFUN	get_ioint_info;
-	DEVSUPFUN	read_mbbi;
-	DEVSUPFUN	special_linconv;
-}devMbbiF3RP61={
-	6,
-	NULL,
-	NULL,
-	init_record,
-	f3rp61GetIoIntInfo,
-	read_mbbi,
-	NULL
+  long       number;
+  DEVSUPFUN  report;
+  DEVSUPFUN  init;
+  DEVSUPFUN  init_record;
+  DEVSUPFUN  get_ioint_info;
+  DEVSUPFUN  read_mbbi;
+  DEVSUPFUN  special_linconv;
+} devMbbiF3RP61 = {
+  6,
+  NULL,
+  NULL,
+  init_record,
+  f3rp61GetIoIntInfo,
+  read_mbbi,
+  NULL
 };
+
 epicsExportAddress(dset,devMbbiF3RP61);
 
 extern F3RP61_IO_INTR f3rp61_io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
@@ -89,7 +97,7 @@ static long init_record(mbbiRecord *pmbbi)
   /* Input link type must be INST_IO */
   if (pmbbi->inp.type != INST_IO) {
     recGblRecordError(S_db_badField,(void *)pmbbi,
-		      "devMbbiF3RP61 (init_record) Illegal INP field");
+                      "devMbbiF3RP61 (init_record) Illegal INP field");
     pmbbi->pact = 1;
     return(S_db_badField);
   }
@@ -105,13 +113,13 @@ static long init_record(mbbiRecord *pmbbi)
     *pC++ = '\0';
     if (sscanf(pC, "U%d,S%d,X%d", &unitno, &slotno, &start) < 3) {
       errlogPrintf("devMbbiF3RP61: can't get interrupt source address for %s\n",
-		   pmbbi->name);
+                   pmbbi->name);
       pmbbi->pact = 1;
       return (-1);
     }
     if (f3rp61_register_io_interrupt((dbCommon *) pmbbi, unitno, slotno, start) < 0) {
       errlogPrintf("devMbbiF3RP61: can't register I/O interrupt for %s\n",
-		   pmbbi->name);
+                   pmbbi->name);
       pmbbi->pact = 1;
       return (-1);
     }
@@ -121,15 +129,15 @@ static long init_record(mbbiRecord *pmbbi)
   if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
     if (sscanf(buf, "CPU%d,R%d", &cpuno, &start) < 2) {
       if (sscanf(buf, "%c%d", &device, &start) < 2) {
-	errlogPrintf("devMbbiF3RP61: can't get I/O address for %s\n", pmbbi->name);
-	pmbbi->pact = 1;
-	return (-1);
+        errlogPrintf("devMbbiF3RP61: can't get I/O address for %s\n", pmbbi->name);
+        pmbbi->pact = 1;
+        return (-1);
       }
       else if (device != 'W' && device != 'L' && device != 'R' && device != 'E') {
-	errlogPrintf("devMbbiF3RP61: unsupported device \'%c\' for %s\n", device,
-		     pmbbi->name);
-	pmbbi->pact = 1;
-	return (-1);
+        errlogPrintf("devMbbiF3RP61: unsupported device \'%c\' for %s\n", device,
+                     pmbbi->name);
+        pmbbi->pact = 1;
+        return (-1);
       }
     }
     else {
@@ -139,17 +147,17 @@ static long init_record(mbbiRecord *pmbbi)
 
   /* Check device validity*/
   if (!(device == 'X' || device == 'Y' || device == 'A' || device == 'r' ||
-	device == 'W' || device == 'L' || device == 'M' || device == 'R' ||
-	device == 'E')) {
+        device == 'W' || device == 'L' || device == 'M' || device == 'R' ||
+        device == 'E')) {
     errlogPrintf("devMbbiF3RP61: illegal I/O address for %s\n",
-		 pmbbi->name);
+                 pmbbi->name);
     pmbbi->pact = 1;
     return (-1);
   }
 
   dpvt = (F3RP61_MBBI_DPVT *) callocMustSucceed(1,
-						      sizeof(F3RP61_MBBI_DPVT),
-						      "calloc failed");
+                                                sizeof(F3RP61_MBBI_DPVT),
+                                                "calloc failed");
   dpvt->device = device;
 
   if (device == 'r') {
@@ -224,28 +232,28 @@ static long read_mbbi(mbbiRecord *pmbbi)
   else if (device == 'W') {
     if (readM3LinkRegister(pacom->start, 1, &wdata) < 0) {
       errlogPrintf("devMbbiF3RP61: readM3LinkRegister failed [%d] for %s\n",
-		   errno, pmbbi->name);
+                   errno, pmbbi->name);
       return (-1);
     }
   }
   else if (device == 'R') {
     if (readM3ComRegister(pacom->start, 1, &wdata) < 0) {
       errlogPrintf("devMbbiF3RP61: readM3ComRegister failed [%d] for %s\n",
-		   errno, pmbbi->name);
+                   errno, pmbbi->name);
       return (-1);
     }
   }
   else if (device == 'L') {
     if (readM3LinkRelay(pacom->start, 1, &wdata) < 0) {
       errlogPrintf("devMbbiF3RP61: readM3LinkRelay failed [%d] for %s\n",
-		   errno, pmbbi->name);
+                   errno, pmbbi->name);
       return (-1);
     }
   }
   else {
     if (readM3ComRelay(pacom->start, 1, &wdata) < 0) {
       errlogPrintf("devMbbiF3RP61: readM3ComRelay failed [%d] for %s\n",
-		   errno, pmbbi->name);
+                   errno, pmbbi->name);
       return (-1);
     }
   }

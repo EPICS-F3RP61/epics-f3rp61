@@ -1,8 +1,6 @@
-# CONFIG_SITE.Common.linux-x86
+# CONFIG_SITE.Common.linux-f3rp71
 #
-# Revision-Id: anj@aps.anl.gov-20111207195604-heciohzgvyhhpgrb
-#
-# Site Specific definitions for linux-x86 target
+# Site Specific definitions for linux-f3rp71 target
 # Only the local epics system manager should modify this file
 
 # NOTE for SHARED_LIBRARIES: In most cases if this is set to YES the
@@ -12,7 +10,7 @@
 # a) LD_LIBRARY_PATH must include the full absolute pathname to
 #    $(INSTALL_LOCATION)/lib/$(EPICS_HOST_ARCH) when invoking base
 #    executables.
-# b) Add the runtime path to SHRLIB_DEPLIB_DIRS and PROD_DEPLIB_DIRS, which 
+# b) Add the runtime path to SHRLIB_DEPLIB_DIRS and PROD_DEPLIB_DIRS, which
 #    will add the named directory to the list contained in the executables.
 # c) Add the runtime path to /etc/ld.so.conf and run ldconfig
 #    to inform the system of the shared library location.

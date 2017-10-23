@@ -257,7 +257,7 @@ static long read_longin(longinRecord *plongin)
   case 'W':
   case 'R':
       break;
-  default:  // For 'A'
+  default:  /* For 'A' */
     switch (option) {
     case 'L':
       command = M3IO_READ_REG_L;

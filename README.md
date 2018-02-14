@@ -4,7 +4,7 @@ EPICS Device and Driver Support for Yokogawa's F3RP71 and F3RP61
 This device and driver support covers both F3RP71 (or e-RT3 Plus) and
 F3RP61 (or e-RT3 2.0). They provide an ideal platform of the
 combination of realtime Linux, digital/analog I/O and embedded
-EPICS. Vender-supported Linux with PREEMPT_RT ensures the latency less
+EPICS. Vendor-supported Linux with PREEMPT_RT ensures the latency less
 than 100 microseconds. FAM3 I/O bus access enables the integration of
 various FAM3 I/O modules. Embedded EPICS greatly reduces the system
 development efforts with standard EPICS facilities without the need

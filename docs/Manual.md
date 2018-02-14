@@ -116,8 +116,8 @@ relevant record types.
 | V          | Index registers                        |          | 16-bit     |                                                                               |
 | B          | File registers                         | Internal | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout                           |
 | F          | Cache registers                        |          | 16-bit     |                                                                               |
-| L          | Link relays (for FAlink and FL-net)    |          | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo                                    |
-| W          | Link registers (for FAlink and FL-net) |          | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
+| L          | Link relays (for FA Link and FL-net)    |          | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo                                    |
+| W          | Link registers (for FA Link and FL-net) |          | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
 | M          | Special relays – read-only             |          | 1-bit      |                                                                               |
 | T          | Timers                                 |          |            |                                                                               |
 | C          | Counters                               |          |            |                                                                               |
@@ -495,12 +495,12 @@ X32) of the module raise interrupts upon the falling edge of the input
 signals. For more details, please consult relevant hardware manuals
 from Yokogawa Electric Corporation.
 
-Note that the mbboRecord always outputs a value of zero when the
+Note that the mbbo record always outputs a value of zero when the
 record gets processed by being written a value into its VAL field
 regardless of whatever the value is. The author is not sure if the
-behavior is just a specification or a bug of the mbboRecord. At any
+behavior is just a specification or a bug of the mbbo record. At any
 rate, if you complete setting the conditions on a digital I/O module
-bit by bit by using B0, B1, B2, …, BF fields of an mbboRecord, you
+bit by bit by using B0, B1, B2, …, BF fields of an mbbo record, you
 are free from the problem mentioned above.
 
 # Handling Special Module
@@ -634,7 +634,7 @@ the F3RP71 CPU is rebooted, the F3RP71 CPU broadcasts the fact by
 using a signal on the PLC-bus. The I/O modules that have been accessed
 by the F3RP71 CPU and recognize it as one of their masters reset
 themselves when they detect the signal. It makes the I/O modules
-un-accessible by the sequence CPU and makes the ladder program stop
+inaccessible by the sequence CPU and makes the ladder program stop
 with I/O errors. For this reason, it is highly recommended that you
 make the F3RP71 CPU read the status of interlock indirectly via some
 internal devices ("I", "D", "B") of the sequence CPU or, through the
@@ -689,7 +689,7 @@ shown in the figure below.
 
 ### Communication Based on Shared Memory Using New Interface<a name="UsingNewInterface"></a>
 
-In BSP R2.01 of F3RP61, a set of new APIs are newly supported to
+In BSP R2.01 of F3RP61, a set of new APIs is supported to
 access the shared memory (shared relays and shared registers). The
 device / driver support (Ver. 1.1.0 or later) supports accessing the
 shared memory based on the new APIs. In this case, users need to put
@@ -711,7 +711,7 @@ relays and shared registers are allocated to CPU2(1 + 1), say, an
 F3RP61 CPU in slot 2.
 
 Note that the users themselves are responsible for making the
-configuration done on the F3RP61-side as shown above consistent with
+configuration done on the F3RP71-side as shown above consistent with
 the configuration done on the sequence CPU-side by using WideField3
 (or WideField2).
 
@@ -1189,7 +1189,7 @@ record(ao, "f3rp61_example_47") {
 ```
 
 The following example might seem a little bit strange, but it helps
-you see how quick an F3RP61-baed IOC can respond to interrupts.
+you see how quick an F3RP61-based IOC can respond to interrupts.
 
 ```
 record(bi, "f3rp61_example_48") {
@@ -1359,7 +1359,7 @@ status LEDs (**Run**, **Alarm**, **Error**, **U1**, **U2**, and
 f3rp61SetLED R 1
 ```
 
-To rurn off U2 LED, execute the following command:
+To turn off U2 LED, execute the following command:
 
 ```
 f3rp61SetLED 2 0

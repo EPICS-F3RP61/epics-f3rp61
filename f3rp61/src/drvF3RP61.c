@@ -230,7 +230,7 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
   arg.msgQId = msqid;
 
   if (ioctl(f3rp61_fd, M3IO_ENABLE_INTER, &arg) < 0) {
-    errlogPrintf("devBiF3RP61: ioctl failed [%d]\n", errno);
+    errlogPrintf("drvF3RP61: ioctl failed [%d]\n", errno);
     return (-1);
   }
 

@@ -14,7 +14,10 @@ include $(CONFIG)/os/CONFIG.Common.linuxCommon
 #
 ARCH_CLASS = ppc
 
-ARCH_DEP_CPPFLAGS += -D_ppc_ -I/opt/f3rp6x/ppc_6xx/usr/include -I/opt/f3rp6x/ppc_6xx/usr/include/c++/4.2.2 -I/opt/f3rp6x/ppc_6xx/usr/include/c++/4.2.2/powerpc-linux
+ARCH_DEP_CPPFLAGS += -D_ppc_
+
+ARCH_DEP_CFLAGS += -mcpu=603e
+ARCH_DEP_CXXFLAGS += -mcpu=603e
 
 ifeq ($(BUILD_CLASS),CROSS)
     GNU_TARGET = ppc_6xx

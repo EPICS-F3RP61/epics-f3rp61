@@ -623,7 +623,7 @@ following two points.
 - The sequence CPU must be in the first slot (slot 1) because the CPU
   in the first slot becomes the master of the unit and the master
   resets the whole system upon rebooting.
-- The F3RP71 CPU should NOT have an access, regardless of read or
+- The F3RP71 CPU should NOT have any access, regardless of read or
   write, to the I/O modules that are used with the normal sequence CPU
   for the interlock.
 
@@ -708,7 +708,7 @@ registers, 64 bits of extended shared relays and 32 words of extended
 shared registers are allocated to CPU1(0 + 1), say, a normal sequence
 CPU in slot 1. The next line means that the same numbers of shared
 relays and shared registers are allocated to CPU2(1 + 1), say, an
-F3RP61 CPU in slot 2.
+F3RP71 CPU in slot 2.
 
 Note that the users themselves are responsible for making the
 configuration done on the F3RP71-side as shown above consistent with
@@ -741,7 +741,7 @@ record(bo, "f3rp61_example_20") {
 ```
 
 The bo record can be used to write the first shared relay (E1). In
-this case, the relay (E1) must be allocated to the F3RP61-based IOC as
+this case, the relay (E1) must be allocated to the F3RP71-based IOC as
 mentioned earlier.
 
 #### READ/WRITE SHARED REGISTERS (16-bit variables)
@@ -808,7 +808,7 @@ record(longout, "f3rp61_example_24") {
 
 The longout record can be used to write the first shared register
 (R1). In this case, the register (R1) must be allocated to the
-F3RP61-based IOC.
+F3RP71-based IOC.
 
 The following example shows usage of "B" option. Value in the VAL
 field is converted to BCD format and written to a shared register.
@@ -892,7 +892,7 @@ record(ao, "f3rp61_example_31") {
 
 The longout record can be used to write the first shared register
 (R1). In this case, the register (R1) must be allocated to the
-F3RP61-based IOC.
+F3RP71-based IOC.
 
 In order to write a long word (32-bits) value onto two registers, say,
 R1 and R2, the following record, of which INP field value has the
@@ -1067,8 +1067,8 @@ shared registers.
 
 ## Accessing Internal Device of Sequence CPU
 
-The alternative method for an F3RP61 to communicate with a sequence
-CPU is to use the message-based transaction. It enables an F3RP61 to
+The alternative method for an F3RP71 to communicate with a sequence
+CPU is to use the message-based transaction. It enables an F3RP71 to
 access internal relays and registers of Sequence CPU. Currently
 supported by the device support are internal relays "I", internal
 registers "D" and internal file registers "B".
@@ -1150,7 +1150,7 @@ record(longout, "f3rp61_example_45") {
 
 # I/O Interrupt Support
 
-Digital input modules of FA-M3 can interrupt the F3RP61-based IOC when
+Digital input modules of FA-M3 can interrupt the F3RP71-based IOC when
 they detect a rising edge or falling edge of the input signals. The
 kernel-level driver of the BSP can transform the interrupt into a
 message to a user-level process. Based on the function, processing
@@ -1160,7 +1160,7 @@ the SCAN value of "I/O Intr" get processed upon an interrupt on a
 specified channel of the specified module. This feature allows you to
 trigger a read / write operation by external trigger signals.
 
-Suppose a unit which comprises of an F3RP61 in slot 1, a digital input
+Suppose a unit which comprises of an F3RP71 in slot 1, a digital input
 module in slot2, and an A/D module in slot 3. The following record
 reads the first data register (A1) of the A/D module upon a trigger
 input into the first channel (X1) of the digital input module. (The
@@ -1189,7 +1189,7 @@ record(ao, "f3rp61_example_47") {
 ```
 
 The following example might seem a little bit strange, but it helps
-you see how quick an F3RP61-based IOC can respond to interrupts.
+you see how quick an F3RP71-based IOC can respond to interrupts.
 
 ```
 record(bi, "f3rp61_example_48") {
@@ -1217,8 +1217,8 @@ with fixed link refresh period of 10 milliseconds. It does not support
 FL-net in multi-CPU configuration at present. (setM3FlnSysNo() is
 called without specifying sysNo in the driver support.)
 
-In order to use FL-net with an F3RP61-based IOC, users need to put the
-following IOC command in the startup script for an F3RP61-based IOC to
+In order to use FL-net with an F3RP71-based IOC, users need to put the
+following IOC command in the startup script for an F3RP71-based IOC to
 specify how many link relays and link registers are allocated to each
 of the links.
 
@@ -1231,18 +1231,18 @@ The command needs to be executed prior to the call to iocInit(). The
 first line implies that 512 bits of link relays and 256 words of link
 registers are allocated to Link1(0 + 1). The next line means that the
 same numbers of link relays and link registers are allocated to
-Link2(1 + 1). (An F3RP61 CPU can handle up to two FL-net interface
+Link2(1 + 1). (An F3RP71 CPU can handle up to two FL-net interface
 modules, i.e., up to two links though the author have tested only one
 link so far.)
 
 Allocation of the link relays and link registers to each of the nodes
 on a link needs to be done on a sequence CPU-side by using WideField3
-(or WideField2). There is nothing to be done on the F3RP61-based IOC
+(or WideField2). There is nothing to be done on the F3RP71-based IOC
 on this point. Only allocation of the link relays and link registers
 to each of the links is needed by using the command described above.
 
-How to make an F3RP61-based IOC communicate with other nodes on a link
-is similar with how to make the F3RP61-based IOC communicate with
+How to make an F3RP71-based IOC communicate with other nodes on a link
+is similar with how to make the F3RP71-based IOC communicate with
 another CPU on the same base unit through shared memory based on the
 new APIs as described in [Using New Interface](#UsingNewInterface).
 
@@ -1274,7 +1274,7 @@ record(bo, "f3rp61_example_50") {
 
 The bo record can be used to write the first link relay allocated to a
 node on the Link1(0 + 1). In this case, since it is a write access,
-the relay must be allocated to the F3RP61-based IOC as a node on the
+the relay must be allocated to the F3RP71-based IOC as a node on the
 link.
 
 The following example shows how to read a link register.
@@ -1305,7 +1305,7 @@ record(longout, "f3rp61_example_52") {
 
 The longout record can be used to write the first link register
 allocated to a node on the Link1(0 + 1). In this case, since it is a
-write access, the register must be allocated to the F3RP61-based IOC
+write access, the register must be allocated to the F3RP71-based IOC
 as a node on the link.
 
 In order to read / write long word (32-bits) values by using longin /

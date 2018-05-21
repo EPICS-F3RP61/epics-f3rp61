@@ -12,42 +12,28 @@
 */
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/msg.h>
-#include <fcntl.h>
-#if defined(_arm_)
-#  include <m3sysctl.h>
-#  include <m3lib.h>
-#elif defined(_ppc_)
-#  include <asm/fam3rtos/fam3rtos_sysctl.h>
-#  include <asm/fam3rtos/m3lib.h>
-#  define M3SC_SET_LED      RP6X_SYSIOC_SETLED
-#  define M3SC_LED_RUN_OFF  RP6X_LED_RUN_OFF
-#  define M3SC_LED_ALM_OFF  RP6X_LED_ALM_OFF
-#  define M3SC_LED_ERR_OFF  RP6X_LED_ERR_OFF
-#  define M3SC_LED_RUN_ON   RP6X_LED_RUN_ON
-#  define M3SC_LED_ALM_ON   RP6X_LED_ALM_ON
-#  define M3SC_LED_ERR_ON   RP6X_LED_ERR_ON
-#else
-#  error
-#endif
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <dbCommon.h>
 #include <dbScan.h>
-#include <recSup.h>
 #include <drvSup.h>
-#include <iocsh.h>
-#include <epicsThread.h>
-#include <errlog.h>
+#include <epicsExport.h>
 #ifndef EPICS_REVISION
+#include <epicsThread.h>
 #include <epicsVersion.h>
 #endif
-#include <epicsExport.h>
+#include <errlog.h>
+#include <iocsh.h>
+#include <recSup.h>
+
+#include <drvF3RP61SysCtl.h>
 
 static long report();
 static long init();
@@ -71,7 +57,6 @@ static int init_flag;
 static void setLEDCallFunc(const iocshArgBuf *);
 static void setLED(char, int);
 static void drvF3RP61SysCtlRegisterCommands(void);
-
 
 
 static long report(void)
@@ -218,4 +203,5 @@ static void drvF3RP61SysCtlRegisterCommands(void)
     firstTimeSysCtl = 0;
   }
 }
+
 epicsExportRegistrar(drvF3RP61SysCtlRegisterCommands);

@@ -13,40 +13,29 @@
 *      Modified: Gregor Kostevc (Cosylab)
 *      Date: Dec. 2013
 */
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <errno.h>
-#include <math.h>
-
-#include "alarm.h"
-#include "dbDefs.h"
-#include "dbAccess.h"
-#include "dbScan.h"
-#include "recGbl.h"
-#include "recSup.h"
-#include "devSup.h"
-#include "longoutRecord.h"
-#include "cantProceed.h"
-#include "errlog.h"
-#include "epicsExport.h"
-
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#if defined(_arm_)
-#  include <m3io.h>
-#  include <m3lib.h>
-#elif defined(_ppc_)
-#  include <asm/fam3rtos/m3iodrv.h>
-#  include <asm/fam3rtos/m3lib.h>
-#else
-#  error
-#endif
-#include "drvF3RP61.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-extern int f3rp61_fd;
+#include <alarm.h>
+#include <callback.h>
+#include <cantProceed.h>
+#include <dbAccess.h>
+#include <dbDefs.h>
+#include <dbScan.h>
+#include <devSup.h>
+#include <epicsExport.h>
+#include <errlog.h>
+#include <recGbl.h>
+#include <recSup.h>
+#include <longoutRecord.h>
+
+#include <drvF3RP61.h>
 
 /* Create the dset for devLoF3RP61 */
 static long init_record();
@@ -69,9 +58,8 @@ struct {
   write_longout,
   NULL
 };
-epicsExportAddress(dset,devLoF3RP61);
 
-extern F3RP61_IO_INTR f3rp61_io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
+epicsExportAddress(dset,devLoF3RP61);
 
 typedef struct {
   IOSCANPVT ioscanpvt; /* must comes first */

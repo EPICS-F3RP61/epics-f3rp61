@@ -11,40 +11,28 @@
 *      Author: Gregor Kostevc (Cosylab)
 *      Date: Dec. 2013
 */
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <errno.h>
-
-#include "alarm.h"
-#include "dbDefs.h"
-#include "dbAccess.h"
-#include "dbScan.h"
-#include "recGbl.h"
-#include "recSup.h"
-#include "devSup.h"
-#include "mbbiRecord.h"
-#include "cantProceed.h"
-#include "errlog.h"
-#include "epicsExport.h"
-
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#if defined(_arm_)
-#  include <m3sysctl.h>
-#  include <m3lib.h>
-#elif defined(_ppc_)
-#  include <asm/fam3rtos/fam3rtos_sysctl.h>
-#  include <asm/fam3rtos/m3lib.h>
-#  define M3SC_GET_SW RP6X_SYSIOC_GETSW
-#else
-#  error
-#endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
+#include <alarm.h>
+#include <cantProceed.h>
+#include <dbAccess.h>
+#include <dbDefs.h>
+#include <dbScan.h>
+#include <devSup.h>
+#include <epicsExport.h>
+#include <errlog.h>
+#include <recGbl.h>
+#include <recSup.h>
+#include <mbbiRecord.h>
 
-extern int f3rp61SysCtl_fd;
+#include <drvF3RP61SysCtl.h>
 
 /* Create the dset for devMbbiF3RP61SysCtl */
 static long init_record();

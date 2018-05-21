@@ -13,22 +13,24 @@ Install
    * [Install definition files](#install-definition-files)
    * [Site-specific build configuration](#site-specific-build-configuration)
 * [Building the Device / Driver Support Library](#building-the-device--driver-support-library)
-* [Usingthe Device / Driver Support with IOC Application](#usingthe-device--driver-support-with-ioc-application)
+* [Using the Device / Driver Support with IOC Application](#using-the-device--driver-support-with-ioc-application)
 * [Using real-time scheduling with F3RP71/F3RP61-based IOC](#using-real-time-scheduling-with-f3rp71f3rp61-based-ioc)
    * [References](#references)
 
 # Introduction
 
 This document describes instructions for cross-building the device and
-driver suport for F3RP71 and F3RP61 on linux-x86_64 or linux-x86 host.
+driver support for F3RP71 and F3RP61 on linux-x86_64 or linux-x86 host.
 
 # Software Requirements
 ## F3RP71 (e-RT3 plus)
 - EPICS base R3.15.5 or R3.14.12.x
+- Xilinx Vivado 2013.4 Standalone SDK
 - Linux BSP for F3RP71 (SFRD12), R1.03
-  - Refer to User's Manual for installation of BSP:
-    - **IM 34M06M52-22E_002**, "e-RT3 Linux BSP (SFRD12) Programming Manual", 2. Building development environment
+- Refer to User's Manual for installation of Xilinx SDK and Linux BSP:
+  - **IM 34M06M52-22E_002**, "e-RT3 Linux BSP (SFRD12) Programming Manual", 2. Building development environment
   - It is assumed that Xilinx SDK and Linux BSP are installed in /opt/Xilinx.
+  - In this document, we don't use Eclipse but GNU toolchain installed along with SDK.
 
 ## F3RP61 (e-RT3 2.0)
 - EPICS base R3.15.5, R3.14.12.x, or R3.14.11
@@ -135,9 +137,9 @@ cd ${EPICS_BASE}/../modules/instrument/epics-f3rp61-2.0.0/f3rp61
 make
 ```
 
-# Usingthe Device / Driver Support with IOC Application
+# Using the Device / Driver Support with IOC Application
 
-This section explains how to include the device / driver support components to your IOC applicaiton.
+This section explains how to include the device / driver support components to your IOC application.
 - In the `configure/RELEASE` file add definition for `F3RP61`:
 
 ```makefile

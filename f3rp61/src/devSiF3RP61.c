@@ -10,37 +10,29 @@
 *      Author: Jun-ichi Odagiri
 *      Date: 6-30-08
 */
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <errno.h>
-
-#include "alarm.h"
-#include "dbDefs.h"
-#include "dbAccess.h"
-#include "dbScan.h"
-#include "recGbl.h"
-#include "recSup.h"
-#include "devSup.h"
-#include "stringinRecord.h"
-#include "cantProceed.h"
-#include "errlog.h"
-#include "epicsExport.h"
-
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#if defined(_arm_)
-#  include <m3io.h>
-#elif defined(_ppc_)
-#  include <asm/fam3rtos/m3iodrv.h>
-#else
-#  error
-#endif
-#include "drvF3RP61.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-extern int f3rp61_fd;
+#include <alarm.h>
+#include <callback.h>
+#include <cantProceed.h>
+#include <dbAccess.h>
+#include <dbDefs.h>
+#include <dbScan.h>
+#include <devSup.h>
+#include <epicsExport.h>
+#include <errlog.h>
+#include <recGbl.h>
+#include <recSup.h>
+#include <stringinRecord.h>
+
+#include <drvF3RP61.h>
 
 /* Create the dset for devSiF3RP61 */
 static long init_record();
@@ -65,8 +57,6 @@ struct {
 };
 
 epicsExportAddress(dset,devSiF3RP61);
-
-extern F3RP61_IO_INTR f3rp61_io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
 
 typedef struct {
   IOSCANPVT ioscanpvt; /* must comes first */

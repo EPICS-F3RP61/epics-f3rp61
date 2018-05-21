@@ -10,40 +10,29 @@
 *      Author: Jun-ichi Odagiri
 *      Date: 31-03-09
 */
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <errno.h>
-
-#include "alarm.h"
-#include "dbDefs.h"
-#include "dbAccess.h"
-#include "dbScan.h"
-#include "callback.h"
-#include "recGbl.h"
-#include "recSup.h"
-#include "devSup.h"
-#include "boRecord.h"
-#include "cantProceed.h"
-#include "errlog.h"
-#include "epicsExport.h"
-
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#if defined(_arm_)
-#  include <m3io.h>
-#  include <m3lib.h>
-#elif defined(_ppc_)
-#  include <asm/fam3rtos/m3iodrv.h>
-#  include <asm/fam3rtos/m3mcmd.h>
-#else
-#  error
-#endif
-#include "drvF3RP61Seq.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-extern int f3rp61_fd;
+#include <alarm.h>
+#include <callback.h>
+#include <cantProceed.h>
+#include <dbAccess.h>
+#include <dbDefs.h>
+#include <dbScan.h>
+#include <devSup.h>
+#include <epicsExport.h>
+#include <errlog.h>
+#include <recGbl.h>
+#include <recSup.h>
+#include <boRecord.h>
+
+#include <drvF3RP61Seq.h>
 
 /* Create the dset for devBoF3RP61Seq */
 static long init_record();
@@ -66,7 +55,6 @@ struct {
 };
 
 epicsExportAddress(dset,devBoF3RP61Seq);
-
 
 
 static long init_record(boRecord *pbo)
@@ -102,7 +90,7 @@ static long init_record(boRecord *pbo)
                                                sizeof(F3RP61_SEQ_DPVT),
                                                "calloc failed");
 
-  if (ioctl(f3rp61_fd, M3IO_GET_MYCPUNO, &srcSlot) < 0) {
+  if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
     errlogPrintf("devBoF3RP61Seq: ioctl failed [%d]\n", errno);
     pbo->pact = 1;
     return (-1);
@@ -139,8 +127,6 @@ static long init_record(boRecord *pbo)
   return(0);
 }
 
-
-
 static long write_bo(boRecord *pbo)
 {
   F3RP61_SEQ_DPVT *dpvt = (F3RP61_SEQ_DPVT *) pbo->dpvt;

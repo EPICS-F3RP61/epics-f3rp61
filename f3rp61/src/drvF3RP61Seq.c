@@ -12,39 +12,31 @@
 */
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/msg.h>
-#include <fcntl.h>
-#if defined(_arm_)
-#  include <m3cpu.h>
-#  define DEVFILE "/dev/m3cpu"
-#elif defined(_ppc_)
-#  include <asm/fam3rtos/m3mcmd.h>
-#  define DEVFILE "/dev/m3mcmd"
-#else
-#  error
-#endif
+#include <unistd.h>
 
+#include <callback.h>
 #include <dbCommon.h>
 #include <dbScan.h>
-#include <callback.h>
-#include <recSup.h>
 #include <drvSup.h>
-#include <iocsh.h>
-#include <epicsThread.h>
-#include <epicsMutex.h>
 #include <epicsEvent.h>
-#include <errlog.h>
+#include <epicsExport.h>
+#include <epicsMutex.h>
+#include <epicsThread.h>
 #ifndef EPICS_REVISION
 #include <epicsVersion.h>
 #endif
-#include <epicsExport.h>
-#include "drvF3RP61Seq.h"
+#include <errlog.h>
+#include <iocsh.h>
+#include <recSup.h>
+
+#include <drvF3RP61Seq.h>
 
 static long report();
 static long init();
@@ -81,12 +73,11 @@ static ELLLIST f3rp61Seq_queueList;
 
 static F3RP61_SEQ_DPVT *get_request_from_queue(void);
 
-
+
 static long report(void)
 {
   return (0);
 }
-
 
 static long init(void)
 {
@@ -126,7 +117,6 @@ static long init(void)
   return (0);
 }
 
-
 static void mcmd_thread(void *arg)
 {
   F3RP61_SEQ_DPVT *dpvt;
@@ -144,7 +134,7 @@ static void mcmd_thread(void *arg)
 
       if (debug_flag) dump_mcmd_request(pmcmdStruct);
 
-      if (ioctl(f3rp61Seq_fd, MCMD_ACCS, pmcmdStruct) < 0) {
+      if (ioctl(f3rp61Seq_fd, M3CPU_ACCS_CMD, pmcmdStruct) < 0) {
         errlogPrintf("drvF3RP61Seq: ioctl failed [%d]\n", errno);
         dpvt->ret = -1;
       }
@@ -160,7 +150,6 @@ static void mcmd_thread(void *arg)
     }
   }
 }
-
 
 long f3rp61Seq_queueRequest(F3RP61_SEQ_DPVT *dpvt)
 {
@@ -178,7 +167,6 @@ long f3rp61Seq_queueRequest(F3RP61_SEQ_DPVT *dpvt)
   return (0);
 }
 
-
 static F3RP61_SEQ_DPVT *get_request_from_queue(void)
 {
   F3RP61_SEQ_DPVT *dpvt;
@@ -189,8 +177,6 @@ static F3RP61_SEQ_DPVT *get_request_from_queue(void)
 
   return dpvt;
 }
-
-
 
 static void dump_mcmd_request(MCMD_STRUCT *pmcmdStruct)
 {
@@ -212,12 +198,10 @@ static void dump_mcmd_request(MCMD_STRUCT *pmcmdStruct)
   printf("\n");
 }
 
-
 void showreq(const iocshArgBuf *args)
 {
   debug_flag = 1;
 }
-
 
 void stopshow(const iocshArgBuf *args)
 {

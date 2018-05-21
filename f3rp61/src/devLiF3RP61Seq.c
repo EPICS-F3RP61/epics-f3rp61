@@ -13,41 +13,30 @@
 *      Modified: Gregor Kostevc (Cosylab)
 *      Date: Dec. 2013
 */
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <errno.h>
-#include <math.h>
-
-#include "alarm.h"
-#include "dbDefs.h"
-#include "dbAccess.h"
-#include "dbScan.h"
-#include "callback.h"
-#include "recGbl.h"
-#include "recSup.h"
-#include "devSup.h"
-#include "longinRecord.h"
-#include "cantProceed.h"
-#include "errlog.h"
-#include "epicsExport.h"
-
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#if defined(_arm_)
-#  include <m3io.h>
-#  include <m3lib.h>
-#elif defined(_ppc_)
-#  include <asm/fam3rtos/m3iodrv.h>
-#  include <asm/fam3rtos/m3mcmd.h>
-#else
-#  error
-#endif
-#include "drvF3RP61Seq.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-extern int f3rp61_fd;
+#include <alarm.h>
+#include <callback.h>
+#include <cantProceed.h>
+#include <dbAccess.h>
+#include <dbDefs.h>
+#include <dbScan.h>
+#include <devSup.h>
+#include <epicsExport.h>
+#include <errlog.h>
+#include <math.h>
+#include <recGbl.h>
+#include <recSup.h>
+#include <longinRecord.h>
+
+#include <drvF3RP61Seq.h>
 
 /* Create the dset for devLiF3RP61Seq */
 static long init_record();
@@ -70,7 +59,6 @@ struct {
 };
 
 epicsExportAddress(dset,devLiF3RP61Seq);
-
 
 
 static long init_record(longinRecord *plongin)
@@ -128,7 +116,7 @@ static long init_record(longinRecord *plongin)
                                                "calloc failed");
 
   /* Read the slot number of CPU module*/
-  if (ioctl(f3rp61_fd, M3IO_GET_MYCPUNO, &srcSlot) < 0) {
+  if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
     errlogPrintf("devLiF3RP61Seq: ioctl failed [%d]\n", errno);
     plongin->pact = 1;
     return (-1);
@@ -169,8 +157,6 @@ static long init_record(longinRecord *plongin)
   return(0);
 }
 
-
-
 static long read_longin(longinRecord *plongin)
 {
   F3RP61_SEQ_DPVT *dpvt = (F3RP61_SEQ_DPVT *) plongin->dpvt;

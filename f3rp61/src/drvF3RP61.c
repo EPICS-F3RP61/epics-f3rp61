@@ -11,38 +11,30 @@
 *      Date: 6-30-08
 */
 
+#include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/msg.h>
-#include <fcntl.h>
-#include <ctype.h>
-#if defined(_arm_)
-#  include <m3io.h>
-#  include <m3lib.h>
-#elif defined(_ppc_)
-#  include <asm/fam3rtos/m3iodrv.h>
-#  include <asm/fam3rtos/m3lib.h>
-#else
-#  error
-#endif
+#include <unistd.h>
 
 #include <dbCommon.h>
 #include <dbScan.h>
-#include <recSup.h>
 #include <drvSup.h>
-#include <iocsh.h>
+#include <epicsExport.h>
 #include <epicsThread.h>
-#include <errlog.h>
 #ifndef EPICS_REVISION
 #include <epicsVersion.h>
 #endif
-#include <epicsExport.h>
-#include "drvF3RP61.h"
+#include <errlog.h>
+#include <iocsh.h>
+#include <recSup.h>
+
+#include <drvF3RP61.h>
 
 #define M3IO_NUM_CPUS   4
 /*
@@ -88,7 +80,6 @@ static long report(void)
 {
   return (0);
 }
-
 
 static long init(void)
 {
@@ -177,7 +168,6 @@ static void msgrcv_thread(void *arg)
   }
 }
 
-
 long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channel)
 {
   M3IO_INTER_DEFINE arg;
@@ -230,7 +220,7 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
   arg.msgQId = msqid;
 
   if (ioctl(f3rp61_fd, M3IO_ENABLE_INTER, &arg) < 0) {
-    errlogPrintf("devBiF3RP61: ioctl failed [%d]\n", errno);
+    errlogPrintf("drvF3RP61: ioctl failed [%d]\n", errno);
     return (-1);
   }
 
@@ -256,8 +246,6 @@ long f3rp61GetIoIntInfo(int cmd, dbCommon * pxx, IOSCANPVT *ppvt)
 
   return (0);
 }
-
-
 
 static const iocshArg linkDeviceConfigureArg0 = { "sysNo",iocshArgInt};
 static const iocshArg linkDeviceConfigureArg1 = { "nRlys",iocshArgInt};
@@ -292,7 +280,6 @@ static void linkDeviceConfigure(int sysno, int nrlys, int nregs)
   link_data_config.wNumberOfRelay[sysno] = nrlys;
   link_data_config.wNumberOfRegister[sysno] = nregs;
 }
-
 
 static const iocshArg comDeviceConfigureArg0 = { "cpuNo",     iocshArgInt};
 static const iocshArg comDeviceConfigureArg1 = { "nRlys",     iocshArgInt};
@@ -332,7 +319,6 @@ static void comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, i
   ext_com_data_config.wNumberOfRelay[cpuno] = ext_nrlys;
   ext_com_data_config.wNumberOfRegister[cpuno] = ext_nregs;
 }
-
 
 static const iocshFuncDef getModuleInfoFuncDef = {"f3rp61GetModuleInfo",0,NULL};
 static void getModuleInfoCallFunc(const iocshArgBuf *args)
@@ -385,7 +371,6 @@ static void getModuleInfo(void)
   }
 }
 
-
 static void drvF3RP61RegisterCommands(void)
 {
   static int firstTime = 1;
@@ -397,4 +382,5 @@ static void drvF3RP61RegisterCommands(void)
     firstTime = 0;
   }
 }
+
 epicsExportRegistrar(drvF3RP61RegisterCommands);

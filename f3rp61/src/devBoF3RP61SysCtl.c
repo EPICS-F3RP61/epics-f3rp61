@@ -10,45 +10,28 @@
 *      Author: Gregor Kostevc (Cosylab)
 *      Date: Dec. 2013
 */
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <errno.h>
-
-#include "alarm.h"
-#include "dbDefs.h"
-#include "dbAccess.h"
-#include "dbScan.h"
-#include "recGbl.h"
-#include "recSup.h"
-#include "devSup.h"
-#include "boRecord.h"
-#include "cantProceed.h"
-#include "errlog.h"
-#include "epicsExport.h"
-
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#if defined(_arm_)
-#  include <m3sysctl.h>
-#  include <m3lib.h>
-#elif defined(_ppc_)
-#  include <asm/fam3rtos/fam3rtos_sysctl.h>
-#  include <asm/fam3rtos/m3lib.h>
-#  define M3SC_SET_LED      RP6X_SYSIOC_SETLED
-#  define M3SC_LED_RUN_OFF  RP6X_LED_RUN_OFF
-#  define M3SC_LED_ALM_OFF  RP6X_LED_ALM_OFF
-#  define M3SC_LED_ERR_OFF  RP6X_LED_ERR_OFF
-#  define M3SC_LED_RUN_ON   RP6X_LED_RUN_ON
-#  define M3SC_LED_ALM_ON   RP6X_LED_ALM_ON
-#  define M3SC_LED_ERR_ON   RP6X_LED_ERR_ON
-#else
-#  error
-#endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-extern int f3rp61SysCtl_fd;
+#include <alarm.h>
+#include <cantProceed.h>
+#include <dbAccess.h>
+#include <dbDefs.h>
+#include <dbScan.h>
+#include <devSup.h>
+#include <epicsExport.h>
+#include <errlog.h>
+#include <recGbl.h>
+#include <recSup.h>
+#include <boRecord.h>
+
+#include <drvF3RP61SysCtl.h>
 
 /* Create the dset for devBoF3RP61SysCtl */
 static long init_record();

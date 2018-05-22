@@ -81,7 +81,7 @@ static long init_record(boRecord *pbo)
   buf[size - 1] = '\0';
 
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-    errlogPrintf("devBoF3RP61Seq: can't get device addresses for %s\n", pbo->name);
+    errlogPrintf("devBoF3RP61Seq: can't get device address for %s\n", pbo->name);
     pbo->pact = 1;
     return (-1);
   }

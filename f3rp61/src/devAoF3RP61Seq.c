@@ -83,7 +83,7 @@ static long init_record(aoRecord *pao)
   buf[size - 1] = '\0';
 
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-    errlogPrintf("devAoF3RP61Seq: can't get device addresses for %s\n", pao->name);
+    errlogPrintf("devAoF3RP61Seq: can't get device address for %s\n", pao->name);
     pao->pact = 1;
     return (-1);
   }

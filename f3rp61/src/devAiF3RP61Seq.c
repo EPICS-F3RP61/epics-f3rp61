@@ -83,7 +83,7 @@ static long init_record(aiRecord *pai)
   buf[size - 1] = '\0';
 
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-    errlogPrintf("devAiF3RP61Seq: can't get device addresses for %s\n", pai->name);
+    errlogPrintf("devAiF3RP61Seq: can't get device address for %s\n", pai->name);
     pai->pact = 1;
     return (-1);
   }

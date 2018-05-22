@@ -82,7 +82,7 @@ static long init_record(mbbiDirectRecord *pmbbiDirect)
   buf[size - 1] = '\0';
 
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-    errlogPrintf("devMbbiDirectF3RP61Seq: can't get device addresses for %s\n",
+    errlogPrintf("devMbbiDirectF3RP61Seq: can't get device address for %s\n",
                  pmbbiDirect->name);
     pmbbiDirect->pact = 1;
     return (-1);

@@ -81,7 +81,7 @@ static long init_record(biRecord *pbi)
   buf[size - 1] = '\0';
 
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-    errlogPrintf("devBiF3RP61Seq: can't get device addresses for %s\n", pbi->name);
+    errlogPrintf("devBiF3RP61Seq: can't get device address for %s\n", pbi->name);
     pbi->pact = 1;
     return (-1);
   }

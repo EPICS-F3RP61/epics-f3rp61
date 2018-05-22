@@ -102,7 +102,7 @@ static long init_record(longoutRecord *plongout)
 
   /* Parse slot, device and register number*/
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-    errlogPrintf("devLoF3RP61Seq: can't get device addresses for %s\n",
+    errlogPrintf("devLoF3RP61Seq: can't get device address for %s\n",
                  plongout->name);
     plongout->pact = 1;
     return (-1);

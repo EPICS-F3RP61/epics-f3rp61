@@ -85,7 +85,7 @@ static long init_record(mbbiRecord *pmbbi)
 
   /* Parse device*/
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-    errlogPrintf("devMbbiF3RP61Seq: can't get device addresses for %s\n",
+    errlogPrintf("devMbbiF3RP61Seq: can't get device address for %s\n",
                  pmbbi->name);
     pmbbi->pact = 1;
     return (-1);

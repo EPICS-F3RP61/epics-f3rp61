@@ -104,7 +104,7 @@ static long init_record(longinRecord *plongin)
 
   /* Parse slot, device and register number*/
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-    errlogPrintf("devLiF3RP61Seq: can't get device addresses for %s\n",
+    errlogPrintf("devLiF3RP61Seq: can't get device address for %s\n",
                  plongin->name);
     plongin->pact = 1;
     return (-1);

@@ -85,7 +85,7 @@ static long init_record(mbboRecord *pmbbo)
 
   /* Parse device*/
   if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-    errlogPrintf("devMbboF3RP61Seq: can't get device addresses for %s\n",
+    errlogPrintf("devMbboF3RP61Seq: can't get device address for %s\n",
                  pmbbo->name);
     pmbbo->pact = 1;
     return (-1);

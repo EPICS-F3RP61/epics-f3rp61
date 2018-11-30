@@ -1,33 +1,41 @@
 Device and Driver Support for F3RP71 and F3RP61
 ===============================================
 
-# Table Of Contents
-* [Overview](#overview)
-* [Device Type](#device-type)
-* [Supported Record Types](#supported-record-types)
-* [Accessing I/O Module](#accessing-io-module)
-   * [Accessing Input Relay (X)](#accessing-input-relay-x)
-   * [Accessing Output Relay (Y)](#accessing-output-relay-y)
-   * [Accessing Data Register](#accessing-data-register)
-      * [Using 'unsigned' value option](#using-unsigned-value-option)
-      * [Using 'binary-coded-decimal (BCD)' option](#using-binary-coded-decimal-bcd-option)
-      * [Read an array of data](#read-an-array-of-data)
-   * [Accessing Mode Register](#accessing-mode-register)
-* [Handling Special Module](#handling-special-module)
-* [Cautions in Using F3RP71 and Sequence CPU Side-by-side](#cautions-in-using-f3rp71-and-sequence-cpu-side-by-side)
-* [Communication with Sequence CPU](#communication-with-sequence-cpu)
-   * [Communication Based on Shared Memory](#communication-based-on-shared-memory)
-      * [Communication Based on Shared Memory Using New Interface<a name="user-content-UsingNewInterface"></a>](#communication-based-on-shared-memory-using-new-interface)
-         * [READ/WRITE SHARED RELAYS (1-bit variables)](#readwrite-shared-relays-1-bit-variables)
-         * [READ/WRITE SHARED REGISTERS (16-bit variables)](#readwrite-shared-registers-16-bit-variables)
-      * [Communication Based on Shared Memory Using Old Interface](#communication-based-on-shared-memory-using-old-interface)
-   * [Accessing Internal Device of Sequence CPU](#accessing-internal-device-of-sequence-cpu)
-* [I/O Interrupt Support](#io-interrupt-support)
-* [FL-net Support](#fl-net-support)
-* [LED / Rotary Switch / Status Register support](#led--rotary-switch--status-register-support)
-   * [LED support](#led-support)
-   * [Rotary switch support](#rotary-switch-support)
-   * [Status register support](#status-register-support)
+Table Of Contents
+=================
+<!--ts-->
+   * [Device and Driver Support for F3RP71 and F3RP61](#device-and-driver-support-for-f3rp71-and-f3rp61)
+   * [Table Of Contents](#table-of-contents)
+   * [Overview](#overview)
+   * [Device Type](#device-type)
+   * [Supported Record Types](#supported-record-types)
+   * [Accessing I/O Module](#accessing-io-module)
+      * [Accessing Input Relay (X)](#accessing-input-relay-x)
+      * [Accessing Output Relay (Y)](#accessing-output-relay-y)
+      * [Accessing Data Register](#accessing-data-register)
+         * [Using 'unsigned' value option](#using-unsigned-value-option)
+         * [Using 'binary-coded-decimal (BCD)' option](#using-binary-coded-decimal-bcd-option)
+         * [Read an array of data](#read-an-array-of-data)
+      * [Accessing Mode Register](#accessing-mode-register)
+   * [Handling Special Module](#handling-special-module)
+   * [Important Notice on Using F3RP71 in Multi-CPU Configuration](#important-notice-on-using-f3rp71-in-multi-cpu-configuration)
+   * [Communication with Sequence CPU](#communication-with-sequence-cpu)
+      * [Communication Based on Shared Memory](#communication-based-on-shared-memory)
+         * [Communication Based on Shared Memory Using New Interface<a name="user-content-UsingNewInterface"></a>](#communication-based-on-shared-memory-using-new-interface)
+            * [READ/WRITE SHARED RELAYS (1-bit variables)](#readwrite-shared-relays-1-bit-variables)
+            * [READ/WRITE SHARED REGISTERS (16-bit variables)](#readwrite-shared-registers-16-bit-variables)
+         * [Communication Based on Shared Memory Using Old Interface](#communication-based-on-shared-memory-using-old-interface)
+      * [Accessing Internal Device of Sequence CPU](#accessing-internal-device-of-sequence-cpu)
+   * [I/O Interrupt Support](#io-interrupt-support)
+   * [FL-net Support](#fl-net-support)
+   * [LED / Rotary Switch / Status Register support](#led--rotary-switch--status-register-support)
+      * [LED support](#led-support)
+      * [Rotary switch support](#rotary-switch-support)
+      * [Status register support](#status-register-support)
+
+<!-- Added by: shuei, at: 2018-11-30T10:28+0900 -->
+
+<!--te-->
 
 
 # Overview
@@ -63,15 +71,16 @@ using an EPICS sequencer program, or a runtime database comprised of
 records that have the PINI field value of "YES".
 
 
-An F3RP71 (or F3RP61) can work as an IOC with / without sequence CPUs
-that run ladder programs. If there is no sequence CPU on the PLC-bus,
-F3RP71 should manage all the I/O activities. If one or more sequence
-CPUs exists on the PLC-bus, some of the I/O modules can be used with
-the sequence CPUs and the others can be used with F3RP71. It is
-recommended that the I/O module under the sequence CPU's control be
-accessed indirectly by the IOC (F3RP71) through the internal devices
-of the sequence CPUs. See [Cautions in Using F3RP71 and Sequence CPU
-Side-by-side](#cautions-in-using-f3rp71-and-sequence-cpu-side-by-side)
+An F3RP71/F3RP61 works as an IOC either with or without sequence CPUs
+which run ladder programs. If there is no sequence CPU on the PLC-bus,
+F3RP71/RP61 should manage all the I/O activities. If one of more
+sequence CPUs attached to the PLC-bus, some of I/O modules can be
+controled by sequence CPUs, while the others by F3RP71. It is
+recommended that those I/O modules under the control of the sequence
+CPU be indirectly accessed by the IOC (F3RP71) viai the internal
+devices of the sequence CPUs. See [Important Notice on Using F3RP71 in
+Multi-CPU
+Configuration](#important-notice-on-using-f3rp71-in-multi-cpu-configuration)
 for more detail.
 
 
@@ -607,25 +616,21 @@ control module, and to handle exceptions that can occur in the
 sequence (for example, an error caused by a wrong parameter set by the
 user).
 
-# Cautions in Using F3RP71 and Sequence CPU Side-by-side
+# Important Notice on Using F3RP71 in Multi-CPU Configuration
 
-This section gives you important cautions in using an F3RP71 CPU and a
-normal sequence CPU on the same unit.
+This section gives you an important notice on using an F3RP71/F3RP61
+CPU together with sequence CPUs on the same unit.
 
-In many cases, this type of multi-CPU configuration is used in case
-you use a normal sequence CPU to implement an interlock logic that is
-required high reliability. In that case, the normal sequence CPU
-dedicates to handle the interlock signals while the F3RP71 CPU is used
-to take care of other control, or just to monitor the status of the
-interlock signals. In this case, you need to be cautious of the
-following two points.
+A typical use case of multi-CPU configuration is a sequence CPU
+implementing an interlock logic which requires high reliability, and
+F3RP71 controling or monitoring the interlock system. In such a case,
+one have to pay attention to the following two points:
 
-- The sequence CPU must be in the first slot (slot 1) because the CPU
-  in the first slot becomes the master of the unit and the master
-  resets the whole system upon rebooting.
-- The F3RP71 CPU should NOT have any access, regardless of read or
-  write, to the I/O modules that are used with the normal sequence CPU
-  for the interlock.
+- The sequence CPU must be in the first slot (slot 1). The CPU in the
+  first slot becomes the master of the unit, which resets the whole
+  system upon rebooting.
+- The F3RP71 should NOT access, regardless of read or write, to those
+  I/O modules used by the sequence CPU for the interlock system.
 
 The reason of the second point is as follows. If an I/O module is
 accessed by an F3RP71 CPU, the I/O module recognizes and remembers
@@ -668,7 +673,7 @@ the device / driver support. The DTYP field needs to be set to
 
 ## Communication Based on Shared Memory
 
-The following is the basics to understand how the communication between F3RP71 CPUs and normal sequence CPUs works.
+The following is the basics to understand how the communication between F3RP71 CPUs and sequence CPUs works.
 
 * Each CPU, a sequence CPU or an F3RP71 CPU can have regions allocated
   to it.
@@ -689,31 +694,33 @@ shown in the figure below.
 
 ### Communication Based on Shared Memory Using New Interface<a name="UsingNewInterface"></a>
 
-In BSP R2.01 of F3RP61, a set of new APIs is supported to
-access the shared memory (shared relays and shared registers). The
-device / driver support (Ver. 1.1.0 or later) supports accessing the
-shared memory based on the new APIs. In this case, users need to put
-the following IOC command in the startup script for an F3RP61-based
-IOC to specify how many shared relays and shared registers are
-allocated to each of the CPUs.
+The device and driver support make use of a set of API for shared
+memory (i.e., shared relays and shared getisters). This API is
+available in F3RP71 BSP (R1.03 or later), as well as in F3RP61 BPS
+(R2.01 or later). Calling f3rp61ComDeviceConfigure() prior to
+iocInit() in the IOC start-up script (st.cmd) allocates shared memory
+for specified CPU:
 
 ```shell
 f3rp61ComDeviceConfigure(0, 512, 256, 64, 32)
 f3rp61ComDeviceConfigure(1, 512, 256, 64, 32)
 ```
 
-The command needs to be executed prior to the call to iocInit(). The
-first line implies that 512 bits of shared relays, 256 words of shared
-registers, 64 bits of extended shared relays and 32 words of extended
-shared registers are allocated to CPU1(0 + 1), say, a normal sequence
-CPU in slot 1. The next line means that the same numbers of shared
-relays and shared registers are allocated to CPU2(1 + 1), say, an
-F3RP71 CPU in slot 2.
+The first line allocates 512 shared relays, 256 words of shared
+registers, 64 extended shared relays, and 32 words of extended shared
+registers the CPU in slot 1 (e.g., a sequence CPU). The second line
+allocates the same numbers of shared relays and shared registers to
+the CPU in slot 2 (e.g., F3RP71 CPU).  Note that indices starts from
+0. Make sure that arguments to f3rp61ComDeviceConfigure() for the
+sequence CPU shall be consistent with Inter-CPU Shared Memory Setup in
+WideField3.
 
-Note that the users themselves are responsible for making the
-configuration done on the F3RP71-side as shown above consistent with
-the configuration done on the sequence CPU-side by using WideField3
-(or WideField2).
+Make sure that, when using F3RP71 (**not** F3RP61) in a multi-CPU
+configuration, "Non-Simultaneous" is selected for "Shared Refreshed
+Data" in Inter-CPU Shared Memory Setup.
+Refer to following manuals for the detail:
+- **IM 34M06M52-02E**, "e-RT3 CPU Module (SFRD␣2) BSP Common Function Manual", 5.2 Shared device
+- **IM 34M06Q16-02E**, "FA-M3 Programming Tool WideField3 (Offline)", D3.1.13 Inter-CPU Shared Memory Setup
 
 #### READ/WRITE SHARED RELAYS (1-bit variables)
 

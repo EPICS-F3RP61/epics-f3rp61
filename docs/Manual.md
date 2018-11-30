@@ -4,8 +4,6 @@ Device and Driver Support for F3RP71 and F3RP61
 Table Of Contents
 =================
 <!--ts-->
-   * [Device and Driver Support for F3RP71 and F3RP61](#device-and-driver-support-for-f3rp71-and-f3rp61)
-   * [Table Of Contents](#table-of-contents)
    * [Overview](#overview)
    * [Device Type](#device-type)
    * [Supported Record Types](#supported-record-types)

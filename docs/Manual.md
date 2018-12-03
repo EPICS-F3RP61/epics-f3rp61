@@ -5,7 +5,7 @@ Table Of Contents
 =================
 <!--ts-->
    * [Overview](#overview)
-   * [Device Type](#device-type)
+   * [Device Types](#device-types)
    * [Supported Record Types](#supported-record-types)
    * [Accessing I/O Module](#accessing-io-module)
       * [Accessing Input Relay (X)](#accessing-input-relay-x)
@@ -88,7 +88,7 @@ interrupt into a message to a user-level process running on it. Based
 on this function, the device / driver support supports processing
 records upon an I/O interrupt.
 
-# Device Type
+# Device Types
 
 In order to use the device / driver support, the device type (DTYP) field of the
 record must be set to either:

@@ -4,6 +4,8 @@ Device and Driver Support for F3RP71 and F3RP61
 Table Of Contents
 =================
 <!--ts-->
+   * [Device and Driver Support for F3RP71 and F3RP61](#device-and-driver-support-for-f3rp71-and-f3rp61)
+   * [Table Of Contents](#table-of-contents)
    * [Overview](#overview)
    * [Device Types](#device-types)
    * [Supported Record Types](#supported-record-types)
@@ -20,8 +22,9 @@ Table Of Contents
    * [Communication with Sequence CPU](#communication-with-sequence-cpu)
       * [Communication Based on Shared Memory](#communication-based-on-shared-memory)
          * [Communication Based on Shared Memory Using New Interface<a name="user-content-UsingNewInterface"></a>](#communication-based-on-shared-memory-using-new-interface)
-            * [READ/WRITE SHARED RELAYS (1-bit variables)](#readwrite-shared-relays-1-bit-variables)
-            * [READ/WRITE SHARED REGISTERS (16-bit variables)](#readwrite-shared-registers-16-bit-variables)
+            * [Notes on Using Shared Memory with F3RP71 (<strong>not</strong> F3RP61)<a name="user-content-SharedMemoryWithF3RP71"></a>](#notes-on-using-shared-memory-with-f3rp71-not-f3rp61)
+            * [Reading/Writing Shared Relays (1-bit variables)](#readingwriting-shared-relays-1-bit-variables)
+            * [Reading/Writing  Shared Registers (16-bit variables)](#readingwriting--shared-registers-16-bit-variables)
          * [Communication Based on Shared Memory Using Old Interface](#communication-based-on-shared-memory-using-old-interface)
       * [Accessing Internal Device of Sequence CPU](#accessing-internal-device-of-sequence-cpu)
    * [I/O Interrupt Support](#io-interrupt-support)
@@ -31,7 +34,7 @@ Table Of Contents
       * [Rotary switch support](#rotary-switch-support)
       * [Status register support](#status-register-support)
 
-<!-- Added by: shuei, at: 2018-11-30T10:28+0900 -->
+<!-- Added by: shuei, at: 2019-02-27T18:04+09:00 -->
 
 <!--te-->
 
@@ -65,7 +68,7 @@ execute the I/O operation. The EPICS sequencer program is used to
 replace the ladder program. See [Handling Special
 Module](#handling-special-module) for more detail. If some
 initialization is required on a special module, it can be done by
-using an EPICS sequencer program, or a runtime database comprised of
+using an EPICS sequencer program, or a run-time database comprised of
 records that have the PINI field value of "YES".
 
 
@@ -73,9 +76,9 @@ An F3RP71/F3RP61 works as an IOC either with or without sequence CPUs
 which run ladder programs. If there is no sequence CPU on the PLC-bus,
 F3RP71/RP61 should manage all the I/O activities. If one of more
 sequence CPUs attached to the PLC-bus, some of I/O modules can be
-controled by sequence CPUs, while the others by F3RP71. It is
+controlled by sequence CPUs, while the others by F3RP71. It is
 recommended that those I/O modules under the control of the sequence
-CPU be indirectly accessed by the IOC (F3RP71) viai the internal
+CPU be indirectly accessed by the IOC (F3RP71) via the internal
 devices of the sequence CPUs. See [Important Notice on Using F3RP71 in
 Multi-CPU
 Configuration](#important-notice-on-using-f3rp71-in-multi-cpu-configuration)
@@ -621,7 +624,7 @@ CPU together with sequence CPUs on the same unit.
 
 A typical use case of multi-CPU configuration is a sequence CPU
 implementing an interlock logic which requires high reliability, and
-F3RP71 controling or monitoring the interlock system. In such a case,
+F3RP71 controlling or monitoring the interlock system. In such a case,
 one have to pay attention to the following two points:
 
 - The sequence CPU must be in the first slot (slot 1). The CPU in the
@@ -659,15 +662,14 @@ ladder program.
 # Communication with Sequence CPU
 
 Two different types of methods are supported for an F3RP71 to
-communicate with the sequence CPUs that work on the same base
-unit. One is shared-memory-based communication and the other is
-message-based communication. The former is fast access that finishes
+communicate with sequence CPUs that work on the same base unit. One is
+shared-memory-based communication and the other is message-based
+communication. The former is synchronous access that finishes
 instantly, just like the access to the I/O relays and registers of an
-I/O module. The latter is slow access that takes a few milliseconds of
-time to complete. For this reason, two different DTYPs are defined in
-the device / driver support. The DTYP field needs to be set to
-"F3RP61" for the former (synchronous) and "F3RP61Seq" for the latter
-(asynchronous).
+I/O module. The latter is asynchronous and takes a few milliseconds to
+complete. For this reason, two different DTYPs are defined in the
+device / driver support, namely "F3RP61" for the former (synchronous)
+and "F3RP61Seq" for the latter (asynchronous).
 
 ## Communication Based on Shared Memory
 
@@ -693,7 +695,7 @@ shown in the figure below.
 ### Communication Based on Shared Memory Using New Interface<a name="UsingNewInterface"></a>
 
 The device and driver support make use of a set of API for shared
-memory (i.e., shared relays and shared getisters). This API is
+memory (i.e., shared relays and shared registers). This API is
 available in F3RP71 BSP (R1.03 or later), as well as in F3RP61 BPS
 (R2.01 or later). Calling f3rp61ComDeviceConfigure() prior to
 iocInit() in the IOC start-up script (st.cmd) allocates shared memory
@@ -713,14 +715,16 @@ the CPU in slot 2 (e.g., F3RP71 CPU).  Note that indices starts from
 sequence CPU shall be consistent with Inter-CPU Shared Memory Setup in
 WideField3.
 
+#### Notes on Using Shared Memory with F3RP71 (**not** F3RP61)<a name="SharedMemoryWithF3RP71"></a>
 Make sure that, when using F3RP71 (**not** F3RP61) in a multi-CPU
 configuration, "Non-Simultaneous" is selected for "Shared Refreshed
 Data" in Inter-CPU Shared Memory Setup.
+Otherwise  even if F3RP71 writes anything to the shared memory, it looks like as if nothing has been modified when read from the sequence CPU.
 Refer to following manuals for the detail:
 - **IM 34M06M52-02E**, "e-RT3 CPU Module (SFRD␣2) BSP Common Function Manual", 5.2 Shared device
 - **IM 34M06Q16-02E**, "FA-M3 Programming Tool WideField3 (Offline)", D3.1.13 Inter-CPU Shared Memory Setup
 
-#### READ/WRITE SHARED RELAYS (1-bit variables)
+#### Reading/Writing Shared Relays (1-bit variables)
 
 The following example shows how to read a shared relay by using a bi
 record.
@@ -749,7 +753,7 @@ The bo record can be used to write the first shared relay (E1). In
 this case, the relay (E1) must be allocated to the F3RP71-based IOC as
 mentioned earlier.
 
-#### READ/WRITE SHARED REGISTERS (16-bit variables)
+#### Reading/Writing  Shared Registers (16-bit variables)
 
 Shared registers are 16-bit variables that can be accessed with
 records of the following types:

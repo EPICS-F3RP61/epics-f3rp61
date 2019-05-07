@@ -12,8 +12,8 @@ include $(CONFIG)/os/CONFIG.Common.linuxCommon
 ARCH_CLASS = arm
 
 ARCH_DEP_CPPFLAGS += -D_arm_
-ARCH_DEP_CFLAGS += -mcpu=cortex-a9 -mfpu=neon-fp16 -mfloat-abi=softfp
-ARCH_DEP_CXXFLAGS += -mcpu=cortex-a9 -mfpu=neon-fp16 -mfloat-abi=softfp
+ARCH_DEP_CFLAGS += -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=softfp
+ARCH_DEP_CXXFLAGS += -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=softfp
 
 ifeq ($(BUILD_CLASS),CROSS)
     GNU_TARGET = arm-xilinx-linux-gnueabi

@@ -113,7 +113,7 @@ static long init_record(boRecord *pbo)
     pM3WriteSeqdev->devType = 0x09;
     break;
   default:
-    errlogPrintf("devAiF3RP61Seq: unsupported device in %s\n", pbo->name);
+    errlogPrintf("devBoF3RP61Seq: unsupported device in %s\n", pbo->name);
     pbo->pact = 1;
     return (-1);
   }

@@ -72,7 +72,7 @@ static long init(void)
 
   f3rp61SysCtl_fd = open("/dev/m3sysctl", O_RDWR);
   if (f3rp61SysCtl_fd < 0) {
-    errlogPrintf("drvF3RP61: can't open /dev/m3sysctl [%d]\n", errno);
+    errlogPrintf("drvF3RP61SysCtl: can't open /dev/m3sysctl [%d]\n", errno);
     return (-1);
   }
 

@@ -113,7 +113,7 @@ static long init_record(biRecord *pbi)
     pM3ReadSeqdev->devType = 0x09;
     break;
   default:
-    errlogPrintf("devAiF3RP61Seq: unsupported device in %s\n", pbi->name);
+    errlogPrintf("devBiF3RP61Seq: unsupported device in %s\n", pbi->name);
     pbi->pact = 1;
     return (-1);
   }

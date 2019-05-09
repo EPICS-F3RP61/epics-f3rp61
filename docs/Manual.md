@@ -111,27 +111,27 @@ device type.
 The table below shows the supported device type along with the
 relevant record types.
 
-| **Device** | **Description**                        | **Type** | **Length** | **Supported record types**                                                    |
-|------------|----------------------------------------|----------|------------|-------------------------------------------------------------------------------|
-| X          | Inputs on input module                 | IO       | 1-bit      | mbbi, mbbiDirect, longin, bi, ai                                              |
-| Y          | Outputs on output module               | IO       | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, bi, bo, ai, ao           |
-| A          | Internal registers on I/O modules      | IO       |            | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, si, so, waveform |
-| M          | Mode registers                         | IO       |            | mbbi, mbbo, mbbiDirect, mbboDirect                                            |
-| R          | Shared registers                       | Shared   | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
-| R ext      | Extended shared registers              | Shared   | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
-| E          | Shared relays                          | Shared   | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo                                    |
-| E ext      | Extended shared relays                 | Shared   | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo                                    |
-| D          | Data registers                         | Internal | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout                           |
-| Z          | Special registers                      |          | 16-bit     |                                                                               |
-| V          | Index registers                        |          | 16-bit     |                                                                               |
-| B          | File registers                         | Internal | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout                           |
-| F          | Cache registers                        |          | 16-bit     |                                                                               |
+| **Device** | **Description**                         | **Type** | **Length** | **Supported record types**                                                    |
+|------------|-----------------------------------------|----------|------------|-------------------------------------------------------------------------------|
+| X          | Inputs on input module                  | IO       | 1-bit      | mbbi, mbbiDirect, longin, bi, ai                                              |
+| Y          | Outputs on output module                | IO       | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, bi, bo, ai, ao           |
+| A          | Internal registers on I/O modules       | IO       |            | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, si, so, waveform |
+| M          | Mode registers                          | IO       |            | mbbi, mbbo, mbbiDirect, mbboDirect                                            |
+| R          | Shared registers                        | Shared   | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
+| R ext      | Extended shared registers               | Shared   | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
+| E          | Shared relays                           | Shared   | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo                                    |
+| E ext      | Extended shared relays                  | Shared   | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo                                    |
+| D          | Data registers                          | Internal | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout                           |
+| Z          | Special registers                       |          | 16-bit     |                                                                               |
+| V          | Index registers                         |          | 16-bit     |                                                                               |
+| B          | File registers                          | Internal | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout                           |
+| F          | Cache registers                         |          | 16-bit     |                                                                               |
 | L          | Link relays (for FA Link and FL-net)    |          | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo                                    |
 | W          | Link registers (for FA Link and FL-net) |          | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
-| M          | Special relays – read-only             |          | 1-bit      |                                                                               |
-| T          | Timers                                 |          |            |                                                                               |
-| C          | Counters                               |          |            |                                                                               |
-| I          |                                        | Internal |            | bi, bo                                                                        |
+| M          | Special relays – read-only              |          | 1-bit      |                                                                               |
+| T          | Timers                                  |          |            |                                                                               |
+| C          | Counters                                |          |            |                                                                               |
+| I          |                                         | Internal |            | bi, bo                                                                        |
 
 The table below shows supported record types with DTYP fields used to
 access specific devices. Each record type by default supports 'no
@@ -146,41 +146,41 @@ options are available. Those options are as follows:
 They can be used as listed in the table below. Device "r" represents
 accessing shared registers using 'old interface'.
 
-| **Record type** | **DTYP**     | **Supported device**           | **Additional option supported**                                                         |
-|-----------------|--------------|--------------------------------|-----------------------------------------------------------------------------------------|
-| mbbi            | F3RP61       | X, Y, A, r, W, L, M, R, E      |                                                                                         |
-| mbbi            | F3RP61Seq    | D, B                           |                                                                                         |
-| mbbi            | F3RP61SysCtl | Rotary Switch position         |                                                                                         |
-| mbbo            | F3RP61       | Y, A, r, W, L, M, R, E         |                                                                                         |
-| mbbo            | F3RP61Seq    | D, B                           |                                                                                         |
-| mbbiDirect      | F3RP61       | X, Y, A, r, W, L, M, R, E      |                                                                                         |
-| mbbiDirect      | F3RP61Seq    | D, B                           |                                                                                         |
-| mbboDirect      | F3RP61       | Y, A, r, W, L, M, R, E         |                                                                                         |
-| mbboDirect      | F3RP61Seq    | D, B                           |                                                                                         |
-| longin          | F3RP61       | X, Y                           | U                                                                                       |
-| longin          | F3RP61       | A, r, W, R                     | U, L, B                                                                                 |
-| longin          | F3RP61Seq    | D, B                           | B                                                                                       |
-| longout         | F3RP61       | Y                              |                                                                                         |
-| longout         | F3RP61       | A, r, W, R                     | L, B                                                                                    |
-| longout         | F3RP61Seq    | D, B                           | B                                                                                       |
-| bi              | F3RP61       | X, Y, L, E                     |                                                                                         |
-| bi              | F3RP61Seq    | I                              |                                                                                         |
+| **Record type** | **DTYP**     | **Supported device**                      | **Additional option supported**                                                         |
+|-----------------|--------------|-------------------------------------------|-----------------------------------------------------------------------------------------|
+| mbbi            | F3RP61       | X, Y, A, r, W, L, M, R, E                 |                                                                                         |
+| mbbi            | F3RP61Seq    | D, B                                      |                                                                                         |
+| mbbi            | F3RP61SysCtl | Rotary Switch position                    |                                                                                         |
+| mbbo            | F3RP61       | Y, A, r, W, L, M, R, E                    |                                                                                         |
+| mbbo            | F3RP61Seq    | D, B                                      |                                                                                         |
+| mbbiDirect      | F3RP61       | X, Y, A, r, W, L, M, R, E                 |                                                                                         |
+| mbbiDirect      | F3RP61Seq    | D, B                                      |                                                                                         |
+| mbboDirect      | F3RP61       | Y, A, r, W, L, M, R, E                    |                                                                                         |
+| mbboDirect      | F3RP61Seq    | D, B                                      |                                                                                         |
+| longin          | F3RP61       | X, Y                                      | U                                                                                       |
+| longin          | F3RP61       | A, r, W, R                                | U, L, B                                                                                 |
+| longin          | F3RP61Seq    | D, B                                      | B                                                                                       |
+| longout         | F3RP61       | Y                                         |                                                                                         |
+| longout         | F3RP61       | A, r, W, R                                | L, B                                                                                    |
+| longout         | F3RP61Seq    | D, B                                      | B                                                                                       |
+| bi              | F3RP61       | X, Y, L, E                                |                                                                                         |
+| bi              | F3RP61Seq    | I                                         |                                                                                         |
 | bi              | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3; System Stat. Reg. |                                                                                         |
-| bo              | F3RP61       | Y, L, E                        |                                                                                         |
-| bo              | F3RP61Seq    | I                              |                                                                                         |
-| bo              | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3         |                                                                                         |
-| ai              | F3RP61       | X, Y                           | U                                                                                       |
-| ai              | F3RP61       | A                              | U, L                                                                                    |
-| ai              | F3RP61       | r, W, R                        | U, D, F, L                                                                              |
-| ai              | F3RP61Seq    | D, B                           |                                                                                         |
-| ao              | F3RP61       | Y, r                           |                                                                                         |
-| ao              | F3RP61       | A                              | L                                                                                       |
-| ao              | F3RP61       | W, R                           | D, F, L                                                                                 |
-| ao              | F3RP61Seq    | D, B                           |                                                                                         |
-| si              | F3RP61       | A                              |                                                                                         |
-| so              | F3RP61       | A                              |                                                                                         |
-| waveform        | F3RP61       | A                              | **FTVL field**: DBF\_ULONG, DBF\_USHORT, DBF\_SHORT                                     |
-| waveform        | F3RP61       | r, W, R                        | **FTVL field**: DBF\_DOUBLE, DBF\_FLOAT, DBF\_LONG, DBF\_ULONG, DBF\_SHORT, DBF\_USHORT |
+| bo              | F3RP61       | Y, L, E                                   |                                                                                         |
+| bo              | F3RP61Seq    | I                                         |                                                                                         |
+| bo              | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3                    |                                                                                         |
+| ai              | F3RP61       | X, Y                                      | U                                                                                       |
+| ai              | F3RP61       | A                                         | U, L                                                                                    |
+| ai              | F3RP61       | r, W, R                                   | U, D, F, L                                                                              |
+| ai              | F3RP61Seq    | D, B                                      |                                                                                         |
+| ao              | F3RP61       | Y, r                                      |                                                                                         |
+| ao              | F3RP61       | A                                         | L                                                                                       |
+| ao              | F3RP61       | W, R                                      | D, F, L                                                                                 |
+| ao              | F3RP61Seq    | D, B                                      |                                                                                         |
+| si              | F3RP61       | A                                         |                                                                                         |
+| so              | F3RP61       | A                                         |                                                                                         |
+| waveform        | F3RP61       | A                                         | **FTVL field**: DBF\_ULONG, DBF\_USHORT, DBF\_SHORT                                     |
+| waveform        | F3RP61       | r, W, R                                   | **FTVL field**: DBF\_DOUBLE, DBF\_FLOAT, DBF\_LONG, DBF\_ULONG, DBF\_SHORT, DBF\_USHORT |
 
 
 # Accessing I/O Module

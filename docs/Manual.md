@@ -195,8 +195,8 @@ example shows.
 
 ```
 record(bi, "f3rp61_example_1") {
-    field(DTYP, “F3RP61")
-    field(INP, “@U0,S2,X1")
+    field(DTYP, "F3RP61")
+    field(INP, "@U0,S2,X1")
 }
 ```
 

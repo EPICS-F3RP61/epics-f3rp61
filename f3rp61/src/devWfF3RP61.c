@@ -215,7 +215,7 @@ static long read_wf(waveformRecord *pwf)
       pdrly->u.pwdata = pwdata;
       break;
     default:
-      errlogPrintf("%s:unsupported field type of value\n", pwf->name);
+      errlogPrintf("devWfF3RP61: unsupported field type of value for %s\n", pwf->name);
       pwf->pact = 1;
       return(-1);
     }

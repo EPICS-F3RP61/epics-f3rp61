@@ -27,9 +27,6 @@
 #include <drvSup.h>
 #include <epicsExport.h>
 #include <epicsThread.h>
-#ifndef EPICS_REVISION
-#include <epicsVersion.h>
-#endif
 #include <errlog.h>
 #include <iocsh.h>
 #include <recSup.h>
@@ -55,7 +52,7 @@ struct {
     init,
 };
 
-epicsExportAddress(drvet,drvF3RP61);
+epicsExportAddress(drvet, drvF3RP61);
 
 int f3rp61_fd;
 
@@ -149,7 +146,8 @@ static void msgrcv_thread(void *arg)
             if (io_intr[unit][slot].ioscan[i].channel == channel) {
                 dbCommon *prec = io_intr[unit][slot].ioscan[i].prec;
                 if (!prec) {
-                    errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,C%d)\n", unit, slot, channel);
+                    errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,C%d)\n",
+                                 unit, slot, channel);
                     break;
                 }
 
@@ -224,11 +222,10 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
     return (0);
 }
 
-
 /*******************************************************************************
  * Get io interrupt info
  *******************************************************************************/
-long f3rp61GetIoIntInfo(int cmd, dbCommon * pxx, IOSCANPVT *ppvt)
+long f3rp61GetIoIntInfo(int cmd, dbCommon *pxx, IOSCANPVT *ppvt)
 {
     if (!pxx->dpvt) {
         errlogPrintf("drvF3RP61: f3rp61GetIoIntInfo is called with null dpvt\n");
@@ -244,6 +241,9 @@ long f3rp61GetIoIntInfo(int cmd, dbCommon * pxx, IOSCANPVT *ppvt)
     return (0);
 }
 
+/*******************************************************************************
+ * Register iocsh command 'f3rp61LinkDeviceConfigure'
+ *******************************************************************************/
 static const iocshArg linkDeviceConfigureArg0 = { "sysNo",iocshArgInt};
 static const iocshArg linkDeviceConfigureArg1 = { "nRlys",iocshArgInt};
 static const iocshArg linkDeviceConfigureArg2 = { "nRegs",iocshArgInt};
@@ -278,6 +278,9 @@ static void linkDeviceConfigure(int sysno, int nrlys, int nregs)
     link_data_config.wNumberOfRegister[sysno] = nregs;
 }
 
+/*******************************************************************************
+ * Register iocsh command 'f3rp61ComDeviceConfigure'
+ *******************************************************************************/
 static const iocshArg comDeviceConfigureArg0 = { "cpuNo",     iocshArgInt};
 static const iocshArg comDeviceConfigureArg1 = { "nRlys",     iocshArgInt};
 static const iocshArg comDeviceConfigureArg2 = { "ext_nRlys", iocshArgInt};
@@ -317,7 +320,15 @@ static void comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, i
     ext_com_data_config.wNumberOfRegister[cpuno] = ext_nregs;
 }
 
-static const iocshFuncDef getModuleInfoFuncDef = {"f3rp61GetModuleInfo",0,NULL};
+/*******************************************************************************
+ * Register iocsh command 'f3rp61GetModuleInfo'
+ *******************************************************************************/
+static const iocshFuncDef getModuleInfoFuncDef = {
+    "f3rp61GetModuleInfo",
+    0,
+    NULL
+};
+
 static void getModuleInfoCallFunc(const iocshArgBuf *args)
 {
     getModuleInfo();

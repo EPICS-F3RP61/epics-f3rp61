@@ -5,7 +5,7 @@
 * and higher are distributed subject to a Software License Agreement found
 * in file LICENSE that is included with this distribution.
 **************************************************************************
-* devMbboF3RP61Seq.c - Device Support Routines for  F3RP61 Multi-bit
+* devMbboF3RP61Seq.c - Device Support Routines for F3RP61 Multi-bit
 * Binary Output
 *
 *      Author: Gregor Kostevc (Cosylab)
@@ -40,103 +40,99 @@ static long init_record();
 static long write_mbbo();
 
 struct {
-  long       number;
-  DEVSUPFUN  report;
-  DEVSUPFUN  init;
-  DEVSUPFUN  init_record;
-  DEVSUPFUN  get_ioint_info;
-  DEVSUPFUN  write_mbbo;
+    long       number;
+    DEVSUPFUN  report;
+    DEVSUPFUN  init;
+    DEVSUPFUN  init_record;
+    DEVSUPFUN  get_ioint_info;
+    DEVSUPFUN  write_mbbo;
 } devMbboF3RP61Seq = {
-  5,
-  NULL,
-  NULL,
-  init_record,
-  NULL,
-  write_mbbo
+    5,
+    NULL,
+    NULL,
+    init_record,
+    NULL,
+    write_mbbo
 };
 
-epicsExportAddress(dset,devMbboF3RP61Seq);
+epicsExportAddress(dset, devMbboF3RP61Seq);
 
 /* Function init_record initializes record - parses INP/OUT field string,
  * allocates private data storage area and sets initial configure values */
 static long init_record(mbboRecord *pmbbo)
 {
-  struct link *plink = &pmbbo->out;
-  int size;
-  char *buf;
-  F3RP61_SEQ_DPVT *dpvt;
-  MCMD_STRUCT *pmcmdStruct;
-  MCMD_REQUEST *pmcmdRequest;
-  M3_WRITE_SEQDEV *pM3WriteSeqdev;
-  int srcSlot, destSlot, top;
-  char device;
+    int srcSlot, destSlot, top;
+    char device;
 
-  /* Output link type must be INST_IO */
-  if (pmbbo->out.type != INST_IO) {
-    recGblRecordError(S_db_badField,(void *)pmbbo,
-                      "devMbboF3RP61Seq (init_record) Illegal OUT field");
-    pmbbo->pact = 1;
-    return(S_db_badField);
-  }
-  size = strlen(plink->value.instio.string) + 1;
-  buf = (char *) callocMustSucceed(size, sizeof(char), "calloc failed");
-  strncpy(buf, plink->value.instio.string, size);
-  buf[size - 1] = '\0';
+    /* Output link type must be INST_IO */
+    if (pmbbo->out.type != INST_IO) {
+        recGblRecordError(S_db_badField, pmbbo,
+                          "devMbboF3RP61Seq (init_record) Illegal OUT field");
+        pmbbo->pact = 1;
+        return (S_db_badField);
+    }
 
-  /* Parse device*/
-  if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-    errlogPrintf("devMbboF3RP61Seq: can't get device address for %s\n",
-                 pmbbo->name);
-    pmbbo->pact = 1;
-    return (-1);
-  }
+    struct link *plink = &pmbbo->out;
+    int   size = strlen(plink->value.instio.string) + 1;
+    char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
+    strncpy(buf, plink->value.instio.string, size);
+    buf[size - 1] = '\0';
 
-  dpvt = (F3RP61_SEQ_DPVT *) callocMustSucceed(1,
-                                               sizeof(F3RP61_SEQ_DPVT),
-                                               "calloc failed");
+    /* Parse device */
+    if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
+        errlogPrintf("devMbboF3RP61Seq: can't get device address for %s\n",
+                     pmbbo->name);
+        pmbbo->pact = 1;
+        return (-1);
+    }
 
-  if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
-    errlogPrintf("devMbboF3RP61Seq: ioctl failed [%d]\n", errno);
-    pmbbo->pact = 1;
-    return (-1);
-  }
-  pmcmdStruct = &dpvt->mcmdStruct;
-  pmcmdStruct->timeOut = 1;
-  pmcmdRequest = &pmcmdStruct->mcmdRequest;
-  pmcmdRequest->formatCode = 0xf1;
-  pmcmdRequest->responseOption = 1;
-  pmcmdRequest->srcSlot = (unsigned char) srcSlot;
-  pmcmdRequest->destSlot = (unsigned char) destSlot;
-  pmcmdRequest->mainCode = 0x26;
-  pmcmdRequest->subCode = 0x02;
-  pmcmdRequest->dataSize = 12;
-  pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-  pM3WriteSeqdev->accessType = 2;
+    F3RP61_SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_SEQ_DPVT), "calloc failed");
 
-  /* Check device validity*/
-  switch (device)
-  {
-  case 'D':
-    pM3WriteSeqdev->devType = 0x04;
-    break;
-  case 'B':
-    pM3WriteSeqdev->devType = 0x02;
-    break;
-  default:
-    errlogPrintf("devMbboF3RP61Seq: unsupported device in %s\n",
-                 pmbbo->name);
-    pmbbo->pact = 1;
-    return (-1);
-  }
-  pM3WriteSeqdev->dataNum = 1;
-  pM3WriteSeqdev->topDevNo = top;
-  callbackSetUser(pmbbo, &dpvt->callback);
+    if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
+        errlogPrintf("devMbboF3RP61Seq: ioctl failed [%d]\n", errno);
+        pmbbo->pact = 1;
+        return (-1);
+    }
 
-  pmbbo->dpvt = dpvt;
+    MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
+    pmcmdStruct->timeOut = 1;
 
-  return(0);
+    MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
+    pmcmdRequest->formatCode = 0xf1;
+    pmcmdRequest->responseOption = 1;
+    pmcmdRequest->srcSlot = (unsigned char) srcSlot;
+    pmcmdRequest->destSlot = (unsigned char) destSlot;
+    pmcmdRequest->mainCode = 0x26;
+    pmcmdRequest->subCode = 0x02;
+    pmcmdRequest->dataSize = 12;
+
+    M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
+    pM3WriteSeqdev->accessType = 2;
+
+    /* Check device validity */
+    switch (device)
+    {
+    case 'D':
+        pM3WriteSeqdev->devType = 0x04;
+        break;
+    case 'B':
+        pM3WriteSeqdev->devType = 0x02;
+        break;
+    default:
+        errlogPrintf("devMbboF3RP61Seq: unsupported device in %s\n",
+                     pmbbo->name);
+        pmbbo->pact = 1;
+        return (-1);
+    }
+
+    pM3WriteSeqdev->dataNum = 1;
+    pM3WriteSeqdev->topDevNo = top;
+    callbackSetUser(pmbbo, &dpvt->callback);
+
+    pmbbo->dpvt = dpvt;
+
+    return (0);
 }
-
 
 /* Function is called when there was a request to process a record.
  * When called, it sends the value from the VAL field to the driver
@@ -144,41 +140,39 @@ static long init_record(mbboRecord *pmbbo)
  *  */
 static long write_mbbo(mbboRecord *pmbbo)
 {
-  F3RP61_SEQ_DPVT *dpvt = (F3RP61_SEQ_DPVT *) pmbbo->dpvt;
-  MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
-  MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
-  MCMD_RESPONSE *pmcmdResponse;
-  M3_WRITE_SEQDEV *pM3WriteSeqdev;
+    F3RP61_SEQ_DPVT *dpvt = pmbbo->dpvt;
+    MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
+    MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
 
-  if (pmbbo->pact) {  /* Second call (PACT is TRUE) */
-    pmcmdResponse = &pmcmdStruct->mcmdResponse;
+    if (pmbbo->pact) {  /* Second call (PACT is TRUE) */
+        MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
-    if (dpvt->ret < 0) {
-      errlogPrintf("devMbboF3RP61Seq: write_mbbo failed for %s\n",
-                   pmbbo->name);
-      return (-1);
-    }
+        if (dpvt->ret < 0) {
+            errlogPrintf("devMbboF3RP61Seq: write_mbbo failed for %s\n",
+                         pmbbo->name);
+            return (-1);
+        }
 
-    if (pmcmdResponse->errorCode) {
-      errlogPrintf("devMbboF3RP61Seq: errorCode %d returned for %s\n",
+        if (pmcmdResponse->errorCode) {
+            errlogPrintf("devMbboF3RP61Seq: errorCode %d returned for %s\n",
                    pmcmdResponse->errorCode, pmbbo->name);
-      return (-1);
+            return (-1);
+        }
+
+        pmbbo->udf = FALSE;
+    }
+    else {  /* First call (PACT is still FALSE) */
+        M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
+        pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) pmbbo->rval;
+
+        if (f3rp61Seq_queueRequest(dpvt) < 0) {
+            errlogPrintf("devMbboF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n",
+                         pmbbo->name);
+            return (-1);
+        }
+
+        pmbbo->pact = 1;
     }
 
-    pmbbo->udf=FALSE;
-  }
-  else {  /* First call (PACT is still FALSE) */
-    pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-    pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) pmbbo->rval;
-
-    if (f3rp61Seq_queueRequest(dpvt) < 0) {
-      errlogPrintf("devMbboF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n",
-                   pmbbo->name);
-      return (-1);
-    }
-
-    pmbbo->pact = 1;
-  }
-
-  return(0);
+    return (0);
 }

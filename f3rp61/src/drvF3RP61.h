@@ -14,21 +14,21 @@
 #define NUM_IO_INTR  8
 
 typedef struct {
-  int channel;
-  dbCommon *prec;
+    int channel;
+    dbCommon *prec;
 } F3RP61_IO_SCAN;
 
 typedef struct {
-  F3RP61_IO_SCAN ioscan[NUM_IO_INTR];
-  int count;
+    F3RP61_IO_SCAN ioscan[NUM_IO_INTR];
+    int count;
 } F3RP61_IO_INTR;
 
 typedef struct {
-  long mtype;
+    long mtype;
 #if defined(_arm_)
-  M3IO_MSG_IO mtext;
+    M3IO_MSG_IO mtext;
 #elif defined(_ppc_)
-  M3IO_IO_EVENT mtext;
+    M3IO_IO_EVENT mtext;
 #else
 #  error
 #endif
@@ -39,6 +39,5 @@ long f3rp61_register_io_interrupt(dbCommon *, int, int, int);
 
 extern int f3rp61_fd;
 extern F3RP61_IO_INTR f3rp61_io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
-//extern int f3rp61_msqid[M3IO_NUM_SLOT];
 
 #endif /* DRVF3RP61_H */

@@ -5,7 +5,7 @@
 * and higher are distributed subject to a Software License Agreement found
 * in file LICENSE that is included with this distribution.
 **************************************************************************
-* devMbbiF3RP61Seq.c - Device Support Routines for  F3RP61 Multi-bit
+* devMbbiF3RP61Seq.c - Device Support Routines for F3RP61 Multi-bit
 * Binary Input
 *
 *      Author: Gregor Kostevc (Cosylab)
@@ -40,101 +40,98 @@ static long init_record();
 static long read_mbbi();
 
 struct {
-  long       number;
-  DEVSUPFUN  report;
-  DEVSUPFUN  init;
-  DEVSUPFUN  init_record;
-  DEVSUPFUN  get_ioint_info;
-  DEVSUPFUN  read_mbbi;
+    long       number;
+    DEVSUPFUN  report;
+    DEVSUPFUN  init;
+    DEVSUPFUN  init_record;
+    DEVSUPFUN  get_ioint_info;
+    DEVSUPFUN  read_mbbi;
 } devMbbiF3RP61Seq = {
-  5,
-  NULL,
-  NULL,
-  init_record,
-  NULL,
-  read_mbbi
+    5,
+    NULL,
+    NULL,
+    init_record,
+    NULL,
+    read_mbbi
 };
 
-epicsExportAddress(dset,devMbbiF3RP61Seq);
+epicsExportAddress(dset, devMbbiF3RP61Seq);
 
 /* Function init_record initializes record - parses INP/OUT field string,
  * allocates private data storage area with sets initial values */
 static long init_record(mbbiRecord *pmbbi)
 {
-  struct link *plink = &pmbbi->inp;
-  int size;
-  char *buf;
-  F3RP61_SEQ_DPVT *dpvt;
-  MCMD_STRUCT *pmcmdStruct;
-  MCMD_REQUEST *pmcmdRequest;
-  M3_READ_SEQDEV *pM3ReadSeqdev;
-  int srcSlot, destSlot, top;
-  char device;
+    int srcSlot, destSlot, top;
+    char device;
 
-  /* Input link type must be INST_IO */
-  if (pmbbi->inp.type != INST_IO) {
-    recGblRecordError(S_db_badField,(void *)pmbbi,
-                      "devMbbiF3RP61Seq (init_record) Illegal INP field");
-    pmbbi->pact = 1;
-    return(S_db_badField);
-  }
-  size = strlen(plink->value.instio.string) + 1;
-  buf = (char *) callocMustSucceed(size, sizeof(char), "calloc failed");
-  strncpy(buf, plink->value.instio.string, size);
-  buf[size - 1] = '\0';
+    /* Input link type must be INST_IO */
+    if (pmbbi->inp.type != INST_IO) {
+        recGblRecordError(S_db_badField, pmbbi,
+                          "devMbbiF3RP61Seq (init_record) Illegal INP field");
+        pmbbi->pact = 1;
+        return (S_db_badField);
+    }
 
-  /* Parse device*/
-  if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-    errlogPrintf("devMbbiF3RP61Seq: can't get device address for %s\n",
+    struct link *plink = &pmbbi->inp;
+    int   size = strlen(plink->value.instio.string) + 1;
+    char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
+    strncpy(buf, plink->value.instio.string, size);
+    buf[size - 1] = '\0';
+
+    /* Parse device */
+    if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
+        errlogPrintf("devMbbiF3RP61Seq: can't get device address for %s\n",
+                     pmbbi->name);
+        pmbbi->pact = 1;
+        return (-1);
+    }
+
+    F3RP61_SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_SEQ_DPVT), "calloc failed");
+
+    if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
+        errlogPrintf("devMbbiF3RP61Seq: ioctl failed [%d]\n", errno);
+        pmbbi->pact = 1;
+        return (-1);
+    }
+
+    MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
+    pmcmdStruct->timeOut = 1;
+
+    MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
+    pmcmdRequest->formatCode = 0xf1;
+    pmcmdRequest->responseOption = 1;
+    pmcmdRequest->srcSlot = (unsigned char) srcSlot;
+    pmcmdRequest->destSlot = (unsigned char) destSlot;
+    pmcmdRequest->mainCode = 0x26;
+    pmcmdRequest->subCode = 0x01;
+    pmcmdRequest->dataSize = 10;
+
+    M3_READ_SEQDEV *pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
+    pM3ReadSeqdev->accessType = 2;
+
+    /* Check device validity */
+    switch (device)
+    {
+    case 'D':
+        pM3ReadSeqdev->devType = 0x04;
+        break;
+    case 'B':
+        pM3ReadSeqdev->devType = 0x02;
+        break;
+    default:
+        errlogPrintf("devMbbiF3RP61Seq: unsupported device in %s\n",
                  pmbbi->name);
-    pmbbi->pact = 1;
-    return (-1);
-  }
+        pmbbi->pact = 1;
+        return (-1);
+    }
 
-  dpvt = (F3RP61_SEQ_DPVT *) callocMustSucceed(1,
-                                               sizeof(F3RP61_SEQ_DPVT),
-                                               "calloc failed");
+    pM3ReadSeqdev->dataNum = 1;
+    pM3ReadSeqdev->topDevNo = top;
+    callbackSetUser(pmbbi, &dpvt->callback);
 
-  if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
-    errlogPrintf("devMbbiF3RP61Seq: ioctl failed [%d]\n", errno);
-    pmbbi->pact = 1;
-    return (-1);
-  }
-  pmcmdStruct = &dpvt->mcmdStruct;
-  pmcmdStruct->timeOut = 1;
-  pmcmdRequest = &pmcmdStruct->mcmdRequest;
-  pmcmdRequest->formatCode = 0xf1;
-  pmcmdRequest->responseOption = 1;
-  pmcmdRequest->srcSlot = (unsigned char) srcSlot;
-  pmcmdRequest->destSlot = (unsigned char) destSlot;
-  pmcmdRequest->mainCode = 0x26;
-  pmcmdRequest->subCode = 0x01;
-  pmcmdRequest->dataSize = 10;
-  pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-  pM3ReadSeqdev->accessType = 2;
+    pmbbi->dpvt = dpvt;
 
-  /* Check device validity*/
-  switch (device)
-  {
-  case 'D':
-    pM3ReadSeqdev->devType = 0x04;
-    break;
-  case 'B':
-    pM3ReadSeqdev->devType = 0x02;
-    break;
-  default:
-    errlogPrintf("devMbbiF3RP61Seq: unsupported device in %s\n",
-                 pmbbi->name);
-    pmbbi->pact = 1;
-    return (-1);
-  }
-  pM3ReadSeqdev->dataNum = 1;
-  pM3ReadSeqdev->topDevNo = top;
-  callbackSetUser(pmbbi, &dpvt->callback);
-
-  pmbbi->dpvt = dpvt;
-
-  return(0);
+    return (0);
 }
 
 /* Function is called when there was a request to process a record.
@@ -144,38 +141,37 @@ static long init_record(mbbiRecord *pmbbi)
  *  */
 static long read_mbbi(mbbiRecord *pmbbi)
 {
-  F3RP61_SEQ_DPVT *dpvt = (F3RP61_SEQ_DPVT *) pmbbi->dpvt;
-  MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
-  MCMD_RESPONSE *pmcmdResponse;
+    F3RP61_SEQ_DPVT *dpvt = pmbbi->dpvt;
+    MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
 
-  if (pmbbi->pact) {  /* Second call; PACT is set to TRUE, so this is a completion request */
-    pmcmdResponse = &pmcmdStruct->mcmdResponse;
+    if (pmbbi->pact) {  /* Second call; PACT is set to TRUE, so this is a completion request */
+        MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
-    if (dpvt->ret < 0) {
-      errlogPrintf("devMbbiF3RP61Seq: read_mbbi failed for %s\n",
-                   pmbbi->name);
-      return (-1);
+        if (dpvt->ret < 0) {
+            errlogPrintf("devMbbiF3RP61Seq: read_mbbi failed for %s\n",
+                         pmbbi->name);
+            return (-1);
+        }
+
+        if (pmcmdResponse->errorCode) {
+            errlogPrintf("devMbbiF3RP61Seq: errorCode %d returned for %s\n",
+                         pmcmdResponse->errorCode, pmbbi->name);
+            return (-1);
+        }
+
+        pmbbi->rval = (unsigned long) pmcmdResponse->dataBuff.wData[0];
+
+        pmbbi->udf = FALSE;
+    }
+    else {  /* First call - PACT is set to FALSE */
+        if (f3rp61Seq_queueRequest(dpvt) < 0) {
+            errlogPrintf("devMbbiF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n",
+                         pmbbi->name);
+            return (-1);
+        }
+
+        pmbbi->pact = 1;
     }
 
-    if (pmcmdResponse->errorCode) {
-      errlogPrintf("devMbbiF3RP61Seq: errorCode %d returned for %s\n",
-                   pmcmdResponse->errorCode, pmbbi->name);
-      return (-1);
-    }
-
-    pmbbi->rval = (unsigned long) pmcmdResponse->dataBuff.wData[0];
-
-    pmbbi->udf=FALSE;
-  }
-  else {  /* First call - PACT is set to FALSE */
-    if (f3rp61Seq_queueRequest(dpvt) < 0) {
-      errlogPrintf("devMbbiF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n",
-                   pmbbi->name);
-      return (-1);
-    }
-
-    pmbbi->pact = 1;
-  }
-
-  return(0);
+    return (0);
 }

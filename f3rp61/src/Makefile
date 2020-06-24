@@ -11,6 +11,7 @@ include $(TOP)/configure/CONFIG
 
 #
 USR_CFLAGS += -Wall
+USR_CFLAGS += -Werror
 USR_CFLAGS += -std=c99
 
 ifneq ($(filter $(T_A), linux-f3rp61 linux-f3rp71),)

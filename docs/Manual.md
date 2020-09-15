@@ -113,8 +113,8 @@ relevant record types.
 
 | **Device** | **Description**                         | **Type** | **Length** | **Supported record types**                                                    |
 |------------|-----------------------------------------|----------|------------|-------------------------------------------------------------------------------|
-| X          | Inputs on input module                  | IO       | 1-bit      | mbbi, mbbiDirect, longin, bi, ai                                              |
-| Y          | Outputs on output module                | IO       | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, bi, bo, ai, ao           |
+| X          | Input relays on input module            | IO       | 1-bit      | mbbi, mbbiDirect, longin, bi, ai                                              |
+| Y          | Output relays on output module          | IO       | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, bi, bo, ai, ao           |
 | A          | Internal registers on I/O modules       | IO       |            | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, si, so, waveform |
 | M          | Mode registers                          | IO       |            | mbbi, mbbo, mbbiDirect, mbboDirect                                            |
 | R          | Shared registers                        | Shared   | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
@@ -131,7 +131,7 @@ relevant record types.
 | M          | Special relays – read-only              |          | 1-bit      |                                                                               |
 | T          | Timers                                  |          |            |                                                                               |
 | C          | Counters                                |          |            |                                                                               |
-| I          |                                         | Internal |            | bi, bo                                                                        |
+| I          | Internal relays                         | Internal |            | bi, bo                                                                        |
 
 The table below shows supported record types with DTYP fields used to
 access specific devices. Each record type by default supports 'no

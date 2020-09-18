@@ -59,18 +59,22 @@ typedef struct {
     char led;
 } F3RP61SysCtl_BI_DPVT;
 
-/* Function init_record initializes record - parses INP/OUT field string,
- * allocates private data storage area and sets initial configure values */
+/*
+  init_record() initializes record - parses INP/OUT field string,
+  allocates private data storage area and sets initial configure
+  values.
+*/
 static long init_record(biRecord *pbi)
 {
-    char device = 'N'; /* Valid states: L (LED), R (Status Register) */
-    char led;          /* Valid states: R (Run), A (Alarm), E (Error) */
+    char device = 0; /* Valid states: L (LED), R (Status Register) or U (F3RP71 only) */
+    char led = 0;    /* Valid states: R (Run), A (Alarm), E (Error) */
 
+    /* Link type must be INST_IO */
     if (pbi->inp.type != INST_IO) {
         recGblRecordError(S_db_badField, pbi,
                           "devBiF3RP61SysCtl (init_record) Illegal INP field");
         pbi->pact = 1;
-        return (S_db_badField);
+        return S_db_badField;
     }
 
     struct link *plink = &pbi->inp;
@@ -84,7 +88,7 @@ static long init_record(biRecord *pbi)
         if (sscanf(buf, "SYS,%c", &device) < 1) {
             errlogPrintf("devBiF3RP61SysCtl: can't get device for %s\n", pbi->name);
             pbi->pact = 1;
-            return (-1);
+            return -1;
         }
     }
 
@@ -94,29 +98,30 @@ static long init_record(biRecord *pbi)
         && device != 'U'
 #endif
         ) {
-        errlogPrintf("devBiF3RP61SysCtl: illegal device for %s\n", pbi->name);
+        errlogPrintf("devBiF3RP61SysCtl: unsupported device \'%c\' for %s\n", device, pbi->name);
         pbi->pact = 1;
-        return (-1);
+        return -1;
     }
 
     /* Check 'led' validity */
     if (device == 'L') {
         if (led != 'R' && led != 'A' && led != 'E' ) {
-            errlogPrintf("devBiF3RP61SysCtl: illegal LED address for %s\n", pbi->name);
+            errlogPrintf("devBiF3RP61SysCtl: unsupported LED address \'%c\' for %s\n", led, pbi->name);
             pbi->pact = 1;
-            return (-1);
+            return -1;
         }
     }
 #ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
     else if (device == 'U') {
         if (led != '1' && led != '2' && led != '3') {
-            errlogPrintf("devBiF3RP61SysCtl: illegal USER LED address for %s\n", pbi->name);
+            errlogPrintf("devBiF3RP61SysCtl: unsupported USER LED address \'%c\' for %s\n", led, pbi->name);
             pbi->pact = 1;
-            return (-1);
+            return -1;
         }
     }
 #endif
 
+    /* Allocate private data storage area */
     F3RP61SysCtl_BI_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SysCtl_BI_DPVT), "calloc failed");
     dpvt->device = device;
 
@@ -126,21 +131,23 @@ static long init_record(biRecord *pbi)
 
     pbi->dpvt = dpvt;
 
-    return (0);
+    return 0;
 }
 
-/* Function is called when there was request to process the record.
- * According to the device (read in init_record) it sets commands and
- * data that is to be sent to driver, sends it and stores returned
- * values to the records RVAL field. */
+/*
+  read_bi() is called when there was a request to process a
+  record. When called, it reads the value from the driver and stores
+  to the VAL field.
+*/
 static long read_bi(biRecord *pbi)
 {
     F3RP61SysCtl_BI_DPVT *dpvt = (F3RP61SysCtl_BI_DPVT *) pbi->dpvt;
     char device = dpvt->device;
     char led = dpvt->led;
-    int command;
-    unsigned long data;
+    int command = 0;
+    unsigned long data = 0;
 
+    /* Compose ioctl request */
     switch (device) {
     case 'L':
         command = M3SC_GET_LED;
@@ -155,11 +162,13 @@ static long read_bi(biRecord *pbi)
         break;
     }
 
+    /* Issue API function */
     if (ioctl(f3rp61SysCtl_fd, command, &data) < 0) {
         errlogPrintf("devBiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, pbi->name);
-        return (-1);
+        return -1;
     }
 
+    /* fill VAL field */
     pbi->udf = FALSE;
 
     switch (device) {
@@ -196,6 +205,5 @@ static long read_bi(biRecord *pbi)
         break;
     }
 
-    /* convert */
-    return (0);
+    return 0;
 }

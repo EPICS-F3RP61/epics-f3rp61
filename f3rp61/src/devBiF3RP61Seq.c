@@ -56,17 +56,22 @@ struct {
 
 epicsExportAddress(dset, devBiF3RP61Seq);
 
-/* */
+/*
+  init_record() initializes record - parses INP/OUT field string,
+  allocates private data storage area and sets initial configure
+  values.
+*/
 static long init_record(biRecord *pbi)
 {
-    int srcSlot, destSlot, top;
-    char device;
+    int srcSlot = 0, destSlot = 0, top = 0;
+    char device = 0;
 
+    /* Link type must be INST_IO */
     if (pbi->inp.type != INST_IO) {
         recGblRecordError(S_db_badField, pbi,
                           "devBiF3RP61Seq (init_record) Illegal INP field");
         pbi->pact = 1;
-        return (S_db_badField);
+        return S_db_badField;
     }
 
     struct link *plink = &pbi->inp;
@@ -75,20 +80,24 @@ static long init_record(biRecord *pbi)
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
+    /* Parse slot, device and register number */
     if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
         errlogPrintf("devBiF3RP61Seq: can't get device address for %s\n", pbi->name);
         pbi->pact = 1;
-        return (-1);
+        return -1;
     }
 
+    /* Read the slot number of CPU module */
+    if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
+        errlogPrintf("devBiF3RP61Seq: ioctl failed [%d] for %s\n", errno, pbi->name);
+        pbi->pact = 1;
+        return -1;
+    }
+
+    /* Allocate private data storage area */
     F3RP61_SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_SEQ_DPVT), "calloc failed");
 
-    if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
-        errlogPrintf("devBiF3RP61Seq: ioctl failed [%d]\n", errno);
-        pbi->pact = 1;
-        return (-1);
-    }
-
+    /* Compose data structure for I/O request to CPU module */
     MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
     pmcmdStruct->timeOut = 1;
 
@@ -104,15 +113,16 @@ static long init_record(biRecord *pbi)
     M3_READ_SEQDEV *pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
     pM3ReadSeqdev->accessType = 0;
 
+    /* Check device validity and set devive type*/
     switch (device)
     {
-    case 'I':
+    case 'I': // internal relays
         pM3ReadSeqdev->devType = 0x09;
         break;
     default:
-        errlogPrintf("devBiF3RP61Seq: unsupported device in %s\n", pbi->name);
+        errlogPrintf("devBiF3RP61Seq: unsupported device \'%c\' for %s\n", device, pbi->name);
         pbi->pact = 1;
-        return (-1);
+        return -1;
     }
 
     pM3ReadSeqdev->devType = 0x09;
@@ -122,40 +132,45 @@ static long init_record(biRecord *pbi)
 
     pbi->dpvt = dpvt;
 
-    return (0);
+    return 0;
 }
 
+/*
+  read_bi() is called when there was a request to process a record.
+  When called, it reads the value from the driver and stores to the
+  VAL field, then sets PACT field back to TRUE.
+*/
 static long read_bi(biRecord *pbi)
 {
     F3RP61_SEQ_DPVT *dpvt = pbi->dpvt;
 
-    if (pbi->pact) {
+    if (pbi->pact) { // Second call (PACT is TRUE)
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (dpvt->ret < 0) {
             errlogPrintf("devBiF3RP61Seq: read_bi failed for %s\n", pbi->name);
-            return (-1);
+            return -1;
         }
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devBiF3RP61Seq: errorCode %d returned for %s\n",
-                         pmcmdResponse->errorCode, pbi->name);
-            return (-1);
+            errlogPrintf("devBiF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, pbi->name);
+            return -1;
         }
 
+        /* fill VAL field */
+        pbi->udf = FALSE;
         pbi->rval = (unsigned long) pmcmdResponse->dataBuff.wData[0];
 
-        pbi->udf = FALSE;
-    }
-    else {
+    } else { // First call (PACT is still FALSE)
+        /* Issue read request */
         if (f3rp61Seq_queueRequest(dpvt) < 0) {
             errlogPrintf("devBiF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n", pbi->name);
-            return (-1);
+            return -1;
         }
 
         pbi->pact = 1;
     }
 
-    return (0);
+    return 0;
 }

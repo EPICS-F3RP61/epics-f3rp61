@@ -59,23 +59,27 @@ struct {
 epicsExportAddress(dset, devSoF3RP61);
 
 typedef struct {
-    IOSCANPVT ioscanpvt; /* must comes first */
+    IOSCANPVT ioscanpvt; /* must come first */
     M3IO_ACCESS_REG drly;
     char device;
 } F3RP61_SO_DPVT;
 
-/* */
+/*
+  init_record() initializes record - parses INP/OUT field string,
+  allocates private data storage area and sets initial configure
+  values.
+*/
 static long init_record(stringoutRecord *pso)
 {
-    int unitno, slotno, start;
-    char device;
+    int unitno = 0, slotno = 0, start = 0;
+    char device = 0;
 
-  /* bi.out must be an INST_IO */
+    /* Link type must be INST_IO */
     if (pso->out.type != INST_IO) {
         recGblRecordError(S_db_badField, pso,
                           "devSoF3RP61 (init_record) Illegal OUT field");
         pso->pact = 1;
-        return (S_db_badField);
+        return S_db_badField;
     }
 
     struct link *plink = &pso->out;
@@ -84,56 +88,65 @@ static long init_record(stringoutRecord *pso)
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
+    /* Parse for possible interrupt source */
     char *pC = strchr(buf, ':');
     if (pC) {
         *pC++ = '\0';
         if (sscanf(pC, "U%d,S%d,X%d", &unitno, &slotno, &start) < 3) {
             errlogPrintf("devSoF3RP61: can't get interrupt source address for %s\n", pso->name);
             pso->pact = 1;
-            return (-1);
+            return -1;
         }
 
         if (f3rp61_register_io_interrupt((dbCommon *) pso, unitno, slotno, start) < 0) {
             errlogPrintf("devSoF3RP61: can't register I/O interrupt for %s\n", pso->name);
             pso->pact = 1;
-            return (-1);
+            return -1;
         }
     }
 
+    /* Parse slot, device and register number */
     if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
         errlogPrintf("devSoF3RP61: can't get I/O address for %s\n", pso->name);
         pso->pact = 1;
-        return (-1);
+        return -1;
     }
 
-    if (!(device == 'A')) {
-        errlogPrintf("devSoF3RP61: illegal I/O address for %s\n", pso->name);
-        pso->pact = 1;
-        return (-1);
-    }
-
+    /* Allocate private data storage area */
     F3RP61_SO_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_SO_DPVT), "calloc failed");
     dpvt->device = device;
 
-    M3IO_ACCESS_REG *pdrly = &dpvt->drly;
-    pdrly->unitno = (unsigned short) unitno;
-    pdrly->slotno = (unsigned short) slotno;
-    pdrly->start  = (unsigned short) start;
-    /*
-      pdrly->u.pbdata = callocMustSucceed(40, sizeof(unsigned char), "calloc failed");
-    */
-    pdrly->u.pwdata = callocMustSucceed(40, sizeof(char),  "calloc failed");
+    /* Check device validity and compose data structure for I/O request */
+    if (device == 'A') {                         // Internal registers on I/O modules
+        M3IO_ACCESS_REG *pdrly = &dpvt->drly;
+        pdrly->unitno = unitno;
+        pdrly->slotno = slotno;
+        pdrly->start  = start;
+        /*
+          pdrly->u.pbdata = callocMustSucceed(40, sizeof(unsigned char), "calloc failed");
+        */
+        pdrly->u.pwdata = callocMustSucceed(40, sizeof(char),  "calloc failed");
 
-    /*
-      pdrly->count = (unsigned short) 40;
-    */
-    pdrly->count = 20;
+        /*
+          pdrly->count = (unsigned short) 40;
+        */
+        pdrly->count = 20;
+    } else {
+        errlogPrintf("devSoF3RP61: unsupported device \'%c\' for %s\n", device, pso->name);
+        pso->pact = 1;
+        return -1;
+    }
 
     pso->dpvt = dpvt;
 
-    return (0);
+    return 0;
 }
 
+/*
+  write_so() is called when there was a request to process a
+  record. When called, it sends the value from the VAL field to the
+  driver.
+*/
 static long write_so(stringoutRecord *pso)
 {
     F3RP61_SO_DPVT *dpvt = pso->dpvt;
@@ -141,12 +154,13 @@ static long write_so(stringoutRecord *pso)
 
     strncpy((char *) pdrly->u.pbdata, (char *)&pso->val, 40);
 
+    /* Issue API function */
     if (ioctl(f3rp61_fd, M3IO_WRITE_REG, pdrly) < 0) {
         errlogPrintf("devSoF3RP61: ioctl failed [%d] for %s\n", errno, pso->name);
-        return (-1);
+        return -1;
     }
 
     pso->udf = FALSE;
 
-    return (0);
+    return 0;
 }

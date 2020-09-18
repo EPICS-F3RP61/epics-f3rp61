@@ -57,7 +57,7 @@ struct {
 epicsExportAddress(dset, devBiF3RP61);
 
 typedef struct {
-    IOSCANPVT ioscanpvt; /* must comes first */
+    IOSCANPVT ioscanpvt; /* must come first */
     union {
         M3IO_ACCESS_RELAY_POINT inrlyp;
         M3IO_ACCESS_REG drly;
@@ -67,17 +67,22 @@ typedef struct {
     unsigned short shift;
 } F3RP61_BI_DPVT;
 
-/* */
+/*
+  init_record() initializes record - parses INP/OUT field string,
+  allocates private data storage area and sets initial configure
+  values.
+*/
 static long init_record(biRecord *pbi)
 {
-    int unitno, slotno, position;
-    char device;
+    int unitno = 0, slotno = 0, position = 0;
+    char device = 0;
 
+    /* Link type must be INST_IO */
     if (pbi->inp.type != INST_IO) {
         recGblRecordError(S_db_badField, pbi,
                           "devBiF3RP61 (init_record) Illegal INP field");
         pbi->pact = 1;
-        return (S_db_badField);
+        return S_db_badField;
     }
 
     struct link *plink = &pbi->inp;
@@ -86,19 +91,20 @@ static long init_record(biRecord *pbi)
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
+    /* Parse for possible interrupt source */
     char *pC = strchr(buf, ':');
     if (pC) {
         *pC++ = '\0';
         if (sscanf(pC, "U%d,S%d,X%d", &unitno, &slotno, &position) < 3) {
             errlogPrintf("devBiF3RP61: can't get interrupt source address for %s\n", pbi->name);
             pbi->pact = 1;
-            return (-1);
+            return -1;
         }
 
         if (f3rp61_register_io_interrupt((dbCommon *) pbi, unitno, slotno, position) < 0) {
             errlogPrintf("devBiF3RP61: can't register I/O interrupt for %s\n", pbi->name);
             pbi->pact = 1;
-            return (-1);
+            return -1;
         }
     }
 
@@ -106,25 +112,24 @@ static long init_record(biRecord *pbi)
         if (sscanf(buf, "%c%d", &device, &position) < 2) {
             errlogPrintf("devBiF3RP61: can't get I/O address for %s\n", pbi->name);
             pbi->pact = 1;
-            return (-1);
-        }
-        else if (device != 'L' && device != 'E') {
-            errlogPrintf("devBiF3RP61: unsupported device \'%c\' for %s\n", device,
-                         pbi->name);
+            return -1;
+        } else if (device != 'L' && device != 'E') {
+            errlogPrintf("devBiF3RP61: unsupported device \'%c\' for %s\n", device, pbi->name);
             pbi->pact = 1;
         }
     }
 
-    if (!(device == 'X' || device == 'Y' || device == 'L' || device == 'E')) {
-        errlogPrintf("devBiF3RP61: illegal I/O address for %s\n", pbi->name);
-        pbi->pact = 1;
-        return (-1);
-    }
-
+    /* Allocate private data storage area */
     F3RP61_BI_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_BI_DPVT), "calloc failed");
     dpvt->device = device;
 
-    if (device == 'Y') {
+    /* Check device validity and compose data structure for I/O request */
+    if (device == 'X') { // Input relays on I/O modules
+        M3IO_ACCESS_RELAY_POINT *pinrlyp = &dpvt->u.inrlyp;
+        pinrlyp->unitno = (unsigned short) unitno;
+        pinrlyp->slotno = (unsigned short) slotno;
+        pinrlyp->position = (unsigned short) position;
+    } else if (device == 'Y') { // Output relays on I/O modules
         dpvt->start = ((position - 1) / 16) * 16 + 1;
         dpvt->shift = ((position - 1) % 16);
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
@@ -132,23 +137,25 @@ static long init_record(biRecord *pbi)
         pdrly->slotno = (unsigned short) slotno;
         pdrly->start = (unsigned short) dpvt->start;
         pdrly->count = (unsigned short) 1;
-    }
-    else if (device == 'L' || device == 'E') {
+    } else if (device == 'L' || device == 'E') {  // Shared relays Link relays
         M3IO_ACCESS_RELAY_POINT *    pinrlyp = &dpvt->u.inrlyp;
         pinrlyp->position = (unsigned short) position;
-    }
-    else {
-        M3IO_ACCESS_RELAY_POINT *pinrlyp = &dpvt->u.inrlyp;
-        pinrlyp->unitno = (unsigned short) unitno;
-        pinrlyp->slotno = (unsigned short) slotno;
-        pinrlyp->position = (unsigned short) position;
+    } else {
+        errlogPrintf("devBiF3RP61: unsupported device \'%c\' for %s\n", device, pbi->name);
+        pbi->pact = 1;
+        return -1;
     }
 
     pbi->dpvt = dpvt;
 
-    return (0);
+    return 0;
 }
 
+/*
+  read_bi() is called when there was a request to process a
+  record. When called, it reads the value from the driver and stores
+  to the VAL field.
+*/
 static long read_bi(biRecord *pbi)
 {
     F3RP61_BI_DPVT *dpvt = pbi->dpvt;
@@ -157,8 +164,9 @@ static long read_bi(biRecord *pbi)
     char device = dpvt->device;
     int command = M3IO_READ_INRELAY_POINT;
     void *p = pinrlyp;
-    unsigned char data;
+    unsigned char data = 0;
 
+    /* Compose ioctl request */
     switch (device) {
     case 'Y':
         command = M3IO_READ_OUTRELAY;
@@ -170,27 +178,26 @@ static long read_bi(biRecord *pbi)
         break;
     }
 
-    if (device != 'L' && device != 'E') {
-        if (ioctl(f3rp61_fd, command, p) < 0) {
-            errlogPrintf("devBiF3RP61: ioctl failed [%d] for %s\n", errno, pbi->name);
-            return (-1);
-        }
-    }
-    else if (device == 'L') {
-        if (readM3LinkRelayB((int) pinrlyp->position, 1, &data) < 0) {
-            errlogPrintf("devBiF3RP61: readM3LinkRelayB failed [%d] for %s\n", errno, pbi->name);
-            return (-1);
-        }
-    }
-    else {
+    /* Issue API function */
+    if (device == 'E') { // Shared relays
         if (readM3ComRelayB((int) pinrlyp->position, 1, &data) < 0) {
             errlogPrintf("devBiF3RP61: readM3ComRelayB failed [%d] for %s\n", errno, pbi->name);
-            return (-1);
+            return -1;
+        }
+    } else if (device == 'L') { // Link realys
+        if (readM3LinkRelayB((int) pinrlyp->position, 1, &data) < 0) {
+            errlogPrintf("devBiF3RP61: readM3LinkRelayB failed [%d] for %s\n", errno, pbi->name);
+            return -1;
+        }
+    } else { // Registers and relays on I/O modules
+        if (ioctl(f3rp61_fd, command, p) < 0) {
+            errlogPrintf("devBiF3RP61: ioctl failed [%d] for %s\n", errno, pbi->name);
+            return -1;
         }
     }
 
+    /* fill VAL field */
     pbi->udf = FALSE;
-
     switch (device) {
     case 'Y':
         pbi->rval = (unsigned long) ((pdrly->u.outrly[0].data >> dpvt->shift) & 0x1);
@@ -203,6 +210,5 @@ static long read_bi(biRecord *pbi)
         pbi->rval = (unsigned long) pinrlyp->data;
     }
 
-    /* convert */
-    return (0);
+    return 0;
 }

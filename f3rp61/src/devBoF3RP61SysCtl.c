@@ -35,7 +35,7 @@
 
 /* Create the dset for devBoF3RP61SysCtl */
 static long init_record();
-static long read_bo();
+static long write_bo();
 
 struct {
     long       number;
@@ -43,7 +43,7 @@ struct {
     DEVSUPFUN  init;
     DEVSUPFUN  init_record;
     DEVSUPFUN  get_ioint_info;
-    DEVSUPFUN  read_bo;
+    DEVSUPFUN  write_bo;
     DEVSUPFUN  special_linconv;
 } devBoF3RP61SysCtl = {
     6,
@@ -51,7 +51,7 @@ struct {
     NULL,
     init_record,
     NULL,
-    read_bo,
+    write_bo,
     NULL
 };
 
@@ -62,18 +62,22 @@ typedef struct {
     char led;
 } F3RP61SysCtl_BO_DPVT;
 
-/* Function init_record initializes record - parses INP/OUT field string,
- * allocates private data storage area and sets initial configure values */
+/*
+  init_record() initializes record - parses INP/OUT field string,
+  allocates private data storage area and sets initial configure
+  values.
+*/
 static long init_record(boRecord *pbo)
 {
-    char device;
-    char led;
+    char device = 0; // Valid states: L (LED), R (Status Register) or U (F3RP71 only)
+    char led = 0;    // Valid states: R (Run), A (Alarm), E (Error)
 
+    /* Link type must be INST_IO */
     if (pbo->out.type != INST_IO) {
         recGblRecordError(S_db_badField, pbo,
                           "devBoF3RP61SysCtl (init_record) Illegal OUT field");
         pbo->pact = 1;
-        return (S_db_badField);
+        return S_db_badField;
     }
 
     struct link *plink = &pbo->out;
@@ -87,7 +91,7 @@ static long init_record(boRecord *pbo)
         if (sscanf(buf, "SYS,%c", &device) < 1) {
             errlogPrintf("devBoF3RP61SysCtl: can't get device for %s\n", pbo->name);
             pbo->pact = 1;
-            return (-1);
+            return -1;
         }
     }
 
@@ -97,30 +101,30 @@ static long init_record(boRecord *pbo)
         && device != 'U'
 #endif
         ) {
-        errlogPrintf("devBoF3RP61SysCtl: illegal device for %s\n",
-                     pbo->name);
+        errlogPrintf("devBoF3RP61SysCtl: unsupported device \'%c\' for %s\n", device, pbo->name);
         pbo->pact = 1;
-        return (-1);
+        return -1;
     }
 
     /* Check 'led' validity */
     if (device == 'L') {
         if (!(led == 'R' || led == 'A' || led == 'E')) {
-            errlogPrintf("devBoF3RP61SysCtl: illegal LED address for %s\n", pbo->name);
+            errlogPrintf("devBoF3RP61SysCtl: unsupported LED address \'%c\' for %s\n", device, pbo->name);
             pbo->pact = 1;
-            return (-1);
+            return -1;
         }
     }
 #ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
     else if (device == 'U') {
         if (!(led == '1' || led == '2' || led == '3')) {
-            errlogPrintf("devBoF3RP61SysCtl: illegal LED address for %s\n", pbo->name);
+            errlogPrintf("devBoF3RP61SysCtl: unsupported LED address \'%c\' for %s\n", device, pbo->name);
             pbo->pact = 1;
-            return (-1);
+            return -1;
         }
     }
 #endif
 
+    /* Allocate private data storage area */
     F3RP61SysCtl_BO_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SysCtl_BO_DPVT), "calloc failed");
     dpvt->device = device;
     if (device == 'L' || device == 'U') {
@@ -129,19 +133,21 @@ static long init_record(boRecord *pbo)
 
     pbo->dpvt = dpvt;
 
-    return (0);
+    return 0;
 }
 
-/* Function is called when there was request to process the record.
- * According to the device (read in init_record) it sets commands and
- * data that is to be sent to driver and sends it. */
-static long read_bo(boRecord *pbo)
+/*
+  write_bo() is called when there was a request to process a
+  record. When called, it sends the value from the VAL field to the
+  driver.
+*/
+static long write_bo(boRecord *pbo)
 {
     F3RP61SysCtl_BO_DPVT *dpvt = pbo->dpvt;
 
     char device = dpvt->device;
     char led = dpvt->led;
-    int command;
+    int command = 0;
     unsigned long data = 0;
 
     /* Set command and data */
@@ -160,8 +166,7 @@ static long read_bo(boRecord *pbo)
                 data = M3SC_LED_ERR_OFF;
                 break;
             }
-        }
-        else if(pbo->val == 1) {  /* When VAL field is 1. Should not use only 'else' because then Invalid Value will be treated as True also */
+        } else if (pbo->val == 1) {  /* When VAL field is 1. Should not use only 'else' because then Invalid Value will be treated as True also */
             switch (led) {
             case 'R':  /* Run LED */
                 data = M3SC_LED_RUN_ON;
@@ -190,8 +195,7 @@ static long read_bo(boRecord *pbo)
                 data = M3SC_LED_US3_OFF;
                 break;
             }
-        }
-        else if(pbo->val == 1) {  /* When VAL field is 1. Should not use only 'else' because then Invalid Value will be treated as True also */
+        } else if (pbo->val == 1) {  /* When VAL field is 1. Should not use only 'else' because then Invalid Value will be treated as True also */
             switch (led) {
             case '1':  /* US1 LED */
                 data = M3SC_LED_US1_ON;
@@ -215,11 +219,11 @@ static long read_bo(boRecord *pbo)
     if (device == 'L' || device == 'U') {
         if (ioctl(f3rp61SysCtl_fd, command, &data) < 0) {
             errlogPrintf("devBoF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, pbo->name);
-            return (-1);
+            return -1;
         }
     }
 
     pbo->udf = FALSE;
 
-    return (0);
+    return 0;
 }

@@ -63,33 +63,32 @@ struct {
 epicsExportAddress(dset, devLiF3RP61);
 
 typedef struct {
-    IOSCANPVT ioscanpvt; /* must comes first */
+    IOSCANPVT ioscanpvt; /* must come first */
     union {
         M3IO_ACCESS_COM acom;
         M3IO_ACCESS_REG drly;
     } u;
     char device;
     char option;
-    int  uword; /* Unsigned flag */
-    int  lword; /* Long-word flag */
-    int  bcd;   /* Binary Coded Decimal format flag */
 } F3RP61_LI_DPVT;
 
-/* */
+/*
+  init_record() initializes record - parses INP/OUT field string,
+  allocates private data storage area and sets initial configure
+  values.
+*/
 static long init_record(longinRecord *plongin)
 {
-    int unitno, slotno, cpuno, start;
-    char device;
-    char option = 'W'; /* 'W' as default option when nothing is passed */
-    int uword = 0;
-    int lword = 0;
-    int bcd = 0;
+    int unitno = 0, slotno = 0, cpuno = 0, start = 0;
+    char device = 0;
+    char option = 'W';  /* Dummy option for Word access */
 
+    /* Link type must be INST_IO */
     if (plongin->inp.type != INST_IO) {
         recGblRecordError(S_db_badField, plongin,
                           "devLiF3RP61 (init_record) Illegal INP field");
         plongin->pact = 1;
-        return (S_db_badField);
+        return S_db_badField;
     }
 
     struct link *plink = &plongin->inp;
@@ -105,22 +104,17 @@ static long init_record(longinRecord *plongin)
         if (sscanf(pC, "%c", &option) < 1) {
             errlogPrintf("devLiF3RP61: can't get option for %s\n", plongin->name);
             plongin->pact = 1;
-            return (-1);
+            return -1;
         }
 
-        if (option == 'U') {      /* Unsigned flag */
-            uword = 1;
-        }
-        else if (option == 'L') { /* Long-word flag */
-            lword = 1;
-        }
-        else if (option == 'B') { /* Binary Coded Decimal format flag */
-            bcd = 1;
-        }
-        else {                    /* Option not recognized */
-            errlogPrintf("devLiF3RP61: illegal option for %s\n", plongin->name);
+        if (option == 'W') {        // Dummy option for Word access
+        } else if (option == 'L') { // Long word
+        } else if (option == 'U') { // Unsigned integer
+        } else if (option == 'B') { // Binary Coded Decimal format
+        } else {                    // Option not recognized
+            errlogPrintf("devLiF3RP61: unsupported option \'%c\' for %s\n", option, plongin->name);
             plongin->pact = 1;
-            return (-1);
+            return -1;
         }
     }
 
@@ -131,60 +125,46 @@ static long init_record(longinRecord *plongin)
         if (sscanf(pC, "U%d,S%d,X%d", &unitno, &slotno, &start) < 3) {
             errlogPrintf("devLiF3RP61: can't get interrupt source address for %s\n", plongin->name);
             plongin->pact = 1;
-            return (-1);
+            return -1;
         }
 
         if (f3rp61_register_io_interrupt((dbCommon *) plongin, unitno, slotno, start) < 0) {
             errlogPrintf("devLiF3RP61: can't register I/O interrupt for %s\n", plongin->name);
             plongin->pact = 1;
-            return (-1);
+            return -1;
         }
     }
 
-    /* Parse device */
+    /* Parse slot, device and register number */
     if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
         if (sscanf(buf, "CPU%d,R%d", &cpuno, &start) < 2) {
             if (sscanf(buf, "%c%d", &device, &start) < 2) {
                 errlogPrintf("devLiF3RP61: can't get I/O address for %s\n", plongin->name);
                 plongin->pact = 1;
-                return (-1);
-            }
-            else if (device != 'W' && device != 'R') {
-                errlogPrintf("devLiF3RP61: unsupported device \'%c\' for %s\n", device,
-                             plongin->name);
+                return -1;
+            } else if (device != 'W' && device != 'R') {
+                errlogPrintf("devLiF3RP61: unsupported device \'%c\' for %s\n", device, plongin->name);
                 plongin->pact = 1;
             }
-        }
-        else {
-            device = 'r';  /* Corresponds to accessing shared memory using 'Old Interface' */
+        } else {
+            device = 'r';  /* Shared memory using 'Old Interface' */
         }
     }
 
-    /* Check device validity */
-    if (!(device == 'X' || device == 'Y' || device == 'A' || device == 'r' ||
-          device == 'W' || device == 'R')) {
-        errlogPrintf("devLiF3RP61: illegal I/O address for %s\n", plongin->name);
-        plongin->pact = 1;
-        return (-1);
-    }
-
-    /* Create private data storage area */
+    /* Allocate private data storage area */
     F3RP61_LI_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_LI_DPVT), "calloc failed");
     dpvt->device = device;
     dpvt->option = option;
-    dpvt->uword  = uword;
-    dpvt->lword  = lword;
-    dpvt->bcd    = bcd;
 
-    if (device == 'r') {  /* Shared registers - Using 'Old' interface */
+    /* Check device validity and compose data structure for I/O request */
+    if (device == 'r') { // Shared registers - Using 'Old' interface
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-        pacom->cpuno = (unsigned short) cpuno;
-        pacom->start = (unsigned short) start;
-        pacom->count = (unsigned short) 1;
-    }
-    else if (device == 'W' || device == 'R') {  /* Shared registers - Using 'New' interface */
+        pacom->cpuno = cpuno;
+        pacom->start = start;
+        pacom->count = 1;
+    } else if (device == 'R' || device == 'W') { // Shared registers and Link registers
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-        pacom->start = (unsigned short) start;
+        pacom->start = start;
         switch (option) {
         case 'L':
             pacom->count = 2;
@@ -192,20 +172,29 @@ static long init_record(longinRecord *plongin)
         default:
             pacom->count = 1;
         }
-    }
-    else {  /* Registers and I/Os of specific modules (X, Y and A) */
+    } else if (device == 'X' || device == 'Y' || // Input and output relays on I/O modules
+               device == 'A') {                  // Internal registers on I/O modules
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
-        pdrly->unitno = (unsigned short) unitno;
-        pdrly->slotno = (unsigned short) slotno;
-        pdrly->start  = (unsigned short) start;
-        pdrly->count  = (unsigned short) 1;
+        pdrly->unitno = unitno;
+        pdrly->slotno = slotno;
+        pdrly->start  = start;
+        pdrly->count  = 1;
+    } else {
+        errlogPrintf("devLiF3RP61: unsupported device \'%c\' for %s\n", device, plongin->name);
+        plongin->pact = 1;
+        return -1;
     }
 
     plongin->dpvt = dpvt;
 
-    return (0);
+    return 0;
 }
 
+/*
+  read_longin() is called when there was a request to process a
+  record. When called, it reads the value from the driver and stores
+  to the VAL field.
+*/
 static long read_longin(longinRecord *plongin)
 {
     F3RP61_LI_DPVT *dpvt = plongin->dpvt;
@@ -213,16 +202,13 @@ static long read_longin(longinRecord *plongin)
     M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
     char device = dpvt->device;
     char option = dpvt->option;
-    int uword   = dpvt->uword; /* Unsigned flag */
-    int lword   = dpvt->lword; /* Long-word flag */
-    int bcd     = dpvt->bcd;   /* Binary Coded Decimal format flag */
     int command = M3IO_READ_REG;
     unsigned short wdata[2];
     unsigned long ldata;
     unsigned long dataFromBCD = 0; /* For storing returned value in binary-coded-decimal format */
     void *p = pdrly;
 
-    /* Set ioctl 'command' for this device */
+    /* Compose ioctl request */
     switch (device) {
     case 'X':
         command = M3IO_READ_INRELAY;
@@ -249,43 +235,36 @@ static long read_longin(longinRecord *plongin)
         }
     }
 
-    /* USE API FUNCTIONS TO READ FROM DEVICE */
-    /* For device 'r' and Registers and I/Os of specific modules (X,Y,A,..) */
-    if (device != 'W' && device != 'R') {
-        if (ioctl(f3rp61_fd, command, p) < 0) {
-            errlogPrintf("devLiF3RP61: ioctl failed [%d] for %s\n", errno, plongin->name);
-            return (-1);
-        }
-    }
-
-    /* For Link Register W */
-    else if (device == 'W') {
-        if (readM3LinkRegister(pacom->start, pacom->count, &wdata[0]) < 0) {
-            errlogPrintf("devLiF3RP61: readM3LinkRegister failed [%d] for %s\n", errno, plongin->name);
-            return (-1);
-        }
-    }
-
-    /* For Shared Register R */
-    else {
+    /* Issue API function */
+    if (device == 'R') { // Shared registers
         if (readM3ComRegister(pacom->start, pacom->count, &wdata[0]) < 0) {
             errlogPrintf("devLiF3RP61: readM3ComRegister failed [%d] for %s\n", errno, plongin->name);
-            return (-1);
+            return -1;
+        }
+    } else if (device == 'W') { // Link registers
+        if (readM3LinkRegister(pacom->start, pacom->count, &wdata[0]) < 0) {
+            errlogPrintf("devLiF3RP61: readM3LinkRegister failed [%d] for %s\n", errno, plongin->name);
+            return -1;
+        }
+    } else { // Registers and relays on I/O modules
+        if (ioctl(f3rp61_fd, command, p) < 0) {
+            errlogPrintf("devLiF3RP61: ioctl failed [%d] for %s\n", errno, plongin->name);
+            return -1;
         }
     }
 
+    /* fill VAL field */
     plongin->udf = FALSE;
 
     /* Decode BCD to decimal */
-    if (bcd) {
+    if (option == 'U') {
         unsigned short i = 0;
         unsigned short data_temp = wdata[0];
         while (i < 4) {  /* max is 9999 */
             if (((unsigned short) (0x0000000f & data_temp)) > 9) {
                 dataFromBCD += 9 * pow(10, i);
                 recGblSetSevr(plongin,HIGH_ALARM,INVALID_ALARM);
-            }
-            else {
+            } else {
                 dataFromBCD += ((unsigned short) (0x0000000f & data_temp)) * pow(10, i);
             }
             data_temp = data_temp >> 4;
@@ -293,54 +272,45 @@ static long read_longin(longinRecord *plongin)
         }
     }
 
-    /* Write to VAL field */
     switch (device) {
     case 'X':
-        if (uword) {
+        if (option == 'U') {
             plongin->val = (long) pdrly->u.inrly[0].data;
-        }
-        else {
+        } else {
             plongin->val = (long) ((signed short) pdrly->u.inrly[0].data);
         }
         break;
     case 'Y':
-        if (uword) {
+        if (option == 'U') {
             plongin->val = (long) pdrly->u.outrly[0].data;
-        }
-        else {
+        } else {
             plongin->val = (long) ((signed short) pdrly->u.outrly[0].data);
         }
         break;
     case 'r':
     case 'W':
     case 'R':
-        if (uword) {
+        if (option == 'U') {
             plongin->val = (long) wdata[0];
-        }
-        else if (lword) {
+        } else if (option == 'L') {
             plongin->val = (long) (((wdata[1] << 16) & 0xffff0000) | (wdata[0] & 0x0000ffff));
-        }
-        else if (bcd) {
+        } else if (option == 'B') {
             plongin->val = dataFromBCD;
-        }
-        else {
+        } else {
             plongin->val = (long) ((signed short) wdata[0]);
         }
         break;
     default:  /* For device 'A' */
-        if (uword) {
+        if (option == 'U') {
             plongin->val = (long) wdata[0];
-        }
-        else if (lword) {
+        } else if (option == 'L') {
             plongin->val = (long) ((signed long) ldata);
-        }
-        else if (bcd) {
+        } else if (option == 'B') {
             plongin->val = dataFromBCD;
-        }
-        else {
+        } else {
             plongin->val = (long) ((signed short) wdata[0]);
         }
     }
 
-    return (0);
+    return 0;
 }

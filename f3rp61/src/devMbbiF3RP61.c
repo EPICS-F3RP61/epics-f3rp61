@@ -68,19 +68,22 @@ typedef struct {
     char device;
 } F3RP61_MBBI_DPVT;
 
-/* Function init_record initializes record - parses INP/OUT field string,
- * allocates private data storage area and sets initial configure values */
+/*
+  init_record() initializes record - parses INP/OUT field string,
+  allocates private data storage area and sets initial configure
+  values.
+*/
 static long init_record(mbbiRecord *pmbbi)
 {
-    int unitno, slotno, cpuno, start;
-    char device;
+    int unitno = 0, slotno = 0, cpuno = 0, start = 0;
+    char device = 0;
 
-    /* Input link type must be INST_IO */
+    /* Link type must be INST_IO */
     if (pmbbi->inp.type != INST_IO) {
         recGblRecordError(S_db_badField, pmbbi,
                           "devMbbiF3RP61 (init_record) Illegal INP field");
         pmbbi->pact = 1;
-        return (S_db_badField);
+        return S_db_badField;
     }
 
     struct link *plink = &pmbbi->inp;
@@ -94,80 +97,73 @@ static long init_record(mbbiRecord *pmbbi)
     if (pC) {
         *pC++ = '\0';
         if (sscanf(pC, "U%d,S%d,X%d", &unitno, &slotno, &start) < 3) {
-            errlogPrintf("devMbbiF3RP61: can't get interrupt source address for %s\n",
-                         pmbbi->name);
+            errlogPrintf("devMbbiF3RP61: can't get interrupt source address for %s\n", pmbbi->name);
             pmbbi->pact = 1;
-            return (-1);
+            return -1;
         }
 
         if (f3rp61_register_io_interrupt((dbCommon *) pmbbi, unitno, slotno, start) < 0) {
-            errlogPrintf("devMbbiF3RP61: can't register I/O interrupt for %s\n",
-                         pmbbi->name);
+            errlogPrintf("devMbbiF3RP61: can't register I/O interrupt for %s\n", pmbbi->name);
             pmbbi->pact = 1;
-            return (-1);
+            return -1;
         }
     }
 
-    /* Parse device */
+    /* Parse slot, device and register number */
     if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
         if (sscanf(buf, "CPU%d,R%d", &cpuno, &start) < 2) {
             if (sscanf(buf, "%c%d", &device, &start) < 2) {
                 errlogPrintf("devMbbiF3RP61: can't get I/O address for %s\n", pmbbi->name);
                 pmbbi->pact = 1;
-                return (-1);
-            }
-            else if (device != 'W' && device != 'L' && device != 'R' && device != 'E') {
-                errlogPrintf("devMbbiF3RP61: unsupported device \'%c\' for %s\n", device,
-                             pmbbi->name);
+                return -1;
+            } else if (device != 'W' && device != 'L' && device != 'R' && device != 'E') {
+                errlogPrintf("devMbbiF3RP61: unsupported device \'%c\' for %s\n", device, pmbbi->name);
                 pmbbi->pact = 1;
-                return (-1);
+                return -1;
             }
-        }
-        else {
+        } else {
             device = 'r';
         }
     }
 
-    /* Check device validity */
-    if (!(device == 'X' || device == 'Y' || device == 'A' || device == 'r' ||
-          device == 'W' || device == 'L' || device == 'M' || device == 'R' ||
-          device == 'E')) {
-        errlogPrintf("devMbbiF3RP61: illegal I/O address for %s\n",
-                     pmbbi->name);
-        pmbbi->pact = 1;
-        return (-1);
-    }
-
+    /* Allocate private data storage area */
     F3RP61_MBBI_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_MBBI_DPVT), "calloc failed");
     dpvt->device = device;
 
-    if (device == 'r') {
+    /* Check device validity and compose data structure for I/O request */
+    if (device == 'r') { // Shared registers and Link registers
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
         pacom->cpuno = (unsigned short) cpuno;
         pacom->start = (unsigned short) start;
         pacom->count = (unsigned short) 1;
-    }
-    else if (device == 'W' || device == 'L' || device == 'R' || device == 'E') {
+    } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
+               device == 'E' || device == 'L') { // Shared relays and Link relays
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
         pacom->start = (unsigned short) start;
-    }
-    else {
+    } else if (device == 'X' || device == 'Y' || // Input and output relays on I/O modules
+               device == 'A' || device == 'M') { // Internal registers and mode registers on I/O modules
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
         pdrly->unitno = (unsigned short) unitno;
         pdrly->slotno = (unsigned short) slotno;
         pdrly->start  = (unsigned short) start;
         pdrly->count  = (unsigned short) 1;
+    } else {
+        errlogPrintf("devMbbiF3RP61: unsupported device \'%c\' for %s\n", device, pmbbi->name);
+        pmbbi->pact = 1;
+        return -1;
     }
+
 
     pmbbi->dpvt = dpvt;
 
-    return (0);
+    return 0;
 }
 
-/* Function is called when there was request to process the record.
- * According to the device (read in init_record) it sets commands and
- * data that is to be sent to driver, sends it and stores returned
- * values to the records RVAL field. */
+/*
+  read_mbbi() is called when there was a request to process a
+  record. When called, it reads the value from the driver and stores
+  to the VAL field.
+*/
 static long read_mbbi(mbbiRecord *pmbbi)
 {
     F3RP61_MBBI_DPVT *dpvt = pmbbi->dpvt;
@@ -178,6 +174,7 @@ static long read_mbbi(mbbiRecord *pmbbi)
     unsigned short wdata;
     void *p = pdrly;
 
+    /* Compose ioctl request */
     switch (device) {
     case 'X':
         command = M3IO_READ_INRELAY;
@@ -204,43 +201,36 @@ static long read_mbbi(mbbiRecord *pmbbi)
         pdrly->u.pwdata = &wdata;
     }
 
-    if (device != 'W' && device != 'L' && device != 'R' && device != 'E') {
+    /* Issue API function */
+    if (device == 'R') { // Shared registers
+        if (readM3ComRegister(pacom->start, 1, &wdata) < 0) {
+            errlogPrintf("devMbbiF3RP61: readM3ComRegister failed [%d] for %s\n", errno, pmbbi->name);
+            return -1;
+        }
+    } else if (device == 'W') { // Link registers
+        if (readM3LinkRegister(pacom->start, 1, &wdata) < 0) {
+            errlogPrintf("devMbbiF3RP61: readM3LinkRegister failed [%d] for %s\n", errno, pmbbi->name);
+            return -1;
+        }
+    } else if (device == 'E') { // Shared relay
+        if (readM3ComRelay(pacom->start, 1, &wdata) < 0) {
+            errlogPrintf("devMbbiF3RP61: readM3ComRelay failed [%d] for %s\n", errno, pmbbi->name);
+            return -1;
+        }
+    } else if (device == 'L') { // Link relay
+        if (readM3LinkRelay(pacom->start, 1, &wdata) < 0) {
+            errlogPrintf("devMbbiF3RP61: readM3LinkRelay failed [%d] for %s\n", errno, pmbbi->name);
+            return -1;
+        }
+    } else {
         if (ioctl(f3rp61_fd, command, p) < 0) {
             errlogPrintf("devMbbiF3RP61: ioctl failed [%d] for %s\n", errno, pmbbi->name);
-            return (-1);
-        }
-    }
-    else if (device == 'W') {
-        if (readM3LinkRegister(pacom->start, 1, &wdata) < 0) {
-            errlogPrintf("devMbbiF3RP61: readM3LinkRegister failed [%d] for %s\n",
-                         errno, pmbbi->name);
-            return (-1);
-        }
-    }
-    else if (device == 'R') {
-        if (readM3ComRegister(pacom->start, 1, &wdata) < 0) {
-            errlogPrintf("devMbbiF3RP61: readM3ComRegister failed [%d] for %s\n",
-                         errno, pmbbi->name);
-            return (-1);
-        }
-    }
-    else if (device == 'L') {
-        if (readM3LinkRelay(pacom->start, 1, &wdata) < 0) {
-            errlogPrintf("devMbbiF3RP61: readM3LinkRelay failed [%d] for %s\n",
-                         errno, pmbbi->name);
-            return (-1);
-        }
-    }
-    else {
-        if (readM3ComRelay(pacom->start, 1, &wdata) < 0) {
-            errlogPrintf("devMbbiF3RP61: readM3ComRelay failed [%d] for %s\n",
-                         errno, pmbbi->name);
-            return (-1);
+            return -1;
         }
     }
 
+    /* fill VAL field */
     pmbbi->udf = FALSE;
-
     switch (device) {
     case 'X':
         pmbbi->rval = (long) pdrly->u.inrly[0].data;
@@ -261,6 +251,5 @@ static long read_mbbi(mbbiRecord *pmbbi)
         pmbbi->rval = (long) wdata;
     }
 
-    /* convert */
-    return (0);
+    return 0;
 }

@@ -72,33 +72,33 @@ static F3RP61_SEQ_DPVT *get_request_from_queue(void);
 /* */
 static long report(void)
 {
-    return (0);
+    return 0;
 }
 
 /* */
 static long init(void)
 {
     if (init_flag) {
-        return (0);
+        return 0;
     }
     init_flag = 1;
 
     f3rp61Seq_fd = open(DEVFILE, O_RDWR);
     if (f3rp61Seq_fd < 0) {
         errlogPrintf("drvF3RP61Seq: can't open " DEVFILE "\n");
-        return (-1);
+        return -1;
     }
 
     f3rp61Seq_queueMutex = epicsMutexCreate();
     if (f3rp61Seq_queueMutex == 0) {
         errlogPrintf("drvF3RP61Seq: epicsMutexCreate failed\n");
-        return (-1);
+        return -1;
     }
 
     f3rp61Seq_queueEvent = epicsEventCreate(epicsEventEmpty);
     if (f3rp61Seq_queueEvent == 0) {
         errlogPrintf("drvF3RP61Seq: epicsEventCreate failed\n");
-        return (-1);
+        return -1;
     }
 
     ellInit(&f3rp61Seq_queueList);
@@ -109,13 +109,13 @@ static long init(void)
                           (EPICSTHREADFUNC) mcmd_thread,
                           NULL) == 0) {
         errlogPrintf("drvF3RP61Seq: epicsThreadCreate failed\n");
-        return (-1);
+        return -1;
     }
 
     iocshRegister(&showreqDef, showreq);
     iocshRegister(&stopshowDef, stopshow);
 
-    return (0);
+    return 0;
 }
 
 static void mcmd_thread(void *arg)
@@ -155,7 +155,7 @@ long f3rp61Seq_queueRequest(F3RP61_SEQ_DPVT *dpvt)
 {
     if (!dpvt) {
         errlogPrintf("drvF3RP61Seq: null request\n");
-        return (-1);
+        return -1;
     }
 
     epicsMutexMustLock(f3rp61Seq_queueMutex);
@@ -164,7 +164,7 @@ long f3rp61Seq_queueRequest(F3RP61_SEQ_DPVT *dpvt)
 
     epicsEventSignal(f3rp61Seq_queueEvent);
 
-    return (0);
+    return 0;
 }
 
 static F3RP61_SEQ_DPVT *get_request_from_queue(void)

@@ -73,20 +73,20 @@ static void drvF3RP61RegisterCommands(void);
 /* */
 static long report(void)
 {
-    return (0);
+    return 0;
 }
 
 static long init(void)
 {
     if (init_flag) {
-        return (0);
+        return 0;
     }
     init_flag = 1;
 
     f3rp61_fd = open("/dev/m3io", O_RDWR);
     if (f3rp61_fd < 0) {
         errlogPrintf("drvF3RP61: can't open /dev/m3io [%d]\n", errno);
-        return (-1);
+        return -1;
     }
 
     for (int i = 0; i < M3IO_NUM_CPUS; i++) {
@@ -95,7 +95,7 @@ static long init(void)
 
             if (setM3ComDataConfig(&com_data_config, &ext_com_data_config) < 0) {
                 errlogPrintf("drvF3RP61: setM3ComDataConfig failed [%d]\n", errno);
-                return (-1);
+                return -1;
             }
 
             break;
@@ -107,24 +107,24 @@ static long init(void)
 
             if (setM3LinkDeviceConfig(&link_data_config) < 0) {
                 errlogPrintf("drvF3RP61: setM3LinkDeviceConfig failed [%d]\n", errno);
-                return (-1);
+                return -1;
             }
 
             if (setM3FlnSysNo(0, NULL) < 0) {
                 errlogPrintf("drvF3RP61: setM3FlnSysNo failed [%d]\n", errno);
-                return (-1);
+                return -1;
             }
 
             if (m3rfrsTsk(10) < 0) {
                 errlogPrintf("drvF3RP61: m3rfrsTsk failed [%d]\n", errno);
-                return (-1);
+                return -1;
             }
 
             break;
         }
     }
 
-    return (0);
+    return 0;
 }
 
 
@@ -146,8 +146,7 @@ static void msgrcv_thread(void *arg)
             if (io_intr[unit][slot].ioscan[i].channel == channel) {
                 dbCommon *prec = io_intr[unit][slot].ioscan[i].prec;
                 if (!prec) {
-                    errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,C%d)\n",
-                                 unit, slot, channel);
+                    errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,C%d)\n", unit, slot, channel);
                     break;
                 }
 
@@ -168,21 +167,21 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
 
     if (count == NUM_IO_INTR) {
         errlogPrintf("drvF3RP61: no interrupt slot\n");
-        return (-1);
+        return -1;
     }
 
     if (count == 0) {
         msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
         if (msqid  == -1) {
             errlogPrintf("drvF3RP61: msgget failed [%d]\n", errno);
-            return (-1);
+            return -1;
         }
 
         /* Add Start */
         msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
         if (msqid == -1) {
-            errlogPrintf("drvF3RP61: msgget failed[ %d]\n", errno);
-            return (-1);
+            errlogPrintf("drvF3RP61: msgget failed [%d]\n", errno);
+            return -1;
         }
         /* Add End */
 
@@ -193,7 +192,7 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
                               (EPICSTHREADFUNC) msgrcv_thread,
                               (void *)msqid) == 0) {
             errlogPrintf("drvF3RP61: epicsThreadCreate failed\n");
-            return (-1);
+            return -1;
         }
     }
 
@@ -203,7 +202,7 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
 
     for (int i = 0; i < count; i++) {
         if (io_intr[unit][slot].ioscan[i].channel == channel) {
-            return (0);
+            return 0;
         }
     }
 
@@ -216,10 +215,10 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
 
     if (ioctl(f3rp61_fd, M3IO_ENABLE_INTER, &arg) < 0) {
         errlogPrintf("drvF3RP61: ioctl failed [%d]\n", errno);
-        return (-1);
+        return -1;
     }
 
-    return (0);
+    return 0;
 }
 
 /*******************************************************************************
@@ -229,7 +228,7 @@ long f3rp61GetIoIntInfo(int cmd, dbCommon *pxx, IOSCANPVT *ppvt)
 {
     if (!pxx->dpvt) {
         errlogPrintf("drvF3RP61: f3rp61GetIoIntInfo is called with null dpvt\n");
-        return (-1);
+        return -1;
     }
 
     if ( *((IOSCANPVT *) pxx->dpvt) == NULL) {
@@ -238,7 +237,7 @@ long f3rp61GetIoIntInfo(int cmd, dbCommon *pxx, IOSCANPVT *ppvt)
 
     *ppvt = *((IOSCANPVT *) pxx->dpvt);
 
-    return (0);
+    return 0;
 }
 
 /*******************************************************************************
@@ -353,8 +352,7 @@ static void getModuleInfo(void)
             for (int k = 0; k < 4; k++) {
                 if (isalnum(module_info.name[k])) {
                     printf("%c", module_info.name[k]);
-                }
-                else {
+                } else {
                     printf("%c", ' ');
                 }
             }

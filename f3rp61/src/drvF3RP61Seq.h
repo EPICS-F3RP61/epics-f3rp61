@@ -30,7 +30,7 @@ typedef struct {
     dbCommon    *prec;
     CALLBACK     callback;
     int          ret;
-    int          bcd; /* Binary-coded-decimal flag */
+    char         option;
 } F3RP61_SEQ_DPVT;
 
 long f3rp61Seq_queueRequest();

@@ -56,24 +56,24 @@ static void drvF3RP61SysCtlRegisterCommands(void);
 /* */
 static long report(void)
 {
-    return (0);
+    return 0;
 }
 
 /* Open and store m3sysctl file descriptor */
 static long init(void)
 {
     if (init_flag) {
-        return (0);
+        return 0;
     }
     init_flag = 1;
 
     f3rp61SysCtl_fd = open("/dev/m3sysctl", O_RDWR);
     if (f3rp61SysCtl_fd < 0) {
         errlogPrintf("drvF3RP61SysCtl: can't open /dev/m3sysctl [%d]\n", errno);
-        return (-1);
+        return -1;
     }
 
-    return (0);
+    return 0;
 }
 
 /*******************************************************************************
@@ -112,7 +112,7 @@ static void setLEDCallFunc(const iocshArgBuf *args)
 static void setLED(char led, int value)
 {
     unsigned long cmd = M3SC_SET_LED;
-    unsigned long data;
+    unsigned long data = 0;
 
     /* Check 'led' validity */
     if (led != 'R' && led != 'A' && led != 'E'
@@ -157,8 +157,7 @@ static void setLED(char led, int value)
             data = M3SC_LED_ERR_OFF;
             break;
         }
-    }
-    else {  /* When value is 1 */
+    } else {  /* When value is 1 */
         switch (led) {
 #ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
         case '1':  /* US1 LED */

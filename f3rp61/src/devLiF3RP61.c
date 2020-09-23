@@ -257,7 +257,7 @@ static long read_longin(longinRecord *plongin)
     plongin->udf = FALSE;
 
     /* Decode BCD to decimal */
-    if (option == 'U') {
+    if (option == 'B') {
         unsigned short i = 0;
         unsigned short data_temp = wdata[0];
         while (i < 4) {  /* max is 9999 */

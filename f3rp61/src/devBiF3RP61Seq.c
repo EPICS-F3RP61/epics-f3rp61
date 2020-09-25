@@ -104,8 +104,8 @@ static long init_record(biRecord *pbi)
     MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
     pmcmdRequest->formatCode = 0xf1;
     pmcmdRequest->responseOption = 1;
-    pmcmdRequest->srcSlot = (unsigned char) srcSlot;
-    pmcmdRequest->destSlot = (unsigned char) destSlot;
+    pmcmdRequest->srcSlot = srcSlot;
+    pmcmdRequest->destSlot = destSlot;
     pmcmdRequest->mainCode = 0x26;
     pmcmdRequest->subCode = 0x01;
     pmcmdRequest->dataSize = 10;
@@ -113,7 +113,7 @@ static long init_record(biRecord *pbi)
     M3_READ_SEQDEV *pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
     pM3ReadSeqdev->accessType = 0;
 
-    /* Check device validity and set devive type*/
+    /* Check device validity and set device type*/
     switch (device)
     {
     case 'I': // internal relays

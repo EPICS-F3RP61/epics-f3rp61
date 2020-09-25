@@ -13,6 +13,7 @@
 */
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -105,8 +106,8 @@ static long init_record(mbboDirectRecord *pmbboDirect)
     MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
     pmcmdRequest->formatCode = 0xf1;
     pmcmdRequest->responseOption = 1;
-    pmcmdRequest->srcSlot = (unsigned char) srcSlot;
-    pmcmdRequest->destSlot = (unsigned char) destSlot;
+    pmcmdRequest->srcSlot = srcSlot;
+    pmcmdRequest->destSlot = destSlot;
     pmcmdRequest->mainCode = 0x26;
     pmcmdRequest->subCode = 0x02;
     pmcmdRequest->dataSize = 12;
@@ -114,7 +115,7 @@ static long init_record(mbboDirectRecord *pmbboDirect)
     M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
     pM3WriteSeqdev->accessType = 2;
 
-    /* Check device validity and set devive type*/
+    /* Check device validity and set device type*/
     switch (device)
     {
     case 'D': // data register
@@ -166,7 +167,7 @@ static long write_mbboDirect(mbboDirectRecord *pmbboDirect)
     } else { // First call (PACT is still FALSE)
         MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-        pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) pmbboDirect->rval;
+        pM3WriteSeqdev->dataBuff.wData[0] = (uint16_t) pmbboDirect->rval;
 
         /* Issue write request */
         if (f3rp61Seq_queueRequest(dpvt) < 0) {

@@ -13,6 +13,7 @@
 */
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -105,8 +106,8 @@ static long init_record(mbbiDirectRecord *pmbbiDirect)
     MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
     pmcmdRequest->formatCode = 0xf1;
     pmcmdRequest->responseOption = 1;
-    pmcmdRequest->srcSlot = (unsigned char) srcSlot;
-    pmcmdRequest->destSlot = (unsigned char) destSlot;
+    pmcmdRequest->srcSlot = srcSlot;
+    pmcmdRequest->destSlot = destSlot;
     pmcmdRequest->mainCode = 0x26;
     pmcmdRequest->subCode = 0x01;
     pmcmdRequest->dataSize = 10;
@@ -114,7 +115,7 @@ static long init_record(mbbiDirectRecord *pmbbiDirect)
     M3_READ_SEQDEV *pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
     pM3ReadSeqdev->accessType = 2;
 
-    /* Check device validity and set devive type*/
+    /* Check device validity and set device type*/
     switch (device)
     {
     case 'D': // data register
@@ -163,7 +164,7 @@ static long read_mbbiDirect(mbbiDirectRecord *pmbbiDirect)
 
         /* fill VAL field */
         pmbbiDirect->udf = FALSE;
-        pmbbiDirect->rval = (unsigned long) pmcmdResponse->dataBuff.wData[0];
+        pmbbiDirect->rval = (uint32_t) pmcmdResponse->dataBuff.wData[0];
 
     } else { // First call (PACT is still FALSE)
         /* Issue read request */

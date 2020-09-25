@@ -13,6 +13,7 @@
 */
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -81,7 +82,7 @@ static long init_record(mbboRecord *pmbbo)
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
-    /* Parse device */
+    /* Parse slot, device and register number */
     if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
         errlogPrintf("devMbboF3RP61Seq: can't get device address for %s\n", pmbbo->name);
         pmbbo->pact = 1;
@@ -105,8 +106,8 @@ static long init_record(mbboRecord *pmbbo)
     MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
     pmcmdRequest->formatCode = 0xf1;
     pmcmdRequest->responseOption = 1;
-    pmcmdRequest->srcSlot = (unsigned char) srcSlot;
-    pmcmdRequest->destSlot = (unsigned char) destSlot;
+    pmcmdRequest->srcSlot = srcSlot;
+    pmcmdRequest->destSlot = destSlot;
     pmcmdRequest->mainCode = 0x26;
     pmcmdRequest->subCode = 0x02;
     pmcmdRequest->dataSize = 12;
@@ -114,7 +115,7 @@ static long init_record(mbboRecord *pmbbo)
     M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
     pM3WriteSeqdev->accessType = 2;
 
-    /* Check device validity */
+    /* Check device validity and set device type*/
     switch (device)
     {
     case 'D': // data register
@@ -147,7 +148,6 @@ static long write_mbbo(mbboRecord *pmbbo)
 {
     F3RP61_SEQ_DPVT *dpvt = pmbbo->dpvt;
     MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
-    MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
 
     if (pmbbo->pact) { // Second call (PACT is TRUE)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
@@ -165,8 +165,9 @@ static long write_mbbo(mbboRecord *pmbbo)
         pmbbo->udf = FALSE;
 
     } else { // First call (PACT is still FALSE)
+        MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-        pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) pmbbo->rval;
+        pM3WriteSeqdev->dataBuff.wData[0] = (uint16_t) pmbbo->rval;
 
         /* Issue write request */
         if (f3rp61Seq_queueRequest(dpvt) < 0) {

@@ -33,7 +33,7 @@ typedef struct {
     char         option;
 } F3RP61_SEQ_DPVT;
 
-long f3rp61Seq_queueRequest();
+int f3rp61Seq_queueRequest();
 
 extern int f3rp61Seq_fd;
 

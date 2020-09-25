@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -134,7 +135,7 @@ static void mcmd_thread(void *arg)
             }
 
             if (ioctl(f3rp61Seq_fd, M3CPU_ACCS_CMD, pmcmdStruct) < 0) {
-                errlogPrintf("drvF3RP61Seq: ioctl failed [%d]\n", errno);
+                errlogPrintf("drvF3RP61Seq: ioctl failed [%d] : %s\n", errno, strerror(errno));
                 dpvt->ret = -1;
             }
 
@@ -151,7 +152,7 @@ static void mcmd_thread(void *arg)
     }
 }
 
-long f3rp61Seq_queueRequest(F3RP61_SEQ_DPVT *dpvt)
+int f3rp61Seq_queueRequest(F3RP61_SEQ_DPVT *dpvt)
 {
     if (!dpvt) {
         errlogPrintf("drvF3RP61Seq: null request\n");

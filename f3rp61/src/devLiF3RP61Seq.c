@@ -15,6 +15,7 @@
 */
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -96,6 +97,8 @@ static long init_record(longinRecord *plongin)
         }
 
         if (option == 'W') {        // Dummy option for Word access
+        } else if (option == 'L') { // Long word
+        } else if (option == 'U') { // Unsigned integer
         } else if (option == 'B') { // Binary Coded Decimal format flag
         } else {                    // Option not recognized
             errlogPrintf("devLiF3RP61Seq: unsupported option \'%c\' for %s\n", option, plongin->name);
@@ -129,16 +132,15 @@ static long init_record(longinRecord *plongin)
     MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
     pmcmdRequest->formatCode = 0xf1;
     pmcmdRequest->responseOption = 1;
-    pmcmdRequest->srcSlot = (unsigned char) srcSlot;
-    pmcmdRequest->destSlot = (unsigned char) destSlot;
+    pmcmdRequest->srcSlot = srcSlot;
+    pmcmdRequest->destSlot = destSlot;
     pmcmdRequest->mainCode = 0x26;
     pmcmdRequest->subCode = 0x01;
     pmcmdRequest->dataSize = 10;
 
     M3_READ_SEQDEV *pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-    pM3ReadSeqdev->accessType = 2;
 
-    /* Check device validity and set devive type*/
+    /* Check device validity and set device type*/
     switch (device)
     {
     case 'D': // data register
@@ -153,7 +155,16 @@ static long init_record(longinRecord *plongin)
         return -1;
     }
 
-    pM3ReadSeqdev->dataNum = 1;
+    switch (option) {
+    case 'L':
+        pM3ReadSeqdev->accessType = 4;
+        pM3ReadSeqdev->dataNum = 1;
+        break;
+    default:
+        pM3ReadSeqdev->accessType = 2;
+        pM3ReadSeqdev->dataNum = 1;
+    }
+
     pM3ReadSeqdev->topDevNo = top;
     callbackSetUser(plongin, &dpvt->callback);
 
@@ -170,7 +181,6 @@ static long init_record(longinRecord *plongin)
 static long read_longin(longinRecord *plongin)
 {
     F3RP61_SEQ_DPVT *dpvt = plongin->dpvt;
-    char option = dpvt->option;
 
     if (plongin->pact) { // Second call (PACT is TRUE)
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
@@ -188,6 +198,7 @@ static long read_longin(longinRecord *plongin)
 
         /* fill VAL field */
         plongin->udf = FALSE;
+        const char option = dpvt->option;
         if (option == 'B') {
             /* Decode BCD to decimal */
             unsigned short i = 0;
@@ -204,9 +215,14 @@ static long read_longin(longinRecord *plongin)
                 i++;
             }
             plongin->val = dataFromBCD;
+        } else if (option == 'L') {
+            plongin->val = (int32_t)pmcmdResponse->dataBuff.lData[0];
+        } else if (option == 'U') {
+            plongin->val = (uint16_t)pmcmdResponse->dataBuff.wData[0];
         } else {
-            plongin->val = (unsigned long) pmcmdResponse->dataBuff.wData[0];
+            plongin->val = (int16_t)pmcmdResponse->dataBuff.wData[0];
         }
+
     } else { // First call (PACT is still FALSE)
         /* Issue read request */
         if (f3rp61Seq_queueRequest(dpvt) < 0) {

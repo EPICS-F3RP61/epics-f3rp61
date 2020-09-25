@@ -15,6 +15,7 @@
 */
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -95,6 +96,8 @@ static long init_record(longoutRecord *plongout)
         }
 
         if (option == 'W') {        // Dummy option for Word access
+        } else if (option == 'L') { // Long word
+        } else if (option == 'U') { // Unsigned integer , perhaps we'd better disable this
         } else if (option == 'B') { // Binary Coded Decimal format
         } else {                    // Option not recognized
             errlogPrintf("devLoF3RP61Seq: unsupported option \'%c\' for %s\n", option, plongout->name);
@@ -128,16 +131,14 @@ static long init_record(longoutRecord *plongout)
     MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
     pmcmdRequest->formatCode = 0xf1;
     pmcmdRequest->responseOption = 1;
-    pmcmdRequest->srcSlot = (unsigned char) srcSlot;
-    pmcmdRequest->destSlot = (unsigned char) destSlot;
+    pmcmdRequest->srcSlot = srcSlot;
+    pmcmdRequest->destSlot = destSlot;
     pmcmdRequest->mainCode = 0x26;
     pmcmdRequest->subCode = 0x02;
-    pmcmdRequest->dataSize = 12;
 
     M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-    pM3WriteSeqdev->accessType = 2;
 
-    /* Check device validity and set devive type*/
+    /* Check device validity and set device type*/
     switch (device)
     {
     case 'D': // data register
@@ -152,7 +153,17 @@ static long init_record(longoutRecord *plongout)
         return -1;
     }
 
-    pM3WriteSeqdev->dataNum = 1;
+    switch (option) {
+    case 'L':
+        pM3WriteSeqdev->accessType = 4;
+        pM3WriteSeqdev->dataNum = 1;
+        break;
+    default:
+        pM3WriteSeqdev->accessType = 2;
+        pM3WriteSeqdev->dataNum = 1;
+    }
+
+    pmcmdRequest->dataSize = 10 + pM3WriteSeqdev->accessType * pM3WriteSeqdev->dataNum;
     pM3WriteSeqdev->topDevNo = top;
     callbackSetUser(plongout, &dpvt->callback);
 
@@ -170,8 +181,6 @@ static long write_longout(longoutRecord *plongout)
 {
     F3RP61_SEQ_DPVT *dpvt = plongout->dpvt;
     MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
-    unsigned short dataBCD = 0;  /* For storing the value decoded from binary-coded-decimal format */
-    char option = dpvt->option;
 
     if (plongout->pact) { // Second call (PACT is TRUE)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
@@ -189,8 +198,13 @@ static long write_longout(longoutRecord *plongout)
         plongout->udf = FALSE;
 
     } else { // First call (PACT is still FALSE)
+        MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
+        M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
+
+        const char option = dpvt->option;
         if (option == 'B') {
             /* Encode decimal to BCD */
+            unsigned short dataBCD = 0;  /* For storing the value decoded from binary-coded-decimal format */
             unsigned short i = 0;
             long data_temp = (long) plongout->val;
             /* Check data range */
@@ -207,14 +221,13 @@ static long write_longout(longoutRecord *plongout)
                 data_temp /= 10;
                 i++;
             }
-        }
-
-        MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
-        M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-        if (option == 'B') {
             pM3WriteSeqdev->dataBuff.wData[0] = dataBCD;
+        } else if (option == 'L') {
+            pM3WriteSeqdev->dataBuff.lData[0] = (int32_t)plongout->val;
+        } else if (option == 'U') {
+            pM3WriteSeqdev->dataBuff.wData[0] = (uint16_t)plongout->val;
         } else {
-            pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) plongout->val;
+            pM3WriteSeqdev->dataBuff.wData[0] = (int16_t)plongout->val;
         }
 
         /* Issue write request */

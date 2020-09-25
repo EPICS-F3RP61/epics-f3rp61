@@ -12,12 +12,14 @@
 */
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <math.h>
 
 #include <alarm.h>
 #include <callback.h>
@@ -67,6 +69,7 @@ static long init_record(aoRecord *pao)
 {
     int srcSlot = 0, destSlot = 0, top = 0;
     char device = 0;
+    char option = 'W'; // Dummy option for Word access
 
     /* Link type must be INST_IO */
     if (pao->out.type != INST_IO) {
@@ -81,6 +84,28 @@ static long init_record(aoRecord *pao)
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
+
+    /* Parse option */
+    char *pC = strchr(buf, '&');
+    if (pC) {
+        *pC++ = '\0';
+        if (sscanf(pC, "%c", &option) < 1) {
+            errlogPrintf("devAoF3RP61Seq: can't get option for %s\n", pao->name);
+            pao->pact = 1;
+            return -1;
+        }
+
+        if (option == 'W') {        // Dummy option for Word access
+        } else if (option == 'L') { // Long word
+        } else if (option == 'U') { // Unsigned integer , perhaps we'd better disable this
+        } else if (option == 'F') { // Single precision floating point
+        } else if (option == 'D') { // Double precision
+        } else {                    // Option not recognized
+            errlogPrintf("devAoF3RP61Seq: unsupported option \'%c\' for %s\n", option, pao->name);
+            pao->pact = 1;
+            return -1;
+        }
+    }
 
     /* Parse slot, device and register number */
     if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
@@ -98,6 +123,7 @@ static long init_record(aoRecord *pao)
 
     /* Allocate private data storage area */
     F3RP61_SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_SEQ_DPVT), "calloc failed");
+    dpvt->option = option;
 
     /* Compose data structure for I/O request to CPU module */
     MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
@@ -106,16 +132,14 @@ static long init_record(aoRecord *pao)
     MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
     pmcmdRequest->formatCode = 0xf1;
     pmcmdRequest->responseOption = 1;
-    pmcmdRequest->srcSlot = (unsigned char) srcSlot;
-    pmcmdRequest->destSlot = (unsigned char) destSlot;
+    pmcmdRequest->srcSlot = srcSlot;
+    pmcmdRequest->destSlot = destSlot;
     pmcmdRequest->mainCode = 0x26;
     pmcmdRequest->subCode = 0x02;
-    pmcmdRequest->dataSize = 12;
 
     M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-    pM3WriteSeqdev->accessType = 2;
 
-    /* Check device validity and set devive type*/
+    /* Check device validity and set device type*/
     switch (device)
     {
     case 'D': // data register
@@ -125,12 +149,27 @@ static long init_record(aoRecord *pao)
         pM3WriteSeqdev->devType = 0x02;
         break;
     default:
-        errlogPrintf("devAoF3RP61Seq: unsupported device in %s\n", pao->name);
+        errlogPrintf("devAoF3RP61Seq: unsupported device \'%c\' for %s\n", device, pao->name);
         pao->pact = 1;
         return -1;
     }
 
-    pM3WriteSeqdev->dataNum = 1;
+    switch (option) {
+    case 'D':
+        pM3WriteSeqdev->accessType = 4;
+        pM3WriteSeqdev->dataNum = 2;
+        break;
+    case 'L':
+    case 'F':
+        pM3WriteSeqdev->accessType = 4;
+        pM3WriteSeqdev->dataNum = 1;
+        break;
+    default:
+        pM3WriteSeqdev->accessType = 2;
+        pM3WriteSeqdev->dataNum = 1;
+    }
+
+    pmcmdRequest->dataSize = 10 + pM3WriteSeqdev->accessType * pM3WriteSeqdev->dataNum;
     pM3WriteSeqdev->topDevNo = top;
     callbackSetUser(pao, &dpvt->callback);
 
@@ -148,7 +187,7 @@ static long write_ao(aoRecord *pao)
 {
     F3RP61_SEQ_DPVT *dpvt = pao->dpvt;
     MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
-    MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
+    int retval = 0; // convert
 
     if (pao->pact) { // Second call (PACT is TRUE)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
@@ -166,8 +205,43 @@ static long write_ao(aoRecord *pao)
         pao->udf = FALSE;
 
     } else { // First call (PACT is still FALSE)
+        MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-        pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) pao->rval;
+
+        const char option = dpvt->option;
+        if (option == 'D') {
+            double val = pao->val;
+            // todo : consider ASLO and AOFF field
+
+            int64_t lval;
+            memcpy(&lval, &val, sizeof(double));
+            uint32_t l0 = (lval>> 0) & 0xFFFFFFFF;
+            uint32_t l1 = (lval>>32) & 0xFFFFFFFF;
+            pM3WriteSeqdev->dataBuff.lData[0] = l0;
+            pM3WriteSeqdev->dataBuff.lData[1] = l1;
+
+            pao->udf = isnan(val);
+            // do we have to return 2?
+            //retval = 2; // no conversion
+        } else if (option == 'F') {
+            float val = pao->val;
+            // todo : consider ASLO and AOFF field
+
+            uint32_t lval;
+            memcpy(&lval, &val, sizeof(float));
+            pM3WriteSeqdev->dataBuff.lData[0] = lval;
+
+            pao->udf = isnan(val);
+            // do we have to return 2?
+            //retval = 2; // no conversion
+        } else if (option == 'L') {
+            pM3WriteSeqdev->dataBuff.lData[0] = (int16_t)pao->val;
+        } else if (option == 'U') {
+            pM3WriteSeqdev->dataBuff.wData[0] = (uint16_t)pao->val;
+        } else {
+            pM3WriteSeqdev->dataBuff.wData[0] = (int16_t)pao->rval;
+            //pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) pao->rval;
+        }
 
         /* Issue write request */
         if (f3rp61Seq_queueRequest(dpvt) < 0) {
@@ -178,5 +252,5 @@ static long write_ao(aoRecord *pao)
         pao->pact = 1;
     }
 
-    return 0;
+    return retval;
 }

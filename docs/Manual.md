@@ -159,10 +159,10 @@ accessing shared registers using 'old interface'.
 | mbboDirect      | F3RP61Seq    | D, B                                      |                                                                                         |
 | longin          | F3RP61       | X, Y                                      | U                                                                                       |
 | longin          | F3RP61       | A, r, W, R                                | U, L, B                                                                                 |
-| longin          | F3RP61Seq    | D, B                                      | B                                                                                       |
+| longin          | F3RP61Seq    | D, B                                      | U, L, B                                                                                 |
 | longout         | F3RP61       | Y                                         |                                                                                         |
 | longout         | F3RP61       | A, r, W, R                                | L, B                                                                                    |
-| longout         | F3RP61Seq    | D, B                                      | B                                                                                       |
+| longout         | F3RP61Seq    | D, B                                      | U, L, B                                                                                 |
 | bi              | F3RP61       | X, Y, L, E                                |                                                                                         |
 | bi              | F3RP61Seq    | I                                         |                                                                                         |
 | bi              | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3; System Stat. Reg. |                                                                                         |
@@ -171,12 +171,12 @@ accessing shared registers using 'old interface'.
 | bo              | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3                    |                                                                                         |
 | ai              | F3RP61       | X, Y                                      | U                                                                                       |
 | ai              | F3RP61       | A                                         | U, L                                                                                    |
-| ai              | F3RP61       | r, W, R                                   | U, D, F, L                                                                              |
-| ai              | F3RP61Seq    | D, B                                      |                                                                                         |
+| ai              | F3RP61       | r, W, R                                   | U, L, F, D                                                                              |
+| ai              | F3RP61Seq    | D, B                                      | U, L, F, D                                                                              |
 | ao              | F3RP61       | Y, r                                      |                                                                                         |
 | ao              | F3RP61       | A                                         | L                                                                                       |
-| ao              | F3RP61       | W, R                                      | D, F, L                                                                                 |
-| ao              | F3RP61Seq    | D, B                                      |                                                                                         |
+| ao              | F3RP61       | W, R                                      | L, F, D                                                                                 |
+| ao              | F3RP61Seq    | D, B                                      | U, L, F, D                                                                              |
 | si              | F3RP61       | A                                         |                                                                                         |
 | so              | F3RP61       | A                                         |                                                                                         |
 | waveform        | F3RP61       | A                                         | **FTVL field**: DBF\_ULONG, DBF\_USHORT, DBF\_SHORT                                     |

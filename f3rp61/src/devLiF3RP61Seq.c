@@ -99,7 +99,7 @@ static long init_record(longinRecord *plongin)
         if (option == 'W') {        // Dummy option for Word access
         } else if (option == 'L') { // Long word
         } else if (option == 'U') { // Unsigned integer
-        } else if (option == 'B') { // Binary Coded Decimal format flag
+        } else if (option == 'B') { // Binary Coded Decimal format
         } else {                    // Option not recognized
             errlogPrintf("devLiF3RP61Seq: unsupported option \'%c\' for %s\n", option, plongin->name);
             plongin->pact = 1;

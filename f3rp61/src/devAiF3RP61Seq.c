@@ -96,10 +96,10 @@ static long init_record(aiRecord *pai)
         }
 
         if (option == 'W') {        // Dummy option for Word access
+        } else if (option == 'D') { // Double precision floating point
+        } else if (option == 'F') { // Single precision floating point
         } else if (option == 'L') { // Long word
         } else if (option == 'U') { // Unsigned integer
-        } else if (option == 'F') { // Single precision floating point
-        } else if (option == 'D') { // Double precision
         } else {                    // Option not recognized
             errlogPrintf("devLiF3RP61Seq: unsupported option \'%c\' for %s\n", option, pai->name);
             pai->pact = 1;

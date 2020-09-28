@@ -96,10 +96,10 @@ static long init_record(aoRecord *pao)
         }
 
         if (option == 'W') {        // Dummy option for Word access
-        } else if (option == 'L') { // Long word
-        } else if (option == 'U') { // Unsigned integer , perhaps we'd better disable this
+        } else if (option == 'D') { // Double precision floating point
         } else if (option == 'F') { // Single precision floating point
-        } else if (option == 'D') { // Double precision
+        } else if (option == 'L') { // Long word
+        } else if (option == 'U') { // Unsigned integer, perhaps we'd better disable this
         } else {                    // Option not recognized
             errlogPrintf("devAoF3RP61Seq: unsupported option \'%c\' for %s\n", option, pao->name);
             pao->pact = 1;
@@ -213,7 +213,7 @@ static long write_ao(aoRecord *pao)
             double val = pao->val;
             // todo : consider ASLO and AOFF field
 
-            int64_t lval;
+            uint64_t lval;
             memcpy(&lval, &val, sizeof(double));
             uint32_t l0 = (lval>> 0) & 0xFFFFFFFF;
             uint32_t l1 = (lval>>32) & 0xFFFFFFFF;

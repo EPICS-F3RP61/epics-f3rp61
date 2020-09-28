@@ -97,7 +97,7 @@ static long init_record(longoutRecord *plongout)
 
         if (option == 'W') {        // Dummy option for Word access
         } else if (option == 'L') { // Long word
-        } else if (option == 'U') { // Unsigned integer , perhaps we'd better disable this
+        } else if (option == 'U') { // Unsigned integer, perhaps we'd better disable this
         } else if (option == 'B') { // Binary Coded Decimal format
         } else {                    // Option not recognized
             errlogPrintf("devLoF3RP61Seq: unsupported option \'%c\' for %s\n", option, plongout->name);

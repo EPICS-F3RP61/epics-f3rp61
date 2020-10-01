@@ -15,6 +15,7 @@
 */
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -108,6 +109,7 @@ static long init_record(longoutRecord *plongout)
 
         if (option == 'W') {        // Dummy option for Word access
         } else if (option == 'L') { // Long word
+        } else if (option == 'U') { // Unsigned integer, perhaps we'd better disable this
         } else if (option == 'B') { // Binary Coded Decimal format
         } else {                    // Option not recognized
             errlogPrintf("devLoF3RP61: unsupported option \'%c\' for %s\n", option, plongout->name);
@@ -157,26 +159,48 @@ static long init_record(longoutRecord *plongout)
 
     /* Check device validity and compose data structure for I/O request */
     if (device == 'r') {                         // Shared registers - Using 'Old' interface
+        //if (option == 'L') {
+        //    errlogPrintf("devAiF3RP61: unsupported option \'%c\' for %s\n", option, pai->name);
+        //    pai->pact = 1;
+        //    return -1;
+        //}
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
         pacom->cpuno = cpuno;
         pacom->start = start;
-        pacom->count = 1;
+        pacom->count = 1; // we don't have '&L' option support yet.
     } else if (device == 'R' || device == 'W') { // Shared registers and Link registers
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
         pacom->start = start;
-        switch (option) {
-        case 'L':
+        if (option == 'L') {
             pacom->count = 2;
-            break;
-        default:
+        } else {
             pacom->count = 1;
         }
-    } else if (device == 'Y' || device == 'A' ) { // Output relays and internal registers on I/O modules
+    } else if (device == 'A') {                   // I/O registers on I/O modules
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
-        pdrly->unitno = (unsigned short) unitno;
-        pdrly->slotno = (unsigned short) slotno;
-        pdrly->start  = (unsigned short) start;
-        pdrly->count  = (unsigned short) 1;
+        pdrly->unitno = unitno;
+        pdrly->slotno = slotno;
+        pdrly->start  = start;
+        if (option == 'L') {
+            pdrly->count = 1; // we use M3IO_READ_REG_L therefore count shall be 1
+        } else {
+            pdrly->count = 1;
+        }
+    } else if (device == 'Y') {                  // Output relays on I/O modules
+        if (option == 'B') {
+            errlogPrintf("devAiF3RP61: unsupported option \'%c\' for %s\n", option, pai->name);
+            pai->pact = 1;
+            return -1;
+        }
+        M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
+        pdrly->unitno = unitno;
+        pdrly->slotno = slotno;
+        pdrly->start  = start;
+        if (option == 'L') {
+            pdrly->count = 2;
+        } else {
+            pdrly->count = 1;
+        }
     } else {
         errlogPrintf("devLoF3RP61: unsupported device \'%c\' for %s\n", device, plongout->name);
         plongout->pact = 1;
@@ -201,8 +225,8 @@ static long write_longout(longoutRecord *plongout)
     char device = dpvt->device;
     char option = dpvt->option;
     int command = M3IO_WRITE_REG;
-    unsigned short wdata[2] = {0};
-    unsigned long  ldata = 0;
+    uint16_t wdata[2] = {0};
+    ulong    ldata = 0;
     unsigned short dataBCD = 0; /* For storing the value decoded from binary-coded-decimal format */
     void *p = pdrly;
 
@@ -228,10 +252,28 @@ static long write_longout(longoutRecord *plongout)
 
     /* Compose ioctl request */
     switch (device) {
+    case 'W':
+    case 'R':
+        if (option == 'B') {
+            wdata[0] = dataBCD;
+        } else if (option == 'L') {
+            wdata[0] = (uint16_t)(plongout->val>> 0);
+            wdata[1] = (uint16_t)(plongout->val>>16);
+        } else {
+            wdata[0] = (uint16_t)plongout->val;
+        }
+        break;
     case 'Y':
         command = M3IO_WRITE_OUTRELAY;
-        pdrly->u.outrly[0].data = (unsigned short) plongout->val;
-        pdrly->u.outrly[0].mask = (unsigned short) 0xffff;
+        if (option == 'L') {
+            pdrly->u.outrly[0].data = (uint16_t)(plongout->val>> 0);
+            pdrly->u.outrly[0].mask = 0xFFFF;
+            pdrly->u.outrly[1].data = (uint16_t)(plongout->val>>16);
+            pdrly->u.outrly[1].mask = 0xFFFF;
+        } else {
+            pdrly->u.outrly[0].data = (uint16_t)plongout->val;
+            pdrly->u.outrly[0].mask = 0xFFFF;
+        }
         break;
     case 'r':
         command = M3IO_WRITE_COM;
@@ -243,43 +285,32 @@ static long write_longout(longoutRecord *plongout)
         pacom->pdata = &wdata[0];
         p =  pacom;
         break;
-    case 'W':
-    case 'R':
-        if (option == 'L') {
-            wdata[0] = (unsigned short) (plongout->val & 0x0000ffff);
-            wdata[1] = (unsigned short) ((plongout->val >> 16) & 0x0000ffff);
-        } else if (option == 'B') {
-            wdata[0] = dataBCD;
-        } else {
-            wdata[0] = (unsigned short) plongout->val;
-        }
-        break;
     default:  /* for device 'A' */
-        if (option == 'L') {
-            command = M3IO_WRITE_REG_L;
-            ldata = (unsigned long) plongout->val;
-            pdrly->u.pldata = &ldata;
-        } else if (option == 'B') {
+        if (option == 'B') {
             wdata[0] = dataBCD;
             pdrly->u.pwdata = &wdata[0];
+        } else if (option == 'L') {
+            command = M3IO_WRITE_REG_L;
+            ldata = (ulong)plongout->val;
+            pdrly->u.pldata = &ldata;
         } else {
-            wdata[0] = (unsigned short) plongout->val;
+            wdata[0] = (uint16_t)plongout->val;
             pdrly->u.pwdata = &wdata[0];
         }
     }
 
     /* Issue API function */
-    if (device == 'R') { // Shared registers
-        if (writeM3ComRegister((int) pacom->start, pacom->count, &wdata[0]) < 0) {
+    if (device == 'R') {        // Shared registers
+        if (writeM3ComRegister(pacom->start, pacom->count, &wdata[0]) < 0) {
             errlogPrintf("devLoF3RP61: writeM3ComRegister failed [%d] for %s\n", errno, plongout->name);
             return -1;
         }
     } else if (device == 'W') { // Link registers
-        if (writeM3LinkRegister((int) pacom->start, pacom->count, &wdata[0]) < 0) {
+        if (writeM3LinkRegister(pacom->start, pacom->count, &wdata[0]) < 0) {
             errlogPrintf("devLoF3RP61: writeM3LinkRegister failed [%d] for %s\n", errno, plongout->name);
             return -1;
         }
-    } else { // Registers and relays on I/O modules
+    } else {                    // Registers and relays on I/O modules
         if (ioctl(f3rp61_fd, command, p) < 0) {
             errlogPrintf("devLoF3RP61: ioctl failed [%d] for %s\n", errno, plongout->name);
             return -1;

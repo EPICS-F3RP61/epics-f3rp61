@@ -90,7 +90,7 @@ static long init_record(aiRecord *pai)
     if (pC) {
         *pC++ = '\0';
         if (sscanf(pC, "%c", &option) < 1) {
-            errlogPrintf("devLiF3RP61Seq: can't get option for %s\n", pai->name);
+            errlogPrintf("devAiF3RP61Seq: can't get option for %s\n", pai->name);
             pai->pact = 1;
             return -1;
         }
@@ -101,7 +101,7 @@ static long init_record(aiRecord *pai)
         } else if (option == 'L') { // Long word
         } else if (option == 'U') { // Unsigned integer
         } else {                    // Option not recognized
-            errlogPrintf("devLiF3RP61Seq: unsupported option \'%c\' for %s\n", option, pai->name);
+            errlogPrintf("devAiF3RP61Seq: unsupported option \'%c\' for %s\n", option, pai->name);
             pai->pact = 1;
             return -1;
         }
@@ -151,6 +151,9 @@ static long init_record(aiRecord *pai)
         break;
     case 'F': // cache register
         pM3ReadSeqdev->devType = 0x06;
+        break;
+    case 'Z': // special register
+        pM3ReadSeqdev->devType = 0x1A;
         break;
     default:
         errlogPrintf("devAiF3RP61Seq: unsupported device \'%c\' for %s\n", device, pai->name);

@@ -152,6 +152,9 @@ static long init_record(longinRecord *plongin)
     case 'F': // cache register
         pM3ReadSeqdev->devType = 0x06;
         break;
+    case 'Z': // special register
+        pM3ReadSeqdev->devType = 0x1A;
+        break;
     default:
         errlogPrintf("devLiF3RP61Seq: unsupported device \'%c\' for %s\n", device, plongin->name);
         plongin->pact = 1;

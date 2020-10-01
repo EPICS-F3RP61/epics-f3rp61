@@ -127,6 +127,9 @@ static long init_record(mbbiDirectRecord *pmbbiDirect)
     case 'F': // cache register
         pM3ReadSeqdev->devType = 0x06;
         break;
+    case 'Z': // special register
+        pM3ReadSeqdev->devType = 0x1A;
+        break;
     default:
         errlogPrintf("devMbbiDirectF3RP61Seq: unsupported device \'%c\' for %s\n", device, pmbbiDirect->name);
         pmbbiDirect->pact = 1;

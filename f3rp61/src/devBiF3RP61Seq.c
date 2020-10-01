@@ -125,7 +125,6 @@ static long init_record(biRecord *pbi)
         return -1;
     }
 
-    pM3ReadSeqdev->devType = 0x09;
     pM3ReadSeqdev->dataNum = 1;
     pM3ReadSeqdev->topDevNo = top;
     callbackSetUser(pbi, &dpvt->callback);

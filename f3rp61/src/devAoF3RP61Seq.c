@@ -148,6 +148,9 @@ static long init_record(aoRecord *pao)
     case 'B': // file register
         pM3WriteSeqdev->devType = 0x02;
         break;
+    case 'F': // cache register
+        pM3WriteSeqdev->devType = 0x06;
+        break;
     default:
         errlogPrintf("devAoF3RP61Seq: unsupported device \'%c\' for %s\n", device, pao->name);
         pao->pact = 1;

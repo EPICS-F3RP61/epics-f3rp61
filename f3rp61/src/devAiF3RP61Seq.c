@@ -149,6 +149,9 @@ static long init_record(aiRecord *pai)
     case 'B': // file register
         pM3ReadSeqdev->devType = 0x02;
         break;
+    case 'F': // cache register
+        pM3ReadSeqdev->devType = 0x06;
+        break;
     default:
         errlogPrintf("devAiF3RP61Seq: unsupported device \'%c\' for %s\n", device, pai->name);
         pai->pact = 1;

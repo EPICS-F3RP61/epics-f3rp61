@@ -124,6 +124,9 @@ static long init_record(mbboRecord *pmbbo)
     case 'B': // file register
         pM3WriteSeqdev->devType = 0x02;
         break;
+    case 'F': // cache register
+        pM3WriteSeqdev->devType = 0x06;
+        break;
     default:
         errlogPrintf("devMbboF3RP61Seq: unsupported device \'%c\' for %s\n", device, pmbbo->name);
         pmbbo->pact = 1;

@@ -147,6 +147,9 @@ static long init_record(longoutRecord *plongout)
     case 'B': // file register
         pM3WriteSeqdev->devType = 0x02;
         break;
+    case 'F': // cache register
+        pM3WriteSeqdev->devType = 0x06;
+        break;
     default:
         errlogPrintf("devLoF3RP61Seq: unsupported device \'%c\' for %s\n", device, plongout->name);
         plongout->pact = 1;

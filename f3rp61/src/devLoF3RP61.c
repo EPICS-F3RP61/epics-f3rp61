@@ -188,8 +188,8 @@ static long init_record(longoutRecord *plongout)
         }
     } else if (device == 'Y') {                  // Output relays on I/O modules
         if (option == 'B') {
-            errlogPrintf("devAiF3RP61: unsupported option \'%c\' for %s\n", option, pai->name);
-            pai->pact = 1;
+            errlogPrintf("devLoF3RP61: unsupported option \'%c\' for %s\n", option, plongout->name);
+            plongout->pact = 1;
             return -1;
         }
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;

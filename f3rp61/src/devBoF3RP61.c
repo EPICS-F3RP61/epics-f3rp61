@@ -123,12 +123,12 @@ static long init_record(boRecord *pbo)
     /* Check device validity and compose data structure for I/O request */
     if (device == 'E' || device == 'L') {        // Shared relays and Link relays
         M3IO_ACCESS_RELAY_POINT *poutrlyp = &dpvt->outrlyp;
-        poutrlyp->position = (unsigned short) position;
+        poutrlyp->position = position;
     } else if (device == 'Y') {                  // Output relays on I/O modules
         M3IO_ACCESS_RELAY_POINT *poutrlyp = &dpvt->outrlyp;
-        poutrlyp->unitno = (unsigned short) unitno;
-        poutrlyp->slotno = (unsigned short) slotno;
-        poutrlyp->position = (unsigned short) position;
+        poutrlyp->unitno = unitno;
+        poutrlyp->slotno = slotno;
+        poutrlyp->position = position;
     } else {
         errlogPrintf("devBoF3RP61: unsupported device \'%c\' for %s\n", device, pbo->name);
         pbo->pact = 1;
@@ -149,22 +149,22 @@ static long write_bo(boRecord *pbo)
 {
     F3RP61_BO_DPVT *dpvt = pbo->dpvt;
     M3IO_ACCESS_RELAY_POINT *poutrlyp = &dpvt->outrlyp;
-    char device = dpvt->device;
-    poutrlyp->data = (unsigned short) pbo->rval;
-    unsigned char data = (unsigned char) pbo->rval;
+    unsigned char data = pbo->rval;
+    const char device = dpvt->device;
 
     /* Issue API function */
-    if (device == 'E') { // Shared relays
-        if (writeM3ComRelayB((int) poutrlyp->position, 1, &data) < 0) {
+    if (device == 'E') {        // Shared relays
+        if (writeM3ComRelayB(poutrlyp->position, 1, &data) < 0) {
             errlogPrintf("devBoF3RP61: writeM3ComRelayB failed [%d] for %s\n", errno, pbo->name);
             return -1;
         }
     } else if (device == 'L') { // Link relays
-        if (writeM3LinkRelayB((int) poutrlyp->position, 1, &data) < 0) {
+        if (writeM3LinkRelayB(poutrlyp->position, 1, &data) < 0) {
             errlogPrintf("devBoF3RP61: writeM3LinkRelayB failed [%d] for %s\n", errno, pbo->name);
             return -1;
         }
-    } else { // Relays on I/O modules
+    } else {                    // Relays on I/O modules
+        poutrlyp->data = data;
         if (ioctl(f3rp61_fd, M3IO_WRITE_OUTRELAY_POINT, poutrlyp) < 0) {
             errlogPrintf("devBoF3RP61: ioctl failed [%d] for %s\n", errno, pbo->name);
             return -1;

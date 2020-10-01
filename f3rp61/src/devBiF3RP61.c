@@ -124,22 +124,22 @@ static long init_record(biRecord *pbi)
     dpvt->device = device;
 
     /* Check device validity and compose data structure for I/O request */
-    if (device == 'X') { // Input relays on I/O modules
+    if (device == 'L' || device == 'E') {        // Shared relays and Link relays
         M3IO_ACCESS_RELAY_POINT *pinrlyp = &dpvt->u.inrlyp;
-        pinrlyp->unitno = (unsigned short) unitno;
-        pinrlyp->slotno = (unsigned short) slotno;
-        pinrlyp->position = (unsigned short) position;
-    } else if (device == 'Y') { // Output relays on I/O modules
+        pinrlyp->position = position;
+    } else if (device == 'X') {                  // Input relays on I/O modules
+        M3IO_ACCESS_RELAY_POINT *pinrlyp = &dpvt->u.inrlyp;
+        pinrlyp->unitno = unitno;
+        pinrlyp->slotno = slotno;
+        pinrlyp->position = position;
+    } else if (device == 'Y') {                  // Output relays on I/O modules
         dpvt->start = ((position - 1) / 16) * 16 + 1;
         dpvt->shift = ((position - 1) % 16);
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
-        pdrly->unitno = (unsigned short) unitno;
-        pdrly->slotno = (unsigned short) slotno;
-        pdrly->start = (unsigned short) dpvt->start;
-        pdrly->count = (unsigned short) 1;
-    } else if (device == 'L' || device == 'E') {  // Shared relays Link relays
-        M3IO_ACCESS_RELAY_POINT *    pinrlyp = &dpvt->u.inrlyp;
-        pinrlyp->position = (unsigned short) position;
+        pdrly->unitno = unitno;
+        pdrly->slotno = slotno;
+        pdrly->start = dpvt->start;
+        pdrly->count = 1;
     } else {
         errlogPrintf("devBiF3RP61: unsupported device \'%c\' for %s\n", device, pbi->name);
         pbi->pact = 1;
@@ -172,24 +172,24 @@ static long read_bi(biRecord *pbi)
         command = M3IO_READ_OUTRELAY;
         p = pdrly;
         break;
-    case 'L':
-    case 'E':
+    //case 'L':
+    //case 'E':
     default:
         break;
     }
 
     /* Issue API function */
-    if (device == 'E') { // Shared relays
-        if (readM3ComRelayB((int) pinrlyp->position, 1, &data) < 0) {
+    if (device == 'E') {        // Shared relays
+        if (readM3ComRelayB(pinrlyp->position, 1, &data) < 0) {
             errlogPrintf("devBiF3RP61: readM3ComRelayB failed [%d] for %s\n", errno, pbi->name);
             return -1;
         }
     } else if (device == 'L') { // Link realys
-        if (readM3LinkRelayB((int) pinrlyp->position, 1, &data) < 0) {
+        if (readM3LinkRelayB(pinrlyp->position, 1, &data) < 0) {
             errlogPrintf("devBiF3RP61: readM3LinkRelayB failed [%d] for %s\n", errno, pbi->name);
             return -1;
         }
-    } else { // Registers and relays on I/O modules
+    } else {                    // Relays on I/O modules
         if (ioctl(f3rp61_fd, command, p) < 0) {
             errlogPrintf("devBiF3RP61: ioctl failed [%d] for %s\n", errno, pbi->name);
             return -1;
@@ -200,14 +200,14 @@ static long read_bi(biRecord *pbi)
     pbi->udf = FALSE;
     switch (device) {
     case 'Y':
-        pbi->rval = (unsigned long) ((pdrly->u.outrly[0].data >> dpvt->shift) & 0x1);
+        pbi->rval = (pdrly->u.outrly[0].data >> dpvt->shift) & 0x1;
         break;
     case 'L':
     case 'E':
-        pbi->rval = (unsigned long) data;
+        pbi->rval = data;
         break;
     default:
-        pbi->rval = (unsigned long) pinrlyp->data;
+        pbi->rval = pinrlyp->data;
     }
 
     return 0;

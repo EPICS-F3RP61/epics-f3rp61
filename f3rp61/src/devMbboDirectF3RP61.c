@@ -133,20 +133,20 @@ static long init_record(mbboDirectRecord *pmbboDirect)
     /* Check device validity and compose data structure for I/O request */
     if (device == 'r') {                         // Shared registers - Using 'Old' interface
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-        pacom->cpuno = (unsigned short) cpuno;
-        pacom->start = (unsigned short) start;
-        pacom->count = (unsigned short) 1;
+        pacom->cpuno = cpuno;
+        pacom->start = start;
+        pacom->count = 1;
     } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
                device == 'E' || device == 'L') { // Shared relay and Link relay
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-        pacom->start = (unsigned short) start;
+        pacom->start = start;
     } else if (device == 'Y' ||                  // Output relays on I/O modules
-               device == 'A' || device == 'M') { // Internal registers and mode registers on I/O modules
+               device == 'A' || device == 'M') { // I/O registers and mode registers on I/O modules
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
-        pdrly->unitno = (unsigned short) unitno;
-        pdrly->slotno = (unsigned short) slotno;
-        pdrly->start  = (unsigned short) start;
-        pdrly->count  = (unsigned short) 1;
+        pdrly->unitno = unitno;
+        pdrly->slotno = slotno;
+        pdrly->start  = start;
+        pdrly->count  = 1;
     } else {
         errlogPrintf("devMbboDirectF3RP61: unsupported device \'%c\' for %s\n", device, pmbboDirect->name);
         pmbboDirect->pact = 1;
@@ -175,6 +175,12 @@ static long write_mbboDirect(mbboDirectRecord *pmbboDirect)
 
     /* Compose ioctl request */
     switch (device) {
+    case 'W':
+    case 'R':
+    case 'L':
+    case 'E':
+        wdata = (unsigned short) pmbboDirect->rval;
+        break;
     case 'Y':
         command = M3IO_WRITE_OUTRELAY;
         pdrly->u.outrly[0].data = (unsigned short) pmbboDirect->rval;
@@ -185,12 +191,6 @@ static long write_mbboDirect(mbboDirectRecord *pmbboDirect)
         wdata = (unsigned short) pmbboDirect->rval;
         pacom->pdata = &wdata;
         p = pacom;
-        break;
-    case 'W':
-    case 'R':
-    case 'L':
-    case 'E':
-        wdata = (unsigned short) pmbboDirect->rval;
         break;
     case 'M':
         /* need to use old style */
@@ -203,7 +203,6 @@ static long write_mbboDirect(mbboDirectRecord *pmbboDirect)
         wdata = (unsigned short) pmbboDirect->rval;
         pdrly->u.pwdata = &wdata;
     }
-
 
     /* Issue API function */
     if (device == 'R') { // Shared registers

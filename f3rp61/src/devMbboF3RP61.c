@@ -13,6 +13,7 @@
 */
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -133,20 +134,20 @@ static long init_record(mbboRecord *pmbbo)
     /* Check device validity and compose data structure for I/O request */
     if (device == 'r') {                         // Shared registers - Using 'Old' interface
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-        pacom->cpuno = (unsigned short) cpuno;
-        pacom->start = (unsigned short) start;
-        pacom->count = (unsigned short) 1;
+        pacom->cpuno = cpuno;
+        pacom->start = start;
+        pacom->count = 1;
     } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
                device == 'E' || device == 'L') { // Shared relays and Link relays
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-        pacom->start = (unsigned short) start;
+        pacom->start = start;
     } else if (device == 'Y' ||                  // Output relays on I/O modules
                device == 'A' || device == 'M') { // Internal registers and mode registers on I/O modules
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
-        pdrly->unitno = (unsigned short) unitno;
-        pdrly->slotno = (unsigned short) slotno;
-        pdrly->start  = (unsigned short) start;
-        pdrly->count  = (unsigned short) 1;
+        pdrly->unitno = unitno;
+        pdrly->slotno = slotno;
+        pdrly->start  = start;
+        pdrly->count  = 1;
     } else {
         errlogPrintf("devMbboF3RP61: unsupported device \'%c\' for %s\n", device, pmbbo->name);
         pmbbo->pact = 1;
@@ -175,22 +176,22 @@ static long write_mbbo(mbboRecord *pmbbo)
 
     /* Compose ioctl request */
     switch (device) {
+    case 'W':
+    case 'R':
+    case 'L':
+    case 'E':
+        wdata = (uint16_t)pmbbo->rval;
+        break;
     case 'Y':
         command = M3IO_WRITE_OUTRELAY;
-        pdrly->u.outrly[0].data = (unsigned short) pmbbo->rval;
-        pdrly->u.outrly[0].mask = (unsigned short) 0xffff;
+        pdrly->u.outrly[0].data = (uint16_t)pmbbo->rval;
+        pdrly->u.outrly[0].mask = 0xFFFF;
         break;
     case 'r':
         command = M3IO_WRITE_COM;
         wdata = (unsigned short) pmbbo->rval;
         pacom->pdata = &wdata;
         p = pacom;
-        break;
-    case 'W':
-    case 'R':
-    case 'L':
-    case 'E':
-        wdata = (unsigned short) pmbbo->rval;
         break;
     case 'M':
         /* need to use old style */
@@ -200,32 +201,32 @@ static long write_mbbo(mbboRecord *pmbbo)
         break;
     default:
         command = M3IO_WRITE_REG;
-        wdata = (unsigned short) pmbbo->rval;
+        wdata = (uint16_t)pmbbo->rval;
         pdrly->u.pwdata = &wdata;
     }
 
     /* Issue API function */
-    if (device == 'R') { /* Shared registers */
-        if (writeM3ComRegister((int) pacom->start, 1, &wdata) < 0) {
+    if (device == 'R') {        // Shared registers
+        if (writeM3ComRegister(pacom->start, 1, &wdata) < 0) {
             errlogPrintf("devMbboF3RP61: writeM3ComRegister failed [%d] for %s\n", errno, pmbbo->name);
             return -1;
         }
-    } else if (device == 'E') { /* Shared relays */
-        if (writeM3ComRelay((int) pacom->start, 1, &wdata) < 0) {
+    } else if (device == 'E') { // Shared relays
+        if (writeM3ComRelay(pacom->start, 1, &wdata) < 0) {
             errlogPrintf("devMbboF3RP61: writeM3ComRelay failed [%d] for %s\n", errno, pmbbo->name);
             return -1;
         }
-    } else if (device == 'W') { /* Link registers */
-        if (writeM3LinkRegister((int) pacom->start, 1, &wdata) < 0) {
+    } else if (device == 'W') { // Link registers
+        if (writeM3LinkRegister(pacom->start, 1, &wdata) < 0) {
             errlogPrintf("devMbboF3RP61: writeM3LinkRegister failed [%d] for %s\n", errno, pmbbo->name);
             return -1;
         }
-    } else if (device == 'L') { /* Link relays */
-        if (writeM3LinkRelay((int) pacom->start, 1, &wdata) < 0) {
+    } else if (device == 'L') { // Link relays
+        if (writeM3LinkRelay(pacom->start, 1, &wdata) < 0) {
             errlogPrintf("devMbboF3RP61: writeM3LinkRelay failed [%d] for %s\n", errno, pmbbo->name);
             return -1;
         }
-    } else {
+    } else {                    // Registers and relays on I/O modules
         if (ioctl(f3rp61_fd, command, p) < 0) {
             errlogPrintf("devMbboF3RP61: ioctl failed [%d] for %s\n", errno, pmbbo->name);
             return -1;

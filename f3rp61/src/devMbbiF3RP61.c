@@ -133,26 +133,25 @@ static long init_record(mbbiRecord *pmbbi)
     /* Check device validity and compose data structure for I/O request */
     if (device == 'r') { // Shared registers and Link registers
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-        pacom->cpuno = (unsigned short) cpuno;
-        pacom->start = (unsigned short) start;
-        pacom->count = (unsigned short) 1;
+        pacom->cpuno = cpuno;
+        pacom->start = start;
+        pacom->count = 1;
     } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
                device == 'E' || device == 'L') { // Shared relays and Link relays
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-        pacom->start = (unsigned short) start;
+        pacom->start = start;
     } else if (device == 'X' || device == 'Y' || // Input and output relays on I/O modules
                device == 'A' || device == 'M') { // Internal registers and mode registers on I/O modules
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
-        pdrly->unitno = (unsigned short) unitno;
-        pdrly->slotno = (unsigned short) slotno;
-        pdrly->start  = (unsigned short) start;
-        pdrly->count  = (unsigned short) 1;
+        pdrly->unitno = unitno;
+        pdrly->slotno = slotno;
+        pdrly->start  = start;
+        pdrly->count  = 1;
     } else {
         errlogPrintf("devMbbiF3RP61: unsupported device \'%c\' for %s\n", device, pmbbi->name);
         pmbbi->pact = 1;
         return -1;
     }
-
 
     pmbbi->dpvt = dpvt;
 
@@ -176,6 +175,11 @@ static long read_mbbi(mbbiRecord *pmbbi)
 
     /* Compose ioctl request */
     switch (device) {
+    case 'R':
+    case 'W':
+    case 'E':
+    case 'L':
+        break;
     case 'X':
         command = M3IO_READ_INRELAY;
         break;
@@ -187,11 +191,6 @@ static long read_mbbi(mbbiRecord *pmbbi)
         pacom->pdata = &wdata;
         p =  pacom;
         break;
-    case 'W':
-    case 'R':
-    case 'L':
-    case 'E':
-        break;
     case 'M':
         /* need to use old style */
         command = M3IO_READ_MODE;
@@ -202,7 +201,7 @@ static long read_mbbi(mbbiRecord *pmbbi)
     }
 
     /* Issue API function */
-    if (device == 'R') { // Shared registers
+    if (device == 'R') {        // Shared registers
         if (readM3ComRegister(pacom->start, 1, &wdata) < 0) {
             errlogPrintf("devMbbiF3RP61: readM3ComRegister failed [%d] for %s\n", errno, pmbbi->name);
             return -1;
@@ -222,7 +221,7 @@ static long read_mbbi(mbbiRecord *pmbbi)
             errlogPrintf("devMbbiF3RP61: readM3LinkRelay failed [%d] for %s\n", errno, pmbbi->name);
             return -1;
         }
-    } else {
+    } else {                    // Registers and relays on I/O modules
         if (ioctl(f3rp61_fd, command, p) < 0) {
             errlogPrintf("devMbbiF3RP61: ioctl failed [%d] for %s\n", errno, pmbbi->name);
             return -1;
@@ -233,10 +232,10 @@ static long read_mbbi(mbbiRecord *pmbbi)
     pmbbi->udf = FALSE;
     switch (device) {
     case 'X':
-        pmbbi->rval = (long) pdrly->u.inrly[0].data;
+        pmbbi->rval = pdrly->u.inrly[0].data;
         break;
     case 'Y':
-        pmbbi->rval = (long) pdrly->u.outrly[0].data;
+        pmbbi->rval = pdrly->u.outrly[0].data;
         break;
     case 'M':
         /* need to use old style */
@@ -248,7 +247,7 @@ static long read_mbbi(mbbiRecord *pmbbi)
     case 'L':
     case 'E':
     default:
-        pmbbi->rval = (long) wdata;
+        pmbbi->rval = wdata;
     }
 
     return 0;

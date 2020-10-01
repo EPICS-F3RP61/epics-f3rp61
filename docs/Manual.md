@@ -157,11 +157,15 @@ accessing shared registers using 'old interface'.
 | mbbiDirect      | F3RP61Seq    | D, B                                      |                                                                                         |
 | mbboDirect      | F3RP61       | Y, A, r, W, L, M, R, E                    |                                                                                         |
 | mbboDirect      | F3RP61Seq    | D, B                                      |                                                                                         |
-| longin          | F3RP61       | X, Y                                      | U                                                                                       |
-| longin          | F3RP61       | A, r, W, R                                | U, L, B                                                                                 |
+| longin          | F3RP61       | X, Y                                      | U, L                                                                                    |
+| longin          | F3RP61       | W, R                                      | U, L, B                                                                                 |
+| longin          | F3RP61       | A                                         | U, L, B ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module  |
+| longin          | F3RP61       | r                                         | U, B                                                                                    |
 | longin          | F3RP61Seq    | D, B                                      | U, L, B                                                                                 |
-| longout         | F3RP61       | Y                                         |                                                                                         |
-| longout         | F3RP61       | A, r, W, R                                | L, B                                                                                    |
+| longout         | F3RP61       | Y                                         | U, L                                                                                    |
+| longout         | F3RP61       | W, R                                      | U, L, B                                                                                 |
+| longout         | F3RP61       | A                                         | U, L, B ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module  |
+| longout         | F3RP61       | r                                         | U, B                                                                                    |
 | longout         | F3RP61Seq    | D, B                                      | U, L, B                                                                                 |
 | bi              | F3RP61       | X, Y, L, E                                |                                                                                         |
 | bi              | F3RP61Seq    | I                                         |                                                                                         |
@@ -169,13 +173,15 @@ accessing shared registers using 'old interface'.
 | bo              | F3RP61       | Y, L, E                                   |                                                                                         |
 | bo              | F3RP61Seq    | I                                         |                                                                                         |
 | bo              | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3                    |                                                                                         |
-| ai              | F3RP61       | X, Y                                      | U                                                                                       |
-| ai              | F3RP61       | A                                         | U, L                                                                                    |
-| ai              | F3RP61       | r, W, R                                   | U, L, F, D                                                                              |
+| ai              | F3RP61       | X, Y                                      | U, L, F, D                                                                              |
+| ai              | F3RP61       | W, R                                      | U, L, F, D                                                                              |
+| ai              | F3RP61       | A                                         | U, L ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module     |
+| ai              | F3RP61       | r                                         | U                                                                                       |
 | ai              | F3RP61Seq    | D, B                                      | U, L, F, D                                                                              |
-| ao              | F3RP61       | Y, r                                      |                                                                                         |
-| ao              | F3RP61       | A                                         | L                                                                                       |
-| ao              | F3RP61       | W, R                                      | L, F, D                                                                                 |
+| ao              | F3RP61       | Y                                         | U, L, F, D                                                                              |
+| ao              | F3RP61       | W, R                                      | U, L, F, D                                                                              |
+| ao              | F3RP61       | A                                         | U, L ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module     |
+| ao              | F3RP61       | r                                         | U                                                                                       |
 | ao              | F3RP61Seq    | D, B                                      | U, L, F, D                                                                              |
 | si              | F3RP61       | A                                         |                                                                                         |
 | so              | F3RP61       | A                                         |                                                                                         |

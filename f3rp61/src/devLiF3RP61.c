@@ -32,12 +32,12 @@
 #include <devSup.h>
 #include <epicsExport.h>
 #include <errlog.h>
-#include <math.h>
 #include <recGbl.h>
 #include <recSup.h>
 #include <longinRecord.h>
 
 #include <drvF3RP61.h>
+#include <devF3RP61bcd.h>
 
 /* Create the dset for devLiF3RP61 */
 static long init_record();
@@ -227,7 +227,6 @@ static long read_longin(longinRecord *plongin)
     int command = M3IO_READ_REG;
     uint16_t wdata[2];
     ulong    ldata;
-    unsigned long dataFromBCD = 0; /* For storing returned value in binary-coded-decimal format */
     void *p = pdrly;
 
     /* Compose ioctl request */
@@ -278,22 +277,6 @@ static long read_longin(longinRecord *plongin)
     /* fill VAL field */
     plongin->udf = FALSE;
 
-    /* Decode BCD to decimal */
-    if (option == 'B') {
-        unsigned short i = 0;
-        unsigned short data_temp = wdata[0];
-        while (i < 4) {  /* max is 9999 */
-            if (((unsigned short) (0x0000000f & data_temp)) > 9) {
-                dataFromBCD += 9 * pow(10, i);
-                recGblSetSevr(plongin,HIGH_ALARM,INVALID_ALARM);
-            } else {
-                dataFromBCD += ((unsigned short) (0x0000000f & data_temp)) * pow(10, i);
-            }
-            data_temp = data_temp >> 4;
-            i++;
-        }
-    }
-
     switch (device) {
     case 'X':
         if (option == 'L') {
@@ -321,7 +304,7 @@ static long read_longin(longinRecord *plongin)
     case 'W':
     case 'R':
         if (option == 'B') {
-            plongin->val = dataFromBCD;
+            plongin->val = devF3RP61bcd2int(wdata[0], plongin);
         } else if (option == 'L') {
             plongin->val = wdata[1]<<16 | wdata[0];
         } else if (option == 'U') {
@@ -332,7 +315,7 @@ static long read_longin(longinRecord *plongin)
         break;
     default: /* For device 'A' */
         if (option == 'B') {
-            plongin->val = dataFromBCD;
+            plongin->val = devF3RP61bcd2int(wdata[0], plongin);
         } else if (option == 'L') {
             plongin->val = (long)ldata;
         } else if (option == 'U') {

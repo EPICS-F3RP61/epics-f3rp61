@@ -37,6 +37,7 @@
 #include <longoutRecord.h>
 
 #include <drvF3RP61.h>
+#include <devF3RP61bcd.h>
 
 /* Create the dset for devLoF3RP61 */
 static long init_record();
@@ -227,35 +228,14 @@ static long write_longout(longoutRecord *plongout)
     int command = M3IO_WRITE_REG;
     uint16_t wdata[2] = {0};
     ulong    ldata = 0;
-    unsigned short dataBCD = 0; /* For storing the value decoded from binary-coded-decimal format */
     void *p = pdrly;
-
-    if (option == 'B') {
-        /* Encode decimal to BCD */
-        unsigned short i = 0;
-        long data_temp = (long) plongout->val;
-        /* Check data range */
-        if (data_temp > 9999) {
-            data_temp = 9999;
-            recGblSetSevr(plongout, HW_LIMIT_ALARM, INVALID_ALARM);
-        } else if (data_temp < 0) {
-            data_temp = 0;
-            recGblSetSevr(plongout, HW_LIMIT_ALARM, INVALID_ALARM);
-        }
-
-        while(data_temp > 0) {
-            dataBCD = dataBCD | (((unsigned long) (data_temp % 10)) << (i*4));
-            data_temp /= 10;
-            i++;
-        }
-    }
 
     /* Compose ioctl request */
     switch (device) {
     case 'W':
     case 'R':
         if (option == 'B') {
-            wdata[0] = dataBCD;
+            wdata[0] = devF3RP61int2bcd(plongout->val, plongout);
         } else if (option == 'L') {
             wdata[0] = (uint16_t)(plongout->val>> 0);
             wdata[1] = (uint16_t)(plongout->val>>16);
@@ -278,7 +258,7 @@ static long write_longout(longoutRecord *plongout)
     case 'r':
         command = M3IO_WRITE_COM;
         if (option == 'B') {
-            wdata[0] = dataBCD;
+            wdata[0] = devF3RP61int2bcd(plongout->val, plongout);
         } else {
             wdata[0] = (unsigned short) plongout->val;
         }
@@ -287,7 +267,7 @@ static long write_longout(longoutRecord *plongout)
         break;
     default:  /* for device 'A' */
         if (option == 'B') {
-            wdata[0] = dataBCD;
+            wdata[0] = devF3RP61int2bcd(plongout->val, plongout);
             pdrly->u.pwdata = &wdata[0];
         } else if (option == 'L') {
             command = M3IO_WRITE_REG_L;

@@ -32,12 +32,12 @@
 #include <devSup.h>
 #include <epicsExport.h>
 #include <errlog.h>
-#include <math.h>
 #include <recGbl.h>
 #include <recSup.h>
 #include <longinRecord.h>
 
 #include <drvF3RP61Seq.h>
+#include <devF3RP61bcd.h>
 
 /* Create the dset for devLiF3RP61Seq */
 static long init_record();
@@ -206,21 +206,7 @@ static long read_longin(longinRecord *plongin)
         plongin->udf = FALSE;
         const char option = dpvt->option;
         if (option == 'B') {
-            /* Decode BCD to decimal */
-            unsigned short i = 0;
-            unsigned long dataFromBCD = 0;  /* For storing returned value in binary-coded-decimal format */
-            unsigned short data_temp = pmcmdResponse->dataBuff.wData[0];
-            while (i < 4) {  /* max is 9999 */
-                if (((unsigned short) (0x0000000f & data_temp)) > 9) {
-                    dataFromBCD += 9 * pow(10, i);
-                    recGblSetSevr(plongin,HIGH_ALARM,INVALID_ALARM);
-                } else {
-                    dataFromBCD += (unsigned short) ((0x0000000f & data_temp) * pow(10, i));
-                }
-                data_temp = data_temp >> 4;
-                i++;
-            }
-            plongin->val = dataFromBCD;
+            plongin->val = devF3RP61bcd2int(pmcmdResponse->dataBuff.wData[0], plongin);
         } else if (option == 'L') {
             plongin->val = (int32_t)pmcmdResponse->dataBuff.lData[0];
         } else if (option == 'U') {

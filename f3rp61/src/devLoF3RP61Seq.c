@@ -37,6 +37,7 @@
 #include <longoutRecord.h>
 
 #include <drvF3RP61Seq.h>
+#include <devF3RP61bcd.h>
 
 /* Create the dset for devLoF3RP61Seq */
 static long init_record();
@@ -209,25 +210,7 @@ static long write_longout(longoutRecord *plongout)
 
         const char option = dpvt->option;
         if (option == 'B') {
-            /* Encode decimal to BCD */
-            unsigned short dataBCD = 0;  /* For storing the value decoded from binary-coded-decimal format */
-            unsigned short i = 0;
-            long data_temp = (long) plongout->val;
-            /* Check data range */
-            if (data_temp > 9999) {
-                data_temp = 9999;
-                recGblSetSevr(plongout, HW_LIMIT_ALARM, INVALID_ALARM);
-            } else if (data_temp < 0) {
-                data_temp = 0;
-                recGblSetSevr(plongout, HW_LIMIT_ALARM, INVALID_ALARM);
-            }
-
-            while (data_temp > 0) {
-                dataBCD = dataBCD | (((unsigned long) (data_temp % 10)) << (i*4));
-                data_temp /= 10;
-                i++;
-            }
-            pM3WriteSeqdev->dataBuff.wData[0] = dataBCD;
+            pM3WriteSeqdev->dataBuff.wData[0] = devF3RP61int2bcd(plongout->val, plongout);
         } else if (option == 'L') {
             pM3WriteSeqdev->dataBuff.lData[0] = (int32_t)plongout->val;
         } else if (option == 'U') {

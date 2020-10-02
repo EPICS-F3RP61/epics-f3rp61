@@ -11,5 +11,5 @@ TODO list for F3RP71/F3RP61 support
 - [ ] Add option to access I/O modules in 8-bit data width.
 - [ ] Add support for aai/aao records
 - [x] Reorganize treatment of option characters.
-- [ ] Reorganize BCD operations
+- [x] Reorganize BCD operations
 - [ ] More documentation

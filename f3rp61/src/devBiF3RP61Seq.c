@@ -119,6 +119,9 @@ static long init_record(biRecord *pbi)
     case 'I': // internal relays
         pM3ReadSeqdev->devType = 0x09;
         break;
+    case 'M': // special relays
+        pM3ReadSeqdev->devType = 0x0D;
+        break;
     default:
         errlogPrintf("devBiF3RP61Seq: unsupported device \'%c\' for %s\n", device, pbi->name);
         pbi->pact = 1;

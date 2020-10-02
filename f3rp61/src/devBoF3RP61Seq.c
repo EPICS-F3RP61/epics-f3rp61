@@ -119,6 +119,9 @@ static long init_record(boRecord *pbo)
     case 'I': // internal relays
         pM3WriteSeqdev->devType = 0x09;
         break;
+    case 'M': // special relays
+        pM3WriteSeqdev->devType = 0x0D;
+        break;
     default:
         errlogPrintf("devBoF3RP61Seq: unsupported device \'%c\' for %s\n", device, pbo->name);
         pbo->pact = 1;

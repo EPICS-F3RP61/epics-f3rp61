@@ -240,8 +240,8 @@ static long read_ai(aiRecord *pai)
         pacom->pdata = &wdata[0];
         p = pacom;
         break;
-    case 'W':
     case 'R':
+    case 'W':
         break;
     default: /* for 'A' */
         switch (option) {

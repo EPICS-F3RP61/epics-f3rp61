@@ -143,7 +143,7 @@ static long init_record(longoutRecord *plongout)
                 errlogPrintf("devLoF3RP61: can't get I/O address for %s\n", plongout->name);
                 plongout->pact = 1;
                 return -1;
-            } else if (device != 'W' && device != 'R') {
+            } else if (device != 'R' && device != 'W' && device != 'E' && device != 'L') {
                 errlogPrintf("devLoF3RP61: unsupported device \'%c\' for %s\n", device, plongout->name);
                 plongout->pact = 1;
                 return -1;
@@ -177,7 +177,15 @@ static long init_record(longoutRecord *plongout)
         } else {
             pacom->count = 1;
         }
-    } else if (device == 'A') {                   // I/O registers on I/O modules
+    } else if (device == 'E' || device == 'L') { // Shared relays and Link relays
+        M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
+        pacom->start = start;
+        if (option == 'L') {
+            pacom->count = 2;
+        } else {
+            pacom->count = 1;
+        }
+    } else if (device == 'A') {                  // I/O registers on I/O modules
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
         pdrly->unitno = unitno;
         pdrly->slotno = slotno;
@@ -232,8 +240,10 @@ static long write_longout(longoutRecord *plongout)
 
     /* Compose ioctl request */
     switch (device) {
-    case 'W':
     case 'R':
+    case 'W':
+    case 'E':
+    case 'L':
         if (option == 'B') {
             wdata[0] = devF3RP61int2bcd(plongout->val, plongout);
         } else if (option == 'L') {
@@ -288,6 +298,17 @@ static long write_longout(longoutRecord *plongout)
     } else if (device == 'W') { // Link registers
         if (writeM3LinkRegister(pacom->start, pacom->count, &wdata[0]) < 0) {
             errlogPrintf("devLoF3RP61: writeM3LinkRegister failed [%d] for %s\n", errno, plongout->name);
+            return -1;
+        }
+
+    } else if (device == 'E') { // Shared relays
+        if (writeM3ComRelay(pacom->start, pacom->count, &wdata[0]) < 0) {
+            errlogPrintf("devLoF3RP61: writeM3ComRelay failed [%d] for %s\n", errno, plongout->name);
+            return -1;
+        }
+    } else if (device == 'L') { // Link relays
+        if (writeM3LinkRelay(pacom->start, pacom->count, &wdata[0]) < 0) {
+            errlogPrintf("devLoF3RP61: writeM3LinkRelay failed [%d] for %s\n", errno, plongout->name);
             return -1;
         }
     } else {                    // Registers and relays on I/O modules

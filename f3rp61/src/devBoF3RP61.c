@@ -109,7 +109,7 @@ static long init_record(boRecord *pbo)
             errlogPrintf("devBoF3RP61: can't get I/O address for %s\n", pbo->name);
             pbo->pact = 1;
             return -1;
-        } else if (device != 'L' && device != 'E') {
+        } else if (device != 'E' && device != 'L') {
             errlogPrintf("devBoF3RP61: unsupported device \'%c\' for %s\n", device, pbo->name);
             pbo->pact = 1;
             return -1;

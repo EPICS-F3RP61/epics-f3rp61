@@ -124,7 +124,7 @@ static long init_record(biRecord *pbi)
     dpvt->device = device;
 
     /* Check device validity and compose data structure for I/O request */
-    if (device == 'L' || device == 'E') {        // Shared relays and Link relays
+    if (device == 'E' || device == 'L') {        // Shared relays and Link relays
         M3IO_ACCESS_RELAY_POINT *pinrlyp = &dpvt->u.inrlyp;
         pinrlyp->position = position;
     } else if (device == 'X') {                  // Input relays on I/O modules

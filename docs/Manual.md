@@ -119,15 +119,15 @@ relevant record types.
 | M          | Mode registers                          | F3RP61     | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect                                            |
 | R          | Shared registers                        | F3RP61     | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
 | R ext      | Extended shared registers               | F3RP61     | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
-| E          | Shared relays                           | F3RP61     | 1-bit          | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo                                    |
-| E ext      | Extended shared relays                  | F3RP61     | 1-bit          | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo                                    |
-| L          | Link relays (for FA Link and FL-net)    | F3RP61     | 1-bit, 16-bit  | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo                                    |
+| E          | Shared relays                           | F3RP61     | 1-bit, 16-bit  | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo, longin, longout                   |
+| E ext      | Extended shared relays                  | F3RP61     | 1-bit, 16-bit  | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo, longin, longout                   |
+| L          | Link relays (for FA Link and FL-net)    | F3RP61     | 1-bit, 16-bit  | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo, longin, longout                   |
 | W          | Link registers (for FA Link and FL-net) | F3RP61     | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
 | D          | Data registers                          | F3RP61Seq  | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
 | B          | File registers                          | F3RP61Seq  | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
 | F          | Cache registers                         | F3RP61Seq  | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
 | Z          | Special registers                       | F3RP61Seq  | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao                   |
-| I          | Internal relays                         | F3RP61Seq  | 1-bit          | bi, bo                                                                        |
+| I          | Internal relays                         | F3RP61Seq  | 1-bit, 16-bit  | bi, bo, longin, longout                                                       |
 | M          | Special relays                          | F3RP61Seq  | 1-bit          | bi, bo                                                                        |
 | V          | Index registers                         |            |                |                                                                               |
 | T          | Timers                                  |            |                |                                                                               |
@@ -158,15 +158,15 @@ accessing shared registers using 'old interface'.
 | mbboDirect      | F3RP61       | Y, A, r, W, L, M, R, E                    |                                                                                         |
 | mbboDirect      | F3RP61Seq    | D, B, F, Z                                |                                                                                         |
 | longin          | F3RP61       | X, Y                                      | U, L                                                                                    |
-| longin          | F3RP61       | W, R                                      | U, L, B                                                                                 |
+| longin          | F3RP61       | W, R, E, L                                | U, L, B                                                                                 |
 | longin          | F3RP61       | A                                         | U, L, B ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module  |
 | longin          | F3RP61       | r                                         | U, B                                                                                    |
-| longin          | F3RP61Seq    | D, B, F, Z                                | U, L, B                                                                                 |
+| longin          | F3RP61Seq    | D, B, F, Z, I                             | U, L, B                                                                                 |
 | longout         | F3RP61       | Y                                         | U, L                                                                                    |
-| longout         | F3RP61       | W, R                                      | U, L, B                                                                                 |
+| longout         | F3RP61       | W, R, E, L                                | U, L, B                                                                                 |
 | longout         | F3RP61       | A                                         | U, L, B ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module  |
 | longout         | F3RP61       | r                                         | U, B                                                                                    |
-| longout         | F3RP61Seq    | D, B, F, Z                                | U, L, B                                                                                 |
+| longout         | F3RP61Seq    | D, B, F, Z, I                             | U, L, B                                                                                 |
 | bi              | F3RP61       | X, Y, L, E                                |                                                                                         |
 | bi              | F3RP61Seq    | I, M                                      |                                                                                         |
 | bi              | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3; System Stat. Reg. |                                                                                         |

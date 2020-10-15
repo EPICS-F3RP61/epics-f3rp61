@@ -143,7 +143,7 @@ static long init_record(longinRecord *plongin)
                 errlogPrintf("devLiF3RP61: can't get I/O address for %s\n", plongin->name);
                 plongin->pact = 1;
                 return -1;
-            } else if (device != 'W' && device != 'R') {
+            } else if (device != 'R' && device != 'W' && device != 'E' && device != 'L') {
                 errlogPrintf("devLiF3RP61: unsupported device \'%c\' for %s\n", device, plongin->name);
                 plongin->pact = 1;
             }
@@ -169,6 +169,14 @@ static long init_record(longinRecord *plongin)
         pacom->start = start;
         pacom->count = 1; // we don't have '&L' option support yet.
     } else if (device == 'R' || device == 'W') { // Shared registers and Link registers
+        M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
+        pacom->start = start;
+        if (option == 'L') {
+            pacom->count = 2;
+        } else {
+            pacom->count = 1;
+        }
+    } else if (device == 'E' || device == 'L') {        // Shared relays and Link relays
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
         pacom->start = start;
         if (option == 'L') {
@@ -267,6 +275,16 @@ static long read_longin(longinRecord *plongin)
             errlogPrintf("devLiF3RP61: readM3LinkRegister failed [%d] for %s\n", errno, plongin->name);
             return -1;
         }
+    } else if (device == 'E') { // Shared relays
+        if (readM3ComRelay(pacom->start, pacom->count, &wdata[0]) < 0) {
+            errlogPrintf("devLiF3RP61: readM3ComRelay failed [%d] for %s\n", errno, plongin->name);
+            return -1;
+        }
+    } else if (device == 'L') { // Link relays
+        if (readM3LinkRelay(pacom->start, pacom->count, &wdata[0]) < 0) {
+            errlogPrintf("devLiF3RP61: readM3LinkRelay failed [%d] for %s\n", errno, plongin->name);
+            return -1;
+        }
     } else {                    // Registers and relays on I/O modules
         if (ioctl(f3rp61_fd, command, p) < 0) {
             errlogPrintf("devLiF3RP61: ioctl failed [%d] for %s\n", errno, plongin->name);
@@ -301,8 +319,10 @@ static long read_longin(longinRecord *plongin)
         }
         break;
     case 'r':
-    case 'W':
     case 'R':
+    case 'W':
+    case 'E':
+    case 'L':
         if (option == 'B') {
             plongin->val = devF3RP61bcd2int(wdata[0], plongin);
         } else if (option == 'L') {

@@ -374,11 +374,11 @@ static long read_ai(aiRecord *pai)
         break;
     default: /* For device 'A' */
         if (option == 'L') {
-            pai->val = (long)ldata;
+            pai->rval = (long)ldata;
         } else if (option == 'U') {
-            pai->val = (uint16_t)wdata[0];
+            pai->rval = (uint16_t)wdata[0];
         } else {
-            pai->val = (int16_t)wdata[0];
+            pai->rval = (int16_t)wdata[0];
         }
 
     }

@@ -11,6 +11,8 @@ include $(TOP)/configure/CONFIG
 
 #
 USR_CFLAGS += -Wall
+USR_CFLAGS += -Werror
+USR_CFLAGS += -std=c99
 
 ifneq ($(filter $(T_A), linux-f3rp61 linux-f3rp71),)
 LIBRARY_IOC += f3rp61
@@ -48,6 +50,7 @@ f3rp61_SRCS += devBiF3RP61SysCtl.c
 f3rp61_SRCS += devBoF3RP61SysCtl.c
 f3rp61_SRCS += devMbbiF3RP61SysCtl.c
 f3rp61_SRCS += drvF3RP61SysCtl.c
+f3rp61_SRCS += devF3RP61bcd.c
 
 endif
 

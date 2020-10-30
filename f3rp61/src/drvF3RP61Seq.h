@@ -25,15 +25,15 @@
 #endif
 
 typedef struct {
-  ELLNODE           node;
-  MCMD_STRUCT       mcmdStruct;
-  dbCommon         *prec;
-  CALLBACK          callback;
-  int               ret;
-  short             BCD; /* Binary-coded-decimal flag */
+    ELLNODE      node;
+    MCMD_STRUCT  mcmdStruct;
+    dbCommon    *prec;
+    CALLBACK     callback;
+    int          ret;
+    char         option;
 } F3RP61_SEQ_DPVT;
 
-long f3rp61Seq_queueRequest();
+int f3rp61Seq_queueRequest();
 
 extern int f3rp61Seq_fd;
 

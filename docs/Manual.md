@@ -1,33 +1,42 @@
 Device and Driver Support for F3RP71 and F3RP61
 ===============================================
 
-# Table Of Contents
-* [Overview](#overview)
-* [Device Type](#device-type)
-* [Supported Record Types](#supported-record-types)
-* [Accessing I/O Module](#accessing-io-module)
-   * [Accessing Input Relay (X)](#accessing-input-relay-x)
-   * [Accessing Output Relay (Y)](#accessing-output-relay-y)
-   * [Accessing Data Register](#accessing-data-register)
-      * [Using 'unsigned' value option](#using-unsigned-value-option)
-      * [Using 'binary-coded-decimal (BCD)' option](#using-binary-coded-decimal-bcd-option)
-      * [Read an array of data](#read-an-array-of-data)
-   * [Accessing Mode Register](#accessing-mode-register)
-* [Handling Special Module](#handling-special-module)
-* [Cautions in Using F3RP71 and Sequence CPU Side-by-side](#cautions-in-using-f3rp71-and-sequence-cpu-side-by-side)
-* [Communication with Sequence CPU](#communication-with-sequence-cpu)
-   * [Communication Based on Shared Memory](#communication-based-on-shared-memory)
-      * [Communication Based on Shared Memory Using New Interface<a name="user-content-UsingNewInterface"></a>](#communication-based-on-shared-memory-using-new-interface)
-         * [READ/WRITE SHARED RELAYS (1-bit variables)](#readwrite-shared-relays-1-bit-variables)
-         * [READ/WRITE SHARED REGISTERS (16-bit variables)](#readwrite-shared-registers-16-bit-variables)
-      * [Communication Based on Shared Memory Using Old Interface](#communication-based-on-shared-memory-using-old-interface)
-   * [Accessing Internal Device of Sequence CPU](#accessing-internal-device-of-sequence-cpu)
-* [I/O Interrupt Support](#io-interrupt-support)
-* [FL-net Support](#fl-net-support)
-* [LED / Rotary Switch / Status Register support](#led--rotary-switch--status-register-support)
-   * [LED support](#led-support)
-   * [Rotary switch support](#rotary-switch-support)
-   * [Status register support](#status-register-support)
+Table Of Contents
+=================
+<!--ts-->
+   * [Device and Driver Support for F3RP71 and F3RP61](#device-and-driver-support-for-f3rp71-and-f3rp61)
+   * [Table Of Contents](#table-of-contents)
+   * [Overview](#overview)
+   * [Device Types](#device-types)
+   * [Supported Record Types](#supported-record-types)
+   * [Accessing I/O Module](#accessing-io-module)
+      * [Accessing Input Relay (X)](#accessing-input-relay-x)
+      * [Accessing Output Relay (Y)](#accessing-output-relay-y)
+      * [Accessing Data Register](#accessing-data-register)
+         * [Using 'unsigned' value option](#using-unsigned-value-option)
+         * [Using 'binary-coded-decimal (BCD)' option](#using-binary-coded-decimal-bcd-option)
+         * [Read an array of data](#read-an-array-of-data)
+      * [Accessing Mode Register](#accessing-mode-register)
+   * [Handling Special Module](#handling-special-module)
+   * [Important Notice on Using F3RP71 in Multi-CPU Configuration](#important-notice-on-using-f3rp71-in-multi-cpu-configuration)
+   * [Communication with Sequence CPU](#communication-with-sequence-cpu)
+      * [Communication Based on Shared Memory](#communication-based-on-shared-memory)
+         * [Communication Based on Shared Memory Using New Interface<a name="user-content-UsingNewInterface"></a>](#communication-based-on-shared-memory-using-new-interface)
+            * [Notes on Using Shared Memory with F3RP71 (<strong>not</strong> F3RP61)<a name="user-content-SharedMemoryWithF3RP71"></a>](#notes-on-using-shared-memory-with-f3rp71-not-f3rp61)
+            * [Reading/Writing Shared Relays (1-bit variables)](#readingwriting-shared-relays-1-bit-variables)
+            * [Reading/Writing  Shared Registers (16-bit variables)](#readingwriting--shared-registers-16-bit-variables)
+         * [Communication Based on Shared Memory Using Old Interface](#communication-based-on-shared-memory-using-old-interface)
+      * [Accessing Internal Device of Sequence CPU](#accessing-internal-device-of-sequence-cpu)
+   * [I/O Interrupt Support](#io-interrupt-support)
+   * [FL-net Support](#fl-net-support)
+   * [LED / Rotary Switch / Status Register support](#led--rotary-switch--status-register-support)
+      * [LED support](#led-support)
+      * [Rotary switch support](#rotary-switch-support)
+      * [Status register support](#status-register-support)
+
+<!-- Added by: shuei, at: 2019-02-27T18:04+09:00 -->
+
+<!--te-->
 
 
 # Overview
@@ -59,19 +68,20 @@ execute the I/O operation. The EPICS sequencer program is used to
 replace the ladder program. See [Handling Special
 Module](#handling-special-module) for more detail. If some
 initialization is required on a special module, it can be done by
-using an EPICS sequencer program, or a runtime database comprised of
+using an EPICS sequencer program, or a run-time database comprised of
 records that have the PINI field value of "YES".
 
 
-An F3RP71 (or F3RP61) can work as an IOC with / without sequence CPUs
-that run ladder programs. If there is no sequence CPU on the PLC-bus,
-F3RP71 should manage all the I/O activities. If one or more sequence
-CPUs exists on the PLC-bus, some of the I/O modules can be used with
-the sequence CPUs and the others can be used with F3RP71. It is
-recommended that the I/O module under the sequence CPU's control be
-accessed indirectly by the IOC (F3RP71) through the internal devices
-of the sequence CPUs. See [Cautions in Using F3RP71 and Sequence CPU
-Side-by-side](#cautions-in-using-f3rp71-and-sequence-cpu-side-by-side)
+An F3RP71/F3RP61 works as an IOC either with or without sequence CPUs
+which run ladder programs. If there is no sequence CPU on the PLC-bus,
+F3RP71/RP61 should manage all the I/O activities. If one of more
+sequence CPUs attached to the PLC-bus, some of I/O modules can be
+controlled by sequence CPUs, while the others by F3RP71. It is
+recommended that those I/O modules under the control of the sequence
+CPU be indirectly accessed by the IOC (F3RP71) via the internal
+devices of the sequence CPUs. See [Important Notice on Using F3RP71 in
+Multi-CPU
+Configuration](#important-notice-on-using-f3rp71-in-multi-cpu-configuration)
 for more detail.
 
 
@@ -81,14 +91,14 @@ interrupt into a message to a user-level process running on it. Based
 on this function, the device / driver support supports processing
 records upon an I/O interrupt.
 
-# Device Type
+# Device Types
 
 In order to use the device / driver support, the device type (DTYP) field of the
 record must be set to either:
 
-* "**F3RP61**" for accessing relays and registers of I/O modules, and
-  a shared memory,
-* "**F3RP61Seq**" for accessing internal devices ("D", "I", "B") of
+* "**F3RP61**" for accessing relays and registers on I/O modules, and
+  shared relays and shared registers,
+* "**F3RP61Seq**" or accessing internal devices ("D", "I", "B") of
   the sequence CPUs on the same base unit, or
 * "**F3RP61SysCtl**" for controlling status LEDs and/or reading rotary
    switch position of F3RP71 module.
@@ -101,27 +111,27 @@ device type.
 The table below shows the supported device type along with the
 relevant record types.
 
-| **Device** | **Description**                        | **Type** | **Length** | **Supported record types**                                                    |
-|------------|----------------------------------------|----------|------------|-------------------------------------------------------------------------------|
-| X          | Inputs on input module                 | IO       | 1-bit      | mbbi, mbbiDirect, longin, bi, ai                                              |
-| Y          | Outputs on output module               | IO       | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, bi, bo, ai, ao           |
-| A          | Internal registers on I/O modules      | IO       |            | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, si, so, waveform |
-| M          | Mode registers                         | IO       |            | mbbi, mbbo, mbbiDirect, mbboDirect                                            |
-| R          | Shared registers                       | Shared   | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
-| R ext      | Extended shared registers              | Shared   | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
-| E          | Shared relays                          | Shared   | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo                                    |
-| E ext      | Extended shared relays                 | Shared   | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo                                    |
-| D          | Data registers                         | Internal | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout                           |
-| Z          | Special registers                      |          | 16-bit     |                                                                               |
-| V          | Index registers                        |          | 16-bit     |                                                                               |
-| B          | File registers                         | Internal | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout                           |
-| F          | Cache registers                        |          | 16-bit     |                                                                               |
-| L          | Link relays (for FA Link and FL-net)    |          | 1-bit      | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo                                    |
-| W          | Link registers (for FA Link and FL-net) |          | 16-bit     | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
-| M          | Special relays – read-only             |          | 1-bit      |                                                                               |
-| T          | Timers                                 |          |            |                                                                               |
-| C          | Counters                               |          |            |                                                                               |
-| I          |                                        | Internal |            | bi, bo                                                                        |
+| **Device** | **Description**                         |  **DTYP**  | **data width** | **Supported record types**                                                    |
+|------------|-----------------------------------------|------------|----------------|-------------------------------------------------------------------------------|
+| X          | Input relays on input module            | F3RP61     | 1-bit, 16-bit  | mbbi, mbbiDirect, longin, bi, ai                                              |
+| Y          | Output relays on output module          | F3RP61     | 1-bit, 16-bit  | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, bi, bo, ai, ao           |
+| A          | I/O registers on I/O modules            | F3RP61     | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, si, so, waveform |
+| M          | Mode registers                          | F3RP61     | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect                                            |
+| R          | Shared registers                        | F3RP61     | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
+| R ext      | Extended shared registers               | F3RP61     | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
+| E          | Shared relays                           | F3RP61     | 1-bit, 16-bit  | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo, longin, longout                   |
+| E ext      | Extended shared relays                  | F3RP61     | 1-bit, 16-bit  | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo, longin, longout                   |
+| L          | Link relays (for FA Link and FL-net)    | F3RP61     | 1-bit, 16-bit  | mbbi, mbbo, mbbiDirect, mbboDirect, bi, bo, longin, longout                   |
+| W          | Link registers (for FA Link and FL-net) | F3RP61     | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
+| D          | Data registers                          | F3RP61Seq  | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
+| B          | File registers                          | F3RP61Seq  | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
+| F          | Cache registers                         | F3RP61Seq  | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao, waveform         |
+| Z          | Special registers                       | F3RP61Seq  | 16-bit         | mbbi, mbbo, mbbiDirect, mbboDirect, longin, longout, ai, ao                   |
+| I          | Internal relays                         | F3RP61Seq  | 1-bit, 16-bit  | bi, bo, longin, longout                                                       |
+| M          | Special relays                          | F3RP61Seq  | 1-bit          | bi, bo                                                                        |
+| V          | Index registers                         |            |                |                                                                               |
+| T          | Timers                                  |            |                |                                                                               |
+| C          | Counters                                |            |                |                                                                               |
 
 The table below shows supported record types with DTYP fields used to
 access specific devices. Each record type by default supports 'no
@@ -136,41 +146,47 @@ options are available. Those options are as follows:
 They can be used as listed in the table below. Device "r" represents
 accessing shared registers using 'old interface'.
 
-| **Record type** | **DTYP**     | **Supported device**           | **Additional option supported**                                                         |
-|-----------------|--------------|--------------------------------|-----------------------------------------------------------------------------------------|
-| mbbi            | F3RP61       | X, Y, A, r, W, L, M, R, E      |                                                                                         |
-| mbbi            | F3RP61Seq    | D, B                           |                                                                                         |
-| mbbi            | F3RP61SysCtl | Rotary Switch position         |                                                                                         |
-| mbbo            | F3RP61       | Y, A, r, W, L, M, R, E         |                                                                                         |
-| mbbo            | F3RP61Seq    | D, B                           |                                                                                         |
-| mbbiDirect      | F3RP61       | X, Y, A, r, W, L, M, R, E      |                                                                                         |
-| mbbiDirect      | F3RP61Seq    | D, B                           |                                                                                         |
-| mbboDirect      | F3RP61       | Y, A, r, W, L, M, R, E         |                                                                                         |
-| mbboDirect      | F3RP61Seq    | D, B                           |                                                                                         |
-| longin          | F3RP61       | X, Y                           | U                                                                                       |
-| longin          | F3RP61       | A, r, W, R                     | U, L, B                                                                                 |
-| longin          | F3RP61Seq    | D, B                           | B                                                                                       |
-| longout         | F3RP61       | Y                              |                                                                                         |
-| longout         | F3RP61       | A, r, W, R                     | L, B                                                                                    |
-| longout         | F3RP61Seq    | D, B                           | B                                                                                       |
-| bi              | F3RP61       | X, Y, L, E                     |                                                                                         |
-| bi              | F3RP61Seq    | I                              |                                                                                         |
+| **Record type** | **DTYP**     | **Supported device**                      | **Additional option supported**                                                         |
+|-----------------|--------------|-------------------------------------------|-----------------------------------------------------------------------------------------|
+| mbbi            | F3RP61       | X, Y, A, r, W, L, M, R, E                 |                                                                                         |
+| mbbi            | F3RP61Seq    | D, B, F, Z                                |                                                                                         |
+| mbbi            | F3RP61SysCtl | Rotary Switch position                    |                                                                                         |
+| mbbo            | F3RP61       | Y, A, r, W, L, M, R, E                    |                                                                                         |
+| mbbo            | F3RP61Seq    | D, B, F, Z                                |                                                                                         |
+| mbbiDirect      | F3RP61       | X, Y, A, r, W, L, M, R, E                 |                                                                                         |
+| mbbiDirect      | F3RP61Seq    | D, B, F                                   |                                                                                         |
+| mbboDirect      | F3RP61       | Y, A, r, W, L, M, R, E                    |                                                                                         |
+| mbboDirect      | F3RP61Seq    | D, B, F, Z                                |                                                                                         |
+| longin          | F3RP61       | X, Y                                      | U, L                                                                                    |
+| longin          | F3RP61       | W, R, E, L                                | U, L, B                                                                                 |
+| longin          | F3RP61       | A                                         | U, L, B ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module  |
+| longin          | F3RP61       | r                                         | U, B                                                                                    |
+| longin          | F3RP61Seq    | D, B, F, Z, I                             | U, L, B                                                                                 |
+| longout         | F3RP61       | Y                                         | U, L                                                                                    |
+| longout         | F3RP61       | W, R, E, L                                | U, L, B                                                                                 |
+| longout         | F3RP61       | A                                         | U, L, B ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module  |
+| longout         | F3RP61       | r                                         | U, B                                                                                    |
+| longout         | F3RP61Seq    | D, B, F, Z, I                             | U, L, B                                                                                 |
+| bi              | F3RP61       | X, Y, L, E                                |                                                                                         |
+| bi              | F3RP61Seq    | I, M                                      |                                                                                         |
 | bi              | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3; System Stat. Reg. |                                                                                         |
-| bo              | F3RP61       | Y, L, E                        |                                                                                         |
-| bo              | F3RP61Seq    | I                              |                                                                                         |
-| bo              | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3         |                                                                                         |
-| ai              | F3RP61       | X, Y                           | U                                                                                       |
-| ai              | F3RP61       | A                              | U, L                                                                                    |
-| ai              | F3RP61       | r, W, R                        | U, D, F, L                                                                              |
-| ai              | F3RP61Seq    | D, B                           |                                                                                         |
-| ao              | F3RP61       | Y, r                           |                                                                                         |
-| ao              | F3RP61       | A                              | L                                                                                       |
-| ao              | F3RP61       | W, R                           | D, F, L                                                                                 |
-| ao              | F3RP61Seq    | D, B                           |                                                                                         |
-| si              | F3RP61       | A                              |                                                                                         |
-| so              | F3RP61       | A                              |                                                                                         |
-| waveform        | F3RP61       | A                              | **FTVL field**: DBF\_ULONG, DBF\_USHORT, DBF\_SHORT                                     |
-| waveform        | F3RP61       | r, W, R                        | **FTVL field**: DBF\_DOUBLE, DBF\_FLOAT, DBF\_LONG, DBF\_ULONG, DBF\_SHORT, DBF\_USHORT |
+| bo              | F3RP61       | Y, L, E                                   |                                                                                         |
+| bo              | F3RP61Seq    | I, M                                      |                                                                                         |
+| bo              | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3                    |                                                                                         |
+| ai              | F3RP61       | X, Y                                      | U, L, F, D                                                                              |
+| ai              | F3RP61       | W, R                                      | U, L, F, D                                                                              |
+| ai              | F3RP61       | A                                         | U, L ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module     |
+| ai              | F3RP61       | r                                         | U                                                                                       |
+| ai              | F3RP61Seq    | D, B, F, Z                                | U, L, F, D                                                                              |
+| ao              | F3RP61       | Y                                         | U, L, F, D                                                                              |
+| ao              | F3RP61       | W, R                                      | U, L, F, D                                                                              |
+| ao              | F3RP61       | A                                         | U, L ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module     |
+| ao              | F3RP61       | r                                         | U                                                                                       |
+| ao              | F3RP61Seq    | D, B, F, Z                                | U, L, F, D                                                                              |
+| si              | F3RP61       | A                                         |                                                                                         |
+| so              | F3RP61       | A                                         |                                                                                         |
+| waveform        | F3RP61       | A                                         | **FTVL field**: DBF\_ULONG, DBF\_USHORT, DBF\_SHORT                                     |
+| waveform        | F3RP61       | r, W, R                                   | **FTVL field**: DBF\_DOUBLE, DBF\_FLOAT, DBF\_LONG, DBF\_ULONG, DBF\_SHORT, DBF\_USHORT |
 
 
 # Accessing I/O Module
@@ -185,8 +201,8 @@ example shows.
 
 ```
 record(bi, "f3rp61_example_1") {
-    field(DTYP, “F3RP61")
-    field(INP, “@U0,S2,X1")
+    field(DTYP, "F3RP61")
+    field(INP, "@U0,S2,X1")
 }
 ```
 
@@ -607,25 +623,21 @@ control module, and to handle exceptions that can occur in the
 sequence (for example, an error caused by a wrong parameter set by the
 user).
 
-# Cautions in Using F3RP71 and Sequence CPU Side-by-side
+# Important Notice on Using F3RP71 in Multi-CPU Configuration
 
-This section gives you important cautions in using an F3RP71 CPU and a
-normal sequence CPU on the same unit.
+This section gives you an important notice on using an F3RP71/F3RP61
+CPU together with sequence CPUs on the same unit.
 
-In many cases, this type of multi-CPU configuration is used in case
-you use a normal sequence CPU to implement an interlock logic that is
-required high reliability. In that case, the normal sequence CPU
-dedicates to handle the interlock signals while the F3RP71 CPU is used
-to take care of other control, or just to monitor the status of the
-interlock signals. In this case, you need to be cautious of the
-following two points.
+A typical use case of multi-CPU configuration is a sequence CPU
+implementing an interlock logic which requires high reliability, and
+F3RP71 controlling or monitoring the interlock system. In such a case,
+one have to pay attention to the following two points:
 
-- The sequence CPU must be in the first slot (slot 1) because the CPU
-  in the first slot becomes the master of the unit and the master
-  resets the whole system upon rebooting.
-- The F3RP71 CPU should NOT have any access, regardless of read or
-  write, to the I/O modules that are used with the normal sequence CPU
-  for the interlock.
+- The sequence CPU must be in the first slot (slot 1). The CPU in the
+  first slot becomes the master of the unit, which resets the whole
+  system upon rebooting.
+- The F3RP71 should NOT access, regardless of read or write, to those
+  I/O modules used by the sequence CPU for the interlock system.
 
 The reason of the second point is as follows. If an I/O module is
 accessed by an F3RP71 CPU, the I/O module recognizes and remembers
@@ -656,19 +668,18 @@ ladder program.
 # Communication with Sequence CPU
 
 Two different types of methods are supported for an F3RP71 to
-communicate with the sequence CPUs that work on the same base
-unit. One is shared-memory-based communication and the other is
-message-based communication. The former is fast access that finishes
+communicate with sequence CPUs that work on the same base unit. One is
+shared-memory-based communication and the other is message-based
+communication. The former is synchronous access that finishes
 instantly, just like the access to the I/O relays and registers of an
-I/O module. The latter is slow access that takes a few milliseconds of
-time to complete. For this reason, two different DTYPs are defined in
-the device / driver support. The DTYP field needs to be set to
-"F3RP61" for the former (synchronous) and "F3RP61Seq" for the latter
-(asynchronous).
+I/O module. The latter is asynchronous and takes a few milliseconds to
+complete. For this reason, two different DTYPs are defined in the
+device / driver support, namely "F3RP61" for the former (synchronous)
+and "F3RP61Seq" for the latter (asynchronous).
 
 ## Communication Based on Shared Memory
 
-The following is the basics to understand how the communication between F3RP71 CPUs and normal sequence CPUs works.
+The following is the basics to understand how the communication between F3RP71 CPUs and sequence CPUs works.
 
 * Each CPU, a sequence CPU or an F3RP71 CPU can have regions allocated
   to it.
@@ -689,33 +700,37 @@ shown in the figure below.
 
 ### Communication Based on Shared Memory Using New Interface<a name="UsingNewInterface"></a>
 
-In BSP R2.01 of F3RP61, a set of new APIs is supported to
-access the shared memory (shared relays and shared registers). The
-device / driver support (Ver. 1.1.0 or later) supports accessing the
-shared memory based on the new APIs. In this case, users need to put
-the following IOC command in the startup script for an F3RP61-based
-IOC to specify how many shared relays and shared registers are
-allocated to each of the CPUs.
+The device and driver support make use of a set of API for shared
+memory (i.e., shared relays and shared registers). This API is
+available in F3RP71 BSP (R1.03 or later), as well as in F3RP61 BPS
+(R2.01 or later). Calling f3rp61ComDeviceConfigure() prior to
+iocInit() in the IOC start-up script (st.cmd) allocates shared memory
+for specified CPU:
 
 ```shell
 f3rp61ComDeviceConfigure(0, 512, 256, 64, 32)
 f3rp61ComDeviceConfigure(1, 512, 256, 64, 32)
 ```
 
-The command needs to be executed prior to the call to iocInit(). The
-first line implies that 512 bits of shared relays, 256 words of shared
-registers, 64 bits of extended shared relays and 32 words of extended
-shared registers are allocated to CPU1(0 + 1), say, a normal sequence
-CPU in slot 1. The next line means that the same numbers of shared
-relays and shared registers are allocated to CPU2(1 + 1), say, an
-F3RP71 CPU in slot 2.
+The first line allocates 512 shared relays, 256 words of shared
+registers, 64 extended shared relays, and 32 words of extended shared
+registers the CPU in slot 1 (e.g., a sequence CPU). The second line
+allocates the same numbers of shared relays and shared registers to
+the CPU in slot 2 (e.g., F3RP71 CPU).  Note that indices starts from
+0. Make sure that arguments to f3rp61ComDeviceConfigure() for the
+sequence CPU shall be consistent with Inter-CPU Shared Memory Setup in
+WideField3.
 
-Note that the users themselves are responsible for making the
-configuration done on the F3RP71-side as shown above consistent with
-the configuration done on the sequence CPU-side by using WideField3
-(or WideField2).
+#### Notes on Using Shared Memory with F3RP71 (**not** F3RP61)<a name="SharedMemoryWithF3RP71"></a>
+Make sure that, when using F3RP71 (**not** F3RP61) in a multi-CPU
+configuration, "Non-Simultaneous" is selected for "Shared Refreshed
+Data" in Inter-CPU Shared Memory Setup.
+Otherwise  even if F3RP71 writes anything to the shared memory, it looks like as if nothing has been modified when read from the sequence CPU.
+Refer to following manuals for the detail:
+- **IM 34M06M52-02E**, "e-RT3 CPU Module (SFRD␣2) BSP Common Function Manual", 5.2 Shared device
+- **IM 34M06Q16-02E**, "FA-M3 Programming Tool WideField3 (Offline)", D3.1.13 Inter-CPU Shared Memory Setup
 
-#### READ/WRITE SHARED RELAYS (1-bit variables)
+#### Reading/Writing Shared Relays (1-bit variables)
 
 The following example shows how to read a shared relay by using a bi
 record.
@@ -744,7 +759,7 @@ The bo record can be used to write the first shared relay (E1). In
 this case, the relay (E1) must be allocated to the F3RP71-based IOC as
 mentioned earlier.
 
-#### READ/WRITE SHARED REGISTERS (16-bit variables)
+#### Reading/Writing  Shared Registers (16-bit variables)
 
 Shared registers are 16-bit variables that can be accessed with
 records of the following types:

@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/msg.h>
 #include <sys/stat.h>
@@ -69,7 +70,7 @@ static long init(void)
 
     f3rp61SysCtl_fd = open("/dev/m3sysctl", O_RDWR);
     if (f3rp61SysCtl_fd < 0) {
-        errlogPrintf("drvF3RP61SysCtl: can't open /dev/m3sysctl [%d]\n", errno);
+        errlogPrintf("drvF3RP61SysCtl: can't open /dev/m3sysctl [%d] : %s\n", errno, strerror(errno));
         return -1;
     }
 

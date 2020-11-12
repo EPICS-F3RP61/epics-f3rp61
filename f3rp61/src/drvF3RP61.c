@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -85,7 +86,7 @@ static long init(void)
 
     f3rp61_fd = open("/dev/m3io", O_RDWR);
     if (f3rp61_fd < 0) {
-        errlogPrintf("drvF3RP61: can't open /dev/m3io [%d]\n", errno);
+        errlogPrintf("drvF3RP61: can't open /dev/m3io [%d] : %s\n", errno, strerror(errno));
         return -1;
     }
 
@@ -127,15 +128,24 @@ static long init(void)
     return 0;
 }
 
-
 static void msgrcv_thread(void *arg)
 {
     int msqid = (int) arg;
 
     for (;;) {
         MSG_BUF msgbuf;
-        if (msgrcv(msqid, &msgbuf, sizeof(MSG_BUF), M3IO_MSGTYPE_IO, 0) == -1) {
-            errlogPrintf("drvF3RP61: msgrcv failed [%d]\n", errno);
+        const ssize_t val = msgrcv(msqid, &msgbuf, sizeof(MSG_BUF), M3IO_MSGTYPE_IO, MSG_NOERROR);
+
+        if (val == -1) {
+            errlogPrintf("drvF3RP61: msgrcv failed [%d] : %s\n", errno, strerror(errno));
+            // msgbuf might be uninitialized if msgrcv() failed.
+            continue;
+        }
+
+        if (val < 16) {
+            // for just in case
+            errlogPrintf("drvF3RP61: message received by msgrcv() is too small (%d bytes)\n", val);
+            continue;
         }
 
         int unit    = msgbuf.mtext.unit;
@@ -173,17 +183,21 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
     if (count == 0) {
         msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
         if (msqid  == -1) {
-            errlogPrintf("drvF3RP61: msgget failed [%d]\n", errno);
+            errlogPrintf("drvF3RP61: msgget failed [%d] : %s\n", errno, strerror(errno));
             return -1;
         }
 
-        /* Add Start */
-        msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
-        if (msqid == -1) {
-            errlogPrintf("drvF3RP61: msgget failed [%d]\n", errno);
-            return -1;
+#if defined(_ppc_)
+        if (msqid == 0) {
+            // Get another message queue ID when it's 0.
+            // Message queue id 0 is valid in SysV IPC but invalid in F3RP61 BSP.
+            msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
+            if (msqid == -1) {
+                errlogPrintf("drvF3RP61: msgget failed [%d] : %s\n", errno, strerror(errno));
+                return -1;
+            }
         }
-        /* Add End */
+#endif
 
         sprintf(thread_name, "msgrcvr%d", msqid);
         if (epicsThreadCreate(thread_name,

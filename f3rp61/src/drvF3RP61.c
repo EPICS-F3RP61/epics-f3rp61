@@ -138,6 +138,7 @@ static void msgrcv_thread(void *arg)
 
         if (val == -1) {
             errlogPrintf("drvF3RP61: msgrcv failed [%d] : %s\n", errno, strerror(errno));
+            // msgbuf might be uninitialized if msgrcv() failed.
             continue;
         }
 

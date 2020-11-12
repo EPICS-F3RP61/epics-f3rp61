@@ -128,15 +128,17 @@ static long init(void)
     return 0;
 }
 
-
 static void msgrcv_thread(void *arg)
 {
     int msqid = (int) arg;
 
     for (;;) {
         MSG_BUF msgbuf;
-        if (msgrcv(msqid, &msgbuf, sizeof(MSG_BUF), M3IO_MSGTYPE_IO, 0) == -1) {
+        const ssize_t val = msgrcv(msqid, &msgbuf, sizeof(MSG_BUF), M3IO_MSGTYPE_IO, MSG_NOERROR);
+
+        if (val == -1) {
             errlogPrintf("drvF3RP61: msgrcv failed [%d] : %s\n", errno, strerror(errno));
+            continue;
         }
 
         int unit    = msgbuf.mtext.unit;

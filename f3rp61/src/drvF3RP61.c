@@ -142,6 +142,12 @@ static void msgrcv_thread(void *arg)
             continue;
         }
 
+        if (val < 16) {
+            // for just in case
+            errlogPrintf("drvF3RP61: message received by msgrcv() is too small (%d bytes)\n", val);
+            continue;
+        }
+
         int unit    = msgbuf.mtext.unit;
         int slot    = msgbuf.mtext.slot;
         int channel = msgbuf.mtext.channel;

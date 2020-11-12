@@ -178,13 +178,17 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
             return -1;
         }
 
-        /* Add Start */
-        msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
-        if (msqid == -1) {
-            errlogPrintf("drvF3RP61: msgget failed [%d] : %s\n", errno, strerror(errno));
-            return -1;
+#if defined(_ppc_)
+        if (msqid == 0) {
+            // Get another message queue ID when it's 0.
+            // Message queue id 0 is valid in SysV IPC but invalid in F3RP61 BSP.
+            msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
+            if (msqid == -1) {
+                errlogPrintf("drvF3RP61: msgget failed [%d] : %s\n", errno, strerror(errno));
+                return -1;
+            }
         }
-        /* Add End */
+#endif
 
         sprintf(thread_name, "msgrcvr%d", msqid);
         if (epicsThreadCreate(thread_name,

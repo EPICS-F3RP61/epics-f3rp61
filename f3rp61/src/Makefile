@@ -20,6 +20,9 @@ LIBRARY_IOC += f3rp61
 # install devXxxSoft.dbd into <top>/dbd
 DBD += f3rp61.dbd
 
+# install header file(s) into <top>/include
+INC += drvF3RP61.h
+
 # The following are compiled and added to the Support library
 f3rp61_SRCS += devAiF3RP61.c
 f3rp61_SRCS += devAoF3RP61.c

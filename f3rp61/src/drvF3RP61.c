@@ -35,10 +35,9 @@
 #include <drvF3RP61.h>
 
 #define M3IO_NUM_CPUS   4
-/*
+
+// a single F3RP61/71 module can work with up to two FL-net interface modules.
 #define M3IO_NUM_LINKS  2
-*/
-#define M3IO_NUM_LINKS  1
 
 static long report();
 static long init();
@@ -123,6 +122,7 @@ static long init(void)
 
             break;
         }
+
     }
 
     return 0;
@@ -279,11 +279,16 @@ static void linkDeviceConfigureCallFunc(const iocshArgBuf *args)
 
 static void linkDeviceConfigure(int sysno, int nrlys, int nregs)
 {
-    /*
-      if (sysno < 0 || sysno > 1 || nrlys < 1 || nrlys > 8192 || nregs < 1 || nregs > 8192) {
-    */
-    if (sysno < 0 || sysno > 0 || nrlys < 1 || nrlys > 8192 || nregs < 1 || nregs > 8192) {
-        errlogPrintf("drvF3RP61: linkDeviceConfigure: parameter out of range\n");
+    if (sysno <0 || sysno > (M3IO_NUM_LINKS-1) ) {
+        errlogPrintf("f3rp61LinkDeviceConfigure: number of FL-net interface out of range\n");
+        return;
+    }
+    if (nrlys < 1 || nrlys > 8192) {
+        errlogPrintf("f3rp61LinkDeviceConfigure: number of Link relay out of range\n");
+        return;
+    }
+    if (nregs < 1 || nregs > 8192) {
+        errlogPrintf("f3rp61LinkDeviceConfigure: number of Link register out of range\n");
         return;
     }
 

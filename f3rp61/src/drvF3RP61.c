@@ -36,7 +36,7 @@
 
 #define M3IO_NUM_CPUS   4
 
-// a single F3RP61/71 module can work with up to two FL-net interface modules.
+// A single F3RP61/71 module can work with up to two FL-net interface modules.
 #define M3IO_NUM_LINKS  2
 
 static long report();

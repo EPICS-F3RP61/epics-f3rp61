@@ -155,7 +155,7 @@ static long init_record(mbboDirectRecord *pmbboDirect)
 
     pmbboDirect->dpvt = dpvt;
 
-    return 0;
+    return 2; // no conversion
 }
 
 /*

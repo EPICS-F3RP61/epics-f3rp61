@@ -29,7 +29,7 @@
 #define BCDMIN_INT     0 //
 
 
-uint32_t devF3RP61bcd2int(uint16_t bcd, void *precord)
+uint32_t devF3RP61bcd2int(uint16_t bcd, longinRecord *precord)
 {
     uint32_t base = 1;
     uint32_t dec  = 0;
@@ -55,7 +55,7 @@ uint32_t devF3RP61bcd2int(uint16_t bcd, void *precord)
     return dec;
 }
 
-uint16_t devF3RP61int2bcd(int32_t dec, void *precord)
+uint16_t devF3RP61int2bcd(int32_t dec, longoutRecord *precord)
 {
     if (dec<BCDMIN_INT) {
         recGblSetSevr(precord, HW_LIMIT_ALARM, INVALID_ALARM);

@@ -21,6 +21,14 @@
 //
 #include <devF3RP61bcd.h>
 
+//
+#define BCDMAX_BCD 39321 // 0x9999
+#define BCDMAX_INT  9999 // 0x9999
+
+#define BCDMIN_BCD     0 // 0x9999
+#define BCDMIN_INT     0 //
+
+
 uint32_t devF3RP61bcd2int(uint16_t bcd, void *precord)
 {
     uint32_t base = 1;

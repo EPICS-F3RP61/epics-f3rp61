@@ -1,5 +1,6 @@
 .svn
 *~
+include
 lib
 dbd
 O.linux-*

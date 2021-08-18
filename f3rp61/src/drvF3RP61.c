@@ -112,6 +112,12 @@ static long init(void)
 
             if (setM3FlnSysNo(0, NULL) < 0) {
                 errlogPrintf("drvF3RP61: setM3FlnSysNo failed [%d]\n", errno);
+                // 414 (invalid number)  : invalid parameter was specified (F3RP71/61)
+                // 415 (device mismatch) : specified modules is not FL-net (F3RP71)
+                // 416 (number over)     : an excessive number of system is specified (F3RP71)
+                // 417 (entry error)     : unable to access module or I/O bus error (F3RP71)
+                // 397 (internal error)  : (F3RP61)
+                // 394                   : Not documented in the manual; setM3FlnSysNo() was called after m3rfrsTsk(). We'd better to reset the CPU.
                 return -1;
             }
 

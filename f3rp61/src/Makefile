@@ -8,11 +8,10 @@ include $(TOP)/configure/CONFIG
 #==================================================
 # build a support library
 
-
 #
-USR_CFLAGS += -Wall
-USR_CFLAGS += -Werror
 USR_CFLAGS += -std=c99
+USR_CFLAGS += -Wall
+#USR_CFLAGS += -Werror
 
 ifneq ($(filter $(T_A), linux-f3rp61 linux-f3rp71),)
 LIBRARY_IOC += f3rp61

@@ -30,7 +30,7 @@ driver support for F3RP71 and F3RP61 on linux-x86_64 or linux-x86 host.
 
 # Software Requirements
 ## F3RP71 (e-RT3 plus)
-- EPICS base R3.15.5 or R3.14.12.x
+- This device support works with EPICS base from 3.14.12 on, tested up to R3.15.8.
 - Xilinx Vivado 2013.4 Standalone SDK
 - Linux BSP for F3RP71 (SFRD12), R1.03
 - Refer to User's Manual for installation of Xilinx SDK and Linux BSP:
@@ -39,7 +39,7 @@ driver support for F3RP71 and F3RP61 on linux-x86_64 or linux-x86 host.
   - In this document, we don't use Eclipse but GNU toolchain installed along with SDK.
 
 ## F3RP61 (e-RT3 2.0)
-- EPICS base R3.15.5, R3.14.12.x, or R3.14.11
+- This device support works with EPICS base from 3.14.11 on, tested up to R3.15.8.
 - Linux BSP for F3RP61 (SFRD11), R2.0x
   - Refer to User's Manual for installation of BSP:
     - **IM 34M06M51-43E**, "RTOS-CPU module (F3RP61-␣␣) Linux BSP Start-up Manual", 6. Introduction Methods
@@ -70,15 +70,15 @@ ldconfig
 
 # Building EPICS Base for F3RP71 and/or F3RP61
 ## Extracting distribution file
-Untar the tar ball, `epics-f3rp61-2.0.0.tar.gz`, to an appropriate directory, e.g., `${EPICS_BASE}/../modules/instrument`:
+Untar the tar ball, `epics-f3rp61-2.0.0.tar.gz`, to an appropriate directory, e.g., `${EPICS_BASE}/../modules/src`:
 ```shell
-mkdir -p ${EPICS_BASE}/../modules/instrument
-tar -C ${EPICS_BASE}/../modules/instrument -x -f epics-f3rp61-2.0.0.tar.gz
+mkdir -p ${EPICS_BASE}/../modules/src
+tar -C ${EPICS_BASE}/../modules/src -x -f epics-f3rp61-2.0.0.tar.gz
 ```
 
 Go to the top-level directory of the device / driver support:
 ```shell
-cd ${EPICS_BASE}/../modules/instrument/epics-f3rp61-2.0.0/f3rp61
+cd ${EPICS_BASE}/../modules/src/epics-f3rp61-2.0.0/f3rp61
 ```
 
 ## Install definition files
@@ -129,7 +129,7 @@ make
 # Building the Device / Driver Support Library
 
 Edit
-`${EPICS_BASE}/../modules/instrument/epics-f3rp61-2.0.0/f3rp61/configure/RELESE`
+`${EPICS_BASE}/../modules/src/epics-f3rp61-2.0.0/f3rp61/configure/RELESE`
 so that `EPICS_BASE` variable points your `$EPICS_BASE` correctly:
 
 ```makefile
@@ -139,7 +139,7 @@ EPICS_BASE=/path/to/epics/base
 and build the device / driver support library:
 
 ```shell
-cd ${EPICS_BASE}/../modules/instrument/epics-f3rp61-2.0.0/f3rp61
+cd ${EPICS_BASE}/../modules/src/epics-f3rp61-2.0.0/f3rp61
 make
 ```
 
@@ -149,7 +149,7 @@ This section explains how to include the device / driver support components to y
 - In the `configure/RELEASE` file add definition for `F3RP61`:
 
 ```makefile
-F3RP61 = ${EPICS_BASE}/../modules/instrument/epics-f3rp61-2.0.0/f3rp61
+F3RP61 = ${EPICS_BASE}/../modules/src/epics-f3rp61-2.0.0/f3rp61
 ```
 
 - In the `configure/CONFIG_SIZE` file add linux-f3rp71 (or linux-f3rp61) to `CROSS_COMPILER_TARGET_ARCHS`:
@@ -166,7 +166,7 @@ ifneq ($(filter $(T_A), linux-f3rp61 linux-f3rp71),)
 PROD_IOC = <app>
 endif
 ...
-<app>_dbd += f3rp61.dbd
+<app>_DBD += f3rp61.dbd
 ...
 <app>_LIBS += f3rp61
 PROD_LDLIBS += -lm3
@@ -174,7 +174,7 @@ PROD_LDLIBS += -lm3
 
 An example Makefile for ```exampleApp``` is included in the distribution:
 ```
-${EPICS_BASE}/../modules/instrument/epics-f3rp61-2.0.0/f3rp61/Makefile.testApp
+${EPICS_BASE}/../modules/src/epics-f3rp61-2.0.0/f3rp61/Makefile.testApp
 SampleMakefileForTestApp.
 ```
 

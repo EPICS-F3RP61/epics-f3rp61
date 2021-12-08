@@ -117,7 +117,7 @@ static long init_record(stringoutRecord *pso)
     dpvt->device = device;
 
     /* Check device validity and compose data structure for I/O request */
-    if (device == 'A') {                         // Internal registers on I/O modules
+    if (device == 'A') {                         // I/O registers on special modules
         M3IO_ACCESS_REG *pdrly = &dpvt->drly;
         pdrly->unitno = unitno;
         pdrly->slotno = slotno;

@@ -179,7 +179,7 @@ static long init_record(aoRecord *pao)
         default:
             pacom->count = 1;
         }
-    } else if (device == 'A') {                  // I/O registers on I/O modules
+    } else if (device == 'A') {                  // I/O registers on special modules
         if (option != 'W') {
             errlogPrintf("devAiF3RP61: unsupported option \'%c\' for %s\n", option, pao->name);
             pao->pact = 1;

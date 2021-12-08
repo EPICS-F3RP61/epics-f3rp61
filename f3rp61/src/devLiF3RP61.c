@@ -176,7 +176,7 @@ static long init_record(longinRecord *plongin)
         } else {
             pacom->count = 1;
         }
-    } else if (device == 'E' || device == 'L') {        // Shared relays and Link relays
+    } else if (device == 'E' || device == 'L') { // Shared relays and Link relays
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
         pacom->start = start;
         if (option == 'L') {
@@ -184,7 +184,7 @@ static long init_record(longinRecord *plongin)
         } else {
             pacom->count = 1;
         }
-    } else if (device == 'A') {                  // I/O registers on I/O modules
+    } else if (device == 'A') {                  // I/O registers on special modules
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
         pdrly->unitno = unitno;
         pdrly->slotno = slotno;

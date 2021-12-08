@@ -163,7 +163,7 @@ static long init_record(waveformRecord *pwf)
         default:
             pacom->count = (unsigned short) (pwf->nelm * 1);
         }
-    } else if (device =='A') { /* Registers on I/O modules */
+    } else if (device =='A') { /* I/O Registers on special modules */
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
         pdrly->unitno = (unsigned short) unitno;
         pdrly->slotno = (unsigned short) slotno;

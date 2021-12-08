@@ -142,7 +142,7 @@ static long init_record(mbboRecord *pmbbo)
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
         pacom->start = start;
     } else if (device == 'Y' ||                  // Output relays on I/O modules
-               device == 'A' || device == 'M') { // I/O registers and mode registers on I/O modules
+               device == 'A' || device == 'M') { // I/O registers on special modules and mode registers on I/O modules
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
         pdrly->unitno = unitno;
         pdrly->slotno = slotno;

@@ -176,7 +176,7 @@ static long init_record(aiRecord *pai)
         } else {
             pacom->count = 1;
         }
-    } else if (device == 'A') {                  // Input and output relays on I/O modules
+    } else if (device == 'A') {                  // I/O registers on special modules
         if (option != 'W') {
             errlogPrintf("devAiF3RP61: unsupported option \'%c\' for %s\n", option, pai->name);
             pai->pact = 1;

@@ -185,7 +185,7 @@ static long init_record(longoutRecord *plongout)
         } else {
             pacom->count = 1;
         }
-    } else if (device == 'A') {                  // I/O registers on I/O modules
+    } else if (device == 'A') {                  // I/O registers on special modules
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
         pdrly->unitno = unitno;
         pdrly->slotno = slotno;

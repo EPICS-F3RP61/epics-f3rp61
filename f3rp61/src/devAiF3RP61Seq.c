@@ -1,5 +1,5 @@
 /*************************************************************************
-* Copyright (c) 2008 High Energy Accelerator Reseach Organization (KEK)
+* Copyright (c) 2008 High Energy Accelerator Research Organization (KEK)
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found

@@ -1,5 +1,5 @@
 /*************************************************************************
-* Copyright (c) 2013 High Energy Accelerator Reseach Organization (KEK)
+* Copyright (c) 2013 High Energy Accelerator Research Organization (KEK)
 *
 * F3RP61 Device Support 1.3.0
 * and higher are distributed subject to a Software License Agreement found

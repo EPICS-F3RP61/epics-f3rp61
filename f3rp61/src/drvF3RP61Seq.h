@@ -3,8 +3,6 @@
 
 #include <fcntl.h>
 #if defined(_arm_)
-#  include <m3cpu.h>
-#  include <m3io.h>
 #  include <m3lib.h>
 #  define DEVFILE "/dev/m3cpu"
 #elif defined(_ppc_)

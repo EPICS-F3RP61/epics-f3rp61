@@ -2,7 +2,6 @@
 #define DRVF3RP61_H
 
 #if defined(_arm_)
-#  include <m3io.h>
 #  include <m3lib.h>
 #elif defined(_ppc_)
 #  include <asm/fam3rtos/m3iodrv.h>

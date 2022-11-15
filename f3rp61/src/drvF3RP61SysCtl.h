@@ -2,7 +2,6 @@
 #define DRVF3RP61SYSCTL_H
 
 #if defined(_arm_)
-#  include <m3sysctl.h>
 #  include <m3lib.h>
 #elif defined(_ppc_)
 #  include <asm/fam3rtos/fam3rtos_sysctl.h>

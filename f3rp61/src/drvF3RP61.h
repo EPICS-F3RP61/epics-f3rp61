@@ -1,9 +1,9 @@
 #ifndef DRVF3RP61_H
 #define DRVF3RP61_H
 
-#if defined(_arm_)
+#if defined(__arm__)
 #  include <m3lib.h>
-#elif defined(_ppc_)
+#elif defined(__powerpc__)
 #  include <asm/fam3rtos/m3iodrv.h>
 #  include <asm/fam3rtos/m3lib.h>
 #else
@@ -24,9 +24,9 @@ typedef struct {
 
 typedef struct {
     long mtype;
-#if defined(_arm_)
+#if defined(__arm__)
     M3IO_MSG_IO mtext;
-#elif defined(_ppc_)
+#elif defined(__powerpc__)
     M3IO_IO_EVENT mtext;
 #else
 #  error

@@ -286,7 +286,7 @@ static long read_ai(aiRecord *pai)
         break;
     case 'Y':
         if (option == 'D') {
-#if defined(_ppc_)
+#if defined(__powerpc__)
             uint64_t l0 = pdrly->u.inrly[0].data;
             uint64_t l1 = pdrly->u.inrly[1].data;
             uint64_t l2 = pdrly->u.inrly[2].data;
@@ -307,7 +307,7 @@ static long read_ai(aiRecord *pai)
             pai->udf = isnan(pai->val);
             return 2; // no conversion
         } else  if (option == 'F') {
-#if defined(_ppc_)
+#if defined(__powerpc__)
             uint32_t l0 = pdrly->u.inrly[0].data;
             uint32_t l1 = pdrly->u.inrly[1].data;
 #else
@@ -324,7 +324,7 @@ static long read_ai(aiRecord *pai)
             pai->udf = isnan(pai->val);
             return 2; // no conversion
         } else if (option == 'L') {
-#if defined(_ppc_)
+#if defined(__powerpc__)
             pai->rval = pdrly->u.inrly[1].data<<16 | pdrly->u.inrly[0].data;
 #else
             pai->rval = pdrly->u.outrly[1].data<<16 | pdrly->u.outrly[0].data;

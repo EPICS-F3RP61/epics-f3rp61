@@ -307,7 +307,7 @@ static long read_longin(longinRecord *plongin)
         break;
     case 'Y':
         if (option == 'L') {
-#if defined(_ppc_)
+#if defined(__powerpc__)
             plongin->val = pdrly->u.inrly[1].data<<16 | pdrly->u.inrly[0].data;
 #else
             plongin->val = pdrly->u.outrly[1].data<<16 | pdrly->u.outrly[0].data;

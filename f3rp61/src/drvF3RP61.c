@@ -193,7 +193,7 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
             return -1;
         }
 
-#if defined(_ppc_)
+#if defined(__powerpc__)
         if (msqid == 0) {
             // Get another message queue ID when it's 0.
             // Message queue id 0 is valid in SysV IPC but invalid in F3RP61 BSP.

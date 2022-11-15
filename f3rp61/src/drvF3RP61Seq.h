@@ -2,10 +2,10 @@
 #define DRVF3RP61SEQ_H
 
 #include <fcntl.h>
-#if defined(_arm_)
+#if defined(__arm__)
 #  include <m3lib.h>
 #  define DEVFILE "/dev/m3cpu"
-#elif defined(_ppc_)
+#elif defined(__powerpc__)
 #  include <asm/fam3rtos/m3iodrv.h>
 #  include <asm/fam3rtos/m3mcmd.h>
 #  define DEVFILE "/dev/m3mcmd"
@@ -13,7 +13,7 @@
 #  error
 #endif
 
-#if defined(_ppc_)
+#if defined(__powerpc__)
 #  define M3CPU_ACCS_CMD        MCMD_ACCS
 #  define M3CPU_SEND_SIG_EVENT  M3IO_SEND_SIG_EVENT
 #  define M3CPU_GET_NUM         M3IO_GET_MYCPUNO

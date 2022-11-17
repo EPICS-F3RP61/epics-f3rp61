@@ -186,7 +186,7 @@ static void setLED(char led, int value)
 
     // Write to the device
     if (ioctl(f3rp61SysCtl_fd, cmd, &data) < 0) {
-        errlogPrintf("drvF3RP61SysCtl: ioctl failed for f3rp61setLED\n");
+        errlogPrintf("drvF3RP61SysCtl: ioctl failed [%d] for f3rp61setLED\n", errno);
         return;
     }
 }

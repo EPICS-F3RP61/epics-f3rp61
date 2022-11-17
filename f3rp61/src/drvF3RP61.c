@@ -66,7 +66,7 @@ static void comDeviceConfigureCallFunc(const iocshArgBuf *);
 static void getModuleInfoCallFunc(const iocshArgBuf *);
 static void linkDeviceConfigure(int, int, int);
 static void comDeviceConfigure(int, int, int, int, int);
-static void getModuleInfo(void);
+static void getModuleInfo(int);
 static void drvF3RP61RegisterCommands(void);
 
 //
@@ -156,9 +156,9 @@ static void msgrcv_thread(void *arg)
             continue;
         }
 
-        int unit    = msgbuf.mtext.unit;
-        int slot    = msgbuf.mtext.slot;
-        int channel = msgbuf.mtext.channel;
+        const int unit    = msgbuf.mtext.unit;
+        const int slot    = msgbuf.mtext.slot;
+        const int channel = msgbuf.mtext.channel;
 
         for (int i = 0; i < io_intr[unit][slot].count; i++) {
             if (io_intr[unit][slot].ioscan[i].channel == channel) {
@@ -190,6 +190,7 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
         return -1;
     }
 
+    // Create a SysV message queue and a thread which reveices the message
     if (count == 0) {
         msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
         if (msqid  == -1) {
@@ -360,46 +361,60 @@ static void comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, i
 // List FA-M3/e-RT3 modules installed on the system.
 // Empty slots are shown if whatever argument is given.
 //
+static const iocshArg getModuleInfoArg0 = { "empty",     iocshArgString};
+static const iocshArg *getModuleInfoArgs[] = {
+    &getModuleInfoArg0,
+};
 static const iocshFuncDef getModuleInfoFuncDef = {
     "f3rp61GetModuleInfo",
-    0,
-    NULL
+    1,
+    getModuleInfoArgs
 };
 
 static void getModuleInfoCallFunc(const iocshArgBuf *args)
 {
-    getModuleInfo();
+    if (args[0].sval) {
+        getModuleInfo(1);
+    } else {
+        getModuleInfo(0);
+    }
 }
 
-static void getModuleInfo(void)
+static void getModuleInfo(int verbosity)
 {
-    for (int i = 0; i < M3IO_NUM_UNIT; i++) {
-        for (int j = 1; j < M3IO_NUM_SLOT + 1; j++) {
+    printf("%4s %4s %4s %5s %4s %4s %4s\n",
+           "Unit", "Slot", "Name", "MSize", "Xreg", "Yreg", "Dreg");
+    for (int unit=0; unit<M3IO_NUM_UNIT; unit++) {
+        for (int slot=1; slot<M3IO_NUM_SLOT + 1; slot++) {
 
             M3IO_MODULE_INFORMATION module_info = {
-                .unitno = i,
-                .slotno = j,
+                .unitno = unit,
+                .slotno = slot,
             };
 
             ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info);
 
-            printf("unitno: %0d  ", module_info.unitno);
-            printf("slotno: %02d  ", module_info.slotno);
-            printf("enable: %d  ", module_info.enable);
-
-            for (int k = 0; k < 4; k++) {
-                if (isalnum(module_info.name[k])) {
-                    printf("%c", module_info.name[k]);
-                } else {
-                    printf("%c", ' ');
+            if (!module_info.enable) {
+                if (!verbosity) {
+                    continue;
                 }
+                module_info.name[3] =
+                module_info.name[2] =
+                module_info.name[1] =
+                module_info.name[0] = '-';
             }
 
-            printf("  msize: %5d  ", module_info.msize);
-            printf("  num_xreg: %02d  ", module_info.num_xreg);
-            printf("  num_yreg: %02d  ", module_info.num_yreg);
-            printf("  num_dreg: %02d  ", module_info.num_dreg);
-            printf("\n");
+            char name[5];
+            memcpy(name, module_info.name, 4);
+            name[4] = '\0';
+            printf("%4d %4d %4s %5d %4d %4d %4d\n",
+                   module_info.unitno,
+                   module_info.slotno,
+                   name,
+                   module_info.msize,
+                   module_info.num_xreg,
+                   module_info.num_yreg,
+                   module_info.num_dreg);
         }
     }
 }

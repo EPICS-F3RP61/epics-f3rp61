@@ -57,7 +57,6 @@ epicsExportAddress(drvet, drvF3RP61);
 int f3rp61_fd;
 
 static F3RP61_IO_INTR io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
-static int init_flag;
 static void msgrcv_thread(void *);
 static M3LINKDATACONFIG link_data_config;
 static M3COMDATACONFIG com_data_config;
@@ -70,14 +69,16 @@ static void comDeviceConfigure(int, int, int, int, int);
 static void getModuleInfo(void);
 static void drvF3RP61RegisterCommands(void);
 
-/* */
+//
 static long report(void)
 {
     return 0;
 }
 
+//
 static long init(void)
 {
+    static int init_flag = 0;
     if (init_flag) {
         return 0;
     }
@@ -134,6 +135,7 @@ static long init(void)
     return 0;
 }
 
+//
 static void msgrcv_thread(void *arg)
 {
     int msqid = (int) arg;
@@ -175,6 +177,8 @@ static void msgrcv_thread(void *arg)
     }
 }
 
+//////////////////////////////////////////////////////////////////////////
+//
 long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channel)
 {
     char thread_name[32];
@@ -241,9 +245,10 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
     return 0;
 }
 
-/*******************************************************************************
- * Get io interrupt info
- *******************************************************************************/
+//////////////////////////////////////////////////////////////////////////
+//
+// Get io interrupt info
+//
 long f3rp61GetIoIntInfo(int cmd, dbCommon *pxx, IOSCANPVT *ppvt)
 {
     if (!pxx->dpvt) {
@@ -260,9 +265,10 @@ long f3rp61GetIoIntInfo(int cmd, dbCommon *pxx, IOSCANPVT *ppvt)
     return 0;
 }
 
-/*******************************************************************************
- * Register iocsh command 'f3rp61LinkDeviceConfigure'
- *******************************************************************************/
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61LinkDeviceConfigure'
+//
 static const iocshArg linkDeviceConfigureArg0 = { "sysNo",iocshArgInt};
 static const iocshArg linkDeviceConfigureArg1 = { "nRlys",iocshArgInt};
 static const iocshArg linkDeviceConfigureArg2 = { "nRegs",iocshArgInt};
@@ -302,9 +308,10 @@ static void linkDeviceConfigure(int sysno, int nrlys, int nregs)
     link_data_config.wNumberOfRegister[sysno] = nregs;
 }
 
-/*******************************************************************************
- * Register iocsh command 'f3rp61ComDeviceConfigure'
- *******************************************************************************/
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61ComDeviceConfigure'
+//
 static const iocshArg comDeviceConfigureArg0 = { "cpuNo",     iocshArgInt};
 static const iocshArg comDeviceConfigureArg1 = { "nRlys",     iocshArgInt};
 static const iocshArg comDeviceConfigureArg2 = { "ext_nRlys", iocshArgInt};
@@ -344,9 +351,15 @@ static void comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, i
     ext_com_data_config.wNumberOfRegister[cpuno] = ext_nregs;
 }
 
-/*******************************************************************************
- * Register iocsh command 'f3rp61GetModuleInfo'
- *******************************************************************************/
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61GetModuleInfo'
+//
+// usage: f3rp61GetModuleInfo [arg]
+//
+// List FA-M3/e-RT3 modules installed on the system.
+// Empty slots are shown if whatever argument is given.
+//
 static const iocshFuncDef getModuleInfoFuncDef = {
     "f3rp61GetModuleInfo",
     0,
@@ -393,14 +406,15 @@ static void getModuleInfo(void)
 
 static void drvF3RP61RegisterCommands(void)
 {
-    static int firstTime = 1;
-
-    if (firstTime) {
-        iocshRegister(&getModuleInfoFuncDef, getModuleInfoCallFunc);
-        iocshRegister(&comDeviceConfigureFuncDef, comDeviceConfigureCallFunc);
-        iocshRegister(&linkDeviceConfigureFuncDef, linkDeviceConfigureCallFunc);
-        firstTime = 0;
+    static int init_flag = 0;
+    if (init_flag) {
+        return;
     }
+    init_flag = 1;
+
+    iocshRegister(&getModuleInfoFuncDef, getModuleInfoCallFunc);
+    iocshRegister(&comDeviceConfigureFuncDef, comDeviceConfigureCallFunc);
+    iocshRegister(&linkDeviceConfigureFuncDef, linkDeviceConfigureCallFunc);
 }
 
 epicsExportRegistrar(drvF3RP61RegisterCommands);

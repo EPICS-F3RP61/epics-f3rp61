@@ -58,7 +58,6 @@ void stopshow(const iocshArgBuf *);
 static const iocshFuncDef showreqDef = {"showreq", 0, NULL};
 static const iocshFuncDef stopshowDef = {"stopshow", 0, NULL};
 
-static int init_flag;
 static int debug_flag;
 static unsigned short request_id;
 
@@ -70,15 +69,16 @@ static ELLLIST f3rp61Seq_queueList;
 
 static F3RP61_SEQ_DPVT *get_request_from_queue(void);
 
-/* */
+//
 static long report(void)
 {
     return 0;
 }
 
-/* */
+//
 static long init(void)
 {
+    static int init_flag = 0;
     if (init_flag) {
         return 0;
     }
@@ -119,6 +119,7 @@ static long init(void)
     return 0;
 }
 
+//
 static void mcmd_thread(void *arg)
 {
     for (;;) {
@@ -152,6 +153,7 @@ static void mcmd_thread(void *arg)
     }
 }
 
+//
 int f3rp61Seq_queueRequest(F3RP61_SEQ_DPVT *dpvt)
 {
     if (!dpvt) {
@@ -168,6 +170,7 @@ int f3rp61Seq_queueRequest(F3RP61_SEQ_DPVT *dpvt)
     return 0;
 }
 
+//
 static F3RP61_SEQ_DPVT *get_request_from_queue(void)
 {
     epicsMutexMustLock(f3rp61Seq_queueMutex);
@@ -177,6 +180,7 @@ static F3RP61_SEQ_DPVT *get_request_from_queue(void)
     return dpvt;
 }
 
+//
 static void dump_mcmd_request(MCMD_STRUCT *pmcmdStruct)
 {
     MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
@@ -197,11 +201,13 @@ static void dump_mcmd_request(MCMD_STRUCT *pmcmdStruct)
     printf("\n");
 }
 
+//
 void showreq(const iocshArgBuf *args)
 {
     debug_flag = 1;
 }
 
+//
 void stopshow(const iocshArgBuf *args)
 {
     debug_flag = 0;

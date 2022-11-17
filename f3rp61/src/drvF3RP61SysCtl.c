@@ -195,7 +195,7 @@ static void drvF3RP61SysCtlRegisterCommands(void)
 {
     static int init_flag = 0;
     if (init_flag) {
-        return 0;
+        return;
     }
     init_flag = 1;
 

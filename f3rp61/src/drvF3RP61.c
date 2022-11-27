@@ -34,11 +34,40 @@
 
 #include <drvF3RP61.h>
 
+//
 #define M3IO_NUM_CPUS   4
 
 // A single F3RP61/71 module can work with up to two FL-net interface modules.
 #define M3IO_NUM_LINKS  2
 
+//
+#define NUM_IO_INTR  8
+
+typedef struct {
+    int channel;
+    dbCommon *prec;
+} F3RP61_IO_SCAN;
+
+typedef struct {
+    F3RP61_IO_SCAN ioscan[NUM_IO_INTR];
+    int count;
+} F3RP61_IO_INTR;
+
+static F3RP61_IO_INTR io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
+
+//
+typedef struct {
+    long mtype;
+#if defined(__arm__)
+    M3IO_MSG_IO mtext;
+#elif defined(__powerpc__)
+    M3IO_IO_EVENT mtext;
+#else
+#  error
+#endif
+} MSG_BUF;
+
+//
 static long report();
 static long init();
 
@@ -54,9 +83,9 @@ struct {
 
 epicsExportAddress(drvet, drvF3RP61);
 
-int f3rp61_fd;
+int f3rp61_fd = -1;
 
-static F3RP61_IO_INTR io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
+//
 static void msgrcv_thread(void *);
 static M3LINKDATACONFIG link_data_config;
 static M3COMDATACONFIG com_data_config;

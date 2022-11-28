@@ -63,20 +63,20 @@ epicsExportAddress(dset, devMbboF3RP61Seq);
   allocates private data storage area and sets initial configure
   values.
 */
-static long init_record(mbboRecord *pmbbo)
+static long init_record(mbboRecord *precord)
 {
     int srcSlot = 0, destSlot = 0, top = 0;
     char device = 0;
 
     /* Link type must be INST_IO */
-    if (pmbbo->out.type != INST_IO) {
-        recGblRecordError(S_db_badField, pmbbo,
+    if (precord->out.type != INST_IO) {
+        recGblRecordError(S_db_badField, precord,
                           "devMbboF3RP61Seq (init_record) Illegal OUT field");
-        pmbbo->pact = 1;
+        precord->pact = 1;
         return S_db_badField;
     }
 
-    struct link *plink = &pmbbo->out;
+    struct link *plink = &precord->out;
     int   size = strlen(plink->value.instio.string) + 1;
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
@@ -84,15 +84,15 @@ static long init_record(mbboRecord *pmbbo)
 
     /* Parse slot, device and register number */
     if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-        errlogPrintf("devMbboF3RP61Seq: can't get device address for %s\n", pmbbo->name);
-        pmbbo->pact = 1;
+        errlogPrintf("devMbboF3RP61Seq: can't get device address for %s\n", precord->name);
+        precord->pact = 1;
         return -1;
     }
 
     /* Read the slot number of CPU module */
     if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
-        errlogPrintf("devMbboF3RP61Seq: ioctl failed [%d] for %s\n", errno, pmbbo->name);
-        pmbbo->pact = 1;
+        errlogPrintf("devMbboF3RP61Seq: ioctl failed [%d] for %s\n", errno, precord->name);
+        precord->pact = 1;
         return -1;
     }
 
@@ -131,16 +131,16 @@ static long init_record(mbboRecord *pmbbo)
         pM3WriteSeqdev->devType = 0x1A;
         break;
     default:
-        errlogPrintf("devMbboF3RP61Seq: unsupported device \'%c\' for %s\n", device, pmbbo->name);
-        pmbbo->pact = 1;
+        errlogPrintf("devMbboF3RP61Seq: unsupported device \'%c\' for %s\n", device, precord->name);
+        precord->pact = 1;
         return -1;
     }
 
     pM3WriteSeqdev->dataNum = 1;
     pM3WriteSeqdev->topDevNo = top;
-    callbackSetUser(pmbbo, &dpvt->callback);
+    callbackSetUser(precord, &dpvt->callback);
 
-    pmbbo->dpvt = dpvt;
+    precord->dpvt = dpvt;
 
     return 0;
 }
@@ -150,38 +150,38 @@ static long init_record(mbboRecord *pmbbo)
   record. When called, it sends the value from the VAL filed to the
   driver, then sets PACT field back to TRUE.
  */
-static long write_mbbo(mbboRecord *pmbbo)
+static long write_mbbo(mbboRecord *precord)
 {
-    F3RP61_SEQ_DPVT *dpvt = pmbbo->dpvt;
+    F3RP61_SEQ_DPVT *dpvt = precord->dpvt;
     MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
 
-    if (pmbbo->pact) { // Second call (PACT is TRUE)
+    if (precord->pact) { // Second call (PACT is TRUE)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (dpvt->ret < 0) {
-            errlogPrintf("devMbboF3RP61Seq: write_mbbo failed for %s\n", pmbbo->name);
+            errlogPrintf("devMbboF3RP61Seq: write_mbbo failed for %s\n", precord->name);
             return -1;
         }
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devMbboF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, pmbbo->name);
+            errlogPrintf("devMbboF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, precord->name);
             return -1;
         }
 
-        pmbbo->udf = FALSE;
+        precord->udf = FALSE;
 
     } else { // First call (PACT is still FALSE)
         MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-        pM3WriteSeqdev->dataBuff.wData[0] = (uint16_t) pmbbo->rval;
+        pM3WriteSeqdev->dataBuff.wData[0] = (uint16_t) precord->rval;
 
         /* Issue write request */
         if (f3rp61Seq_queueRequest(dpvt) < 0) {
-            errlogPrintf("devMbboF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n", pmbbo->name);
+            errlogPrintf("devMbboF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n", precord->name);
             return -1;
         }
 
-        pmbbo->pact = 1;
+        precord->pact = 1;
     }
 
     return 0;

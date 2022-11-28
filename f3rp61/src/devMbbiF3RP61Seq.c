@@ -63,20 +63,20 @@ epicsExportAddress(dset, devMbbiF3RP61Seq);
   allocates private data storage area and sets initial configure
   values.
 */
-static long init_record(mbbiRecord *pmbbi)
+static long init_record(mbbiRecord *precord)
 {
     int srcSlot = 0, destSlot = 0, top = 0;
     char device = 0;
 
     /* Link type must be INST_IO */
-    if (pmbbi->inp.type != INST_IO) {
-        recGblRecordError(S_db_badField, pmbbi,
+    if (precord->inp.type != INST_IO) {
+        recGblRecordError(S_db_badField, precord,
                           "devMbbiF3RP61Seq (init_record) Illegal INP field");
-        pmbbi->pact = 1;
+        precord->pact = 1;
         return S_db_badField;
     }
 
-    struct link *plink = &pmbbi->inp;
+    struct link *plink = &precord->inp;
     int   size = strlen(plink->value.instio.string) + 1;
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
@@ -84,15 +84,15 @@ static long init_record(mbbiRecord *pmbbi)
 
     /* Parse slot, device and register number */
     if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-        errlogPrintf("devMbbiF3RP61Seq: can't get device address for %s\n", pmbbi->name);
-        pmbbi->pact = 1;
+        errlogPrintf("devMbbiF3RP61Seq: can't get device address for %s\n", precord->name);
+        precord->pact = 1;
         return -1;
     }
 
     /* Read the slot number of CPU module */
     if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
-        errlogPrintf("devMbbiF3RP61Seq: ioctl failed [%d] for %s\n", errno, pmbbi->name);
-        pmbbi->pact = 1;
+        errlogPrintf("devMbbiF3RP61Seq: ioctl failed [%d] for %s\n", errno, precord->name);
+        precord->pact = 1;
         return -1;
     }
 
@@ -131,16 +131,16 @@ static long init_record(mbbiRecord *pmbbi)
         pM3ReadSeqdev->devType = 0x1A;
         break;
     default:
-        errlogPrintf("devMbbiF3RP61Seq: unsupported device \'%c\' for %s\n", device, pmbbi->name);
-        pmbbi->pact = 1;
+        errlogPrintf("devMbbiF3RP61Seq: unsupported device \'%c\' for %s\n", device, precord->name);
+        precord->pact = 1;
         return -1;
     }
 
     pM3ReadSeqdev->dataNum = 1;
     pM3ReadSeqdev->topDevNo = top;
-    callbackSetUser(pmbbi, &dpvt->callback);
+    callbackSetUser(precord, &dpvt->callback);
 
-    pmbbi->dpvt = dpvt;
+    precord->dpvt = dpvt;
 
     return 0;
 }
@@ -150,36 +150,36 @@ static long init_record(mbbiRecord *pmbbi)
   When called, it reads the value from the driver and stores to the
   VAL field, then sets PACT field back to TRUE.
  */
-static long read_mbbi(mbbiRecord *pmbbi)
+static long read_mbbi(mbbiRecord *precord)
 {
-    F3RP61_SEQ_DPVT *dpvt = pmbbi->dpvt;
+    F3RP61_SEQ_DPVT *dpvt = precord->dpvt;
 
-    if (pmbbi->pact) { // Second call (PACT is TRUE)
+    if (precord->pact) { // Second call (PACT is TRUE)
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (dpvt->ret < 0) {
-            errlogPrintf("devMbbiF3RP61Seq: read_mbbi failed for %s\n", pmbbi->name);
+            errlogPrintf("devMbbiF3RP61Seq: read_mbbi failed for %s\n", precord->name);
             return -1;
         }
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devMbbiF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, pmbbi->name);
+            errlogPrintf("devMbbiF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, precord->name);
             return -1;
         }
 
         /* fill VAL field */
-        pmbbi->udf = FALSE;
-        pmbbi->rval = (uint32_t) pmcmdResponse->dataBuff.wData[0];
+        precord->udf = FALSE;
+        precord->rval = (uint32_t) pmcmdResponse->dataBuff.wData[0];
 
     } else { // First call - PACT is set to FALSE
         /* Issue read request */
         if (f3rp61Seq_queueRequest(dpvt) < 0) {
-            errlogPrintf("devMbbiF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n", pmbbi->name);
+            errlogPrintf("devMbbiF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n", precord->name);
             return -1;
         }
 
-        pmbbi->pact = 1;
+        precord->pact = 1;
     }
 
     return 0;

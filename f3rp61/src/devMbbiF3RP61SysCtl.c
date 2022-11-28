@@ -68,17 +68,17 @@ typedef struct {
   allocates private data storage area and sets initial configure
   values.
 */
-static long init_record(mbbiRecord *pmbbi)
+static long init_record(mbbiRecord *precord)
 {
     /* Link type must be INST_IO */
-    if (pmbbi->inp.type != INST_IO) {
-        recGblRecordError(S_db_badField, pmbbi,
+    if (precord->inp.type != INST_IO) {
+        recGblRecordError(S_db_badField, precord,
                           "devMbbiF3RP61SysCtl (init_record) Illegal INP field");
-        pmbbi->pact = 1;
+        precord->pact = 1;
         return S_db_badField;
     }
 
-    struct link *plink = &pmbbi->inp;
+    struct link *plink = &precord->inp;
     int   size = strlen(plink->value.instio.string) + 1;
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
@@ -87,15 +87,15 @@ static long init_record(mbbiRecord *pmbbi)
     /* Parse device */
     char device;
     if (sscanf(buf, "SYS,%c,", &device) < 1) {
-        errlogPrintf("devMbbiF3RP61SysCtl: can't get device for %s\n", pmbbi->name);
-        pmbbi->pact = 1;
+        errlogPrintf("devMbbiF3RP61SysCtl: can't get device for %s\n", precord->name);
+        precord->pact = 1;
         return -1;
     }
 
     /* Check device validity */
     if (!(device == 'S')) {
-        errlogPrintf("devMbbiF3RP61SysCtl: unsupported device \'%c\' for %s\n", device, pmbbi->name);
-        pmbbi->pact = 1;
+        errlogPrintf("devMbbiF3RP61SysCtl: unsupported device \'%c\' for %s\n", device, precord->name);
+        precord->pact = 1;
         return -1;
     }
 
@@ -104,7 +104,7 @@ static long init_record(mbbiRecord *pmbbi)
     dpvt->device = device;
 
 
-    pmbbi->dpvt = dpvt;
+    precord->dpvt = dpvt;
 
     return 0;
 }
@@ -114,9 +114,9 @@ static long init_record(mbbiRecord *pmbbi)
   record. When called, it reads the value from the driver and stores
   to the VAL field.
 */
-static long read_mbbi(mbbiRecord *pmbbi)
+static long read_mbbi(mbbiRecord *precord)
 {
-    F3RP61SysCtl_MBBI_DPVT *dpvt = pmbbi->dpvt;
+    F3RP61SysCtl_MBBI_DPVT *dpvt = precord->dpvt;
 
     char device = dpvt->device;
     int command;
@@ -135,19 +135,19 @@ static long read_mbbi(mbbiRecord *pmbbi)
     /* Issue API function */
     if (device == 'S') {
         if (ioctl(f3rp61SysCtl_fd, command, &data) < 0) {
-            errlogPrintf("devMbbiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, pmbbi->name);
+            errlogPrintf("devMbbiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, precord->name);
             return -1;
         }
     }
 
     /* fill VAL field */
-    pmbbi->udf = FALSE;
+    precord->udf = FALSE;
     switch (device) {
     case 'S':
-        pmbbi->rval = (long) data;
+        precord->rval = (long) data;
         break;
     default:
-        pmbbi->rval = (long) data;
+        precord->rval = (long) data;
         break;
     }
 

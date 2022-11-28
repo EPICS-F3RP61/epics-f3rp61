@@ -64,20 +64,20 @@ typedef struct {
   allocates private data storage area and sets initial configure
   values.
 */
-static long init_record(biRecord *pbi)
+static long init_record(biRecord *precord)
 {
     char device = 0; /* Valid states: L (LED), R (Status Register) or U (F3RP71 only) */
     char led = 0;    /* Valid states: R (Run), A (Alarm), E (Error) */
 
     /* Link type must be INST_IO */
-    if (pbi->inp.type != INST_IO) {
-        recGblRecordError(S_db_badField, pbi,
+    if (precord->inp.type != INST_IO) {
+        recGblRecordError(S_db_badField, precord,
                           "devBiF3RP61SysCtl (init_record) Illegal INP field");
-        pbi->pact = 1;
+        precord->pact = 1;
         return S_db_badField;
     }
 
-    struct link *plink = &pbi->inp;
+    struct link *plink = &precord->inp;
     int   size = strlen(plink->value.instio.string) + 1;
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
@@ -86,8 +86,8 @@ static long init_record(biRecord *pbi)
     /* Parse 'device' and possibly 'led' */
     if (sscanf(buf, "SYS,%c%c,", &device, &led) < 2) {
         if (sscanf(buf, "SYS,%c", &device) < 1) {
-            errlogPrintf("devBiF3RP61SysCtl: can't get device for %s\n", pbi->name);
-            pbi->pact = 1;
+            errlogPrintf("devBiF3RP61SysCtl: can't get device for %s\n", precord->name);
+            precord->pact = 1;
             return -1;
         }
     }
@@ -98,24 +98,24 @@ static long init_record(biRecord *pbi)
         && device != 'U'
 #endif
         ) {
-        errlogPrintf("devBiF3RP61SysCtl: unsupported device \'%c\' for %s\n", device, pbi->name);
-        pbi->pact = 1;
+        errlogPrintf("devBiF3RP61SysCtl: unsupported device \'%c\' for %s\n", device, precord->name);
+        precord->pact = 1;
         return -1;
     }
 
     /* Check 'led' validity */
     if (device == 'L') {
         if (led != 'R' && led != 'A' && led != 'E' ) {
-            errlogPrintf("devBiF3RP61SysCtl: unsupported LED address \'%c\' for %s\n", led, pbi->name);
-            pbi->pact = 1;
+            errlogPrintf("devBiF3RP61SysCtl: unsupported LED address \'%c\' for %s\n", led, precord->name);
+            precord->pact = 1;
             return -1;
         }
     }
 #ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
     else if (device == 'U') {
         if (led != '1' && led != '2' && led != '3') {
-            errlogPrintf("devBiF3RP61SysCtl: unsupported USER LED address \'%c\' for %s\n", led, pbi->name);
-            pbi->pact = 1;
+            errlogPrintf("devBiF3RP61SysCtl: unsupported USER LED address \'%c\' for %s\n", led, precord->name);
+            precord->pact = 1;
             return -1;
         }
     }
@@ -129,7 +129,7 @@ static long init_record(biRecord *pbi)
         dpvt->led = led;
     }
 
-    pbi->dpvt = dpvt;
+    precord->dpvt = dpvt;
 
     return 0;
 }
@@ -139,11 +139,11 @@ static long init_record(biRecord *pbi)
   record. When called, it reads the value from the driver and stores
   to the VAL field.
 */
-static long read_bi(biRecord *pbi)
+static long read_bi(biRecord *precord)
 {
-    F3RP61SysCtl_BI_DPVT *dpvt = (F3RP61SysCtl_BI_DPVT *) pbi->dpvt;
-    char device = dpvt->device;
-    char led = dpvt->led;
+    F3RP61SysCtl_BI_DPVT *dpvt = (F3RP61SysCtl_BI_DPVT *) precord->dpvt;
+    const char device = dpvt->device;
+    const char led = dpvt->led;
     int command = 0;
     unsigned long data = 0;
 
@@ -164,24 +164,24 @@ static long read_bi(biRecord *pbi)
 
     /* Issue API function */
     if (ioctl(f3rp61SysCtl_fd, command, &data) < 0) {
-        errlogPrintf("devBiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, pbi->name);
+        errlogPrintf("devBiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, precord->name);
         return -1;
     }
 
     /* fill VAL field */
-    pbi->udf = FALSE;
+    precord->udf = FALSE;
 
     switch (device) {
     case 'L':
         switch (led) {
         case 'R':
-            pbi->rval = (unsigned long) (data & LED_RUN_FLG);
+            precord->rval = (unsigned long) (data & LED_RUN_FLG);
             break;
         case 'A':
-            pbi->rval = (unsigned long) (data & LED_ALM_FLG);
+            precord->rval = (unsigned long) (data & LED_ALM_FLG);
             break;
         case 'E':
-            pbi->rval = (unsigned long) (data & LED_ERR_FLG);
+            precord->rval = (unsigned long) (data & LED_ERR_FLG);
             break;
         }
         break;
@@ -189,19 +189,19 @@ static long read_bi(biRecord *pbi)
     case 'U':
         switch (led) {
         case '1':
-            pbi->rval = (unsigned long) (data & LED_US1_FLG);
+            precord->rval = (unsigned long) (data & LED_US1_FLG);
             break;
         case '2':
-            pbi->rval = (unsigned long) (data & LED_US2_FLG);
+            precord->rval = (unsigned long) (data & LED_US2_FLG);
             break;
         case '3':
-            pbi->rval = (unsigned long) (data & LED_US3_FLG);
+            precord->rval = (unsigned long) (data & LED_US3_FLG);
             break;
         }
         break;
 #endif
     case 'R':
-        pbi->rval = (unsigned long) (data & 0x00000004);
+        precord->rval = (unsigned long) (data & 0x00000004);
         break;
     }
 

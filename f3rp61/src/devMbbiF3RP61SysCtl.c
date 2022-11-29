@@ -13,6 +13,7 @@
 */
 #include <errno.h>
 #include <fcntl.h>
+//#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,7 +35,7 @@
 
 #include <drvF3RP61SysCtl.h>
 
-/* Create the dset for devMbbiF3RP61SysCtl */
+// Create the dset for devMbbiF3RP61SysCtl
 static long init_record();
 static long read_mbbi();
 
@@ -60,17 +61,14 @@ epicsExportAddress(dset, devMbbiF3RP61SysCtl);
 
 typedef struct {
     char device;
-    char led;
 } F3RP61SysCtl_MBBI_DPVT;
 
-/*
-  init_record() initializes record - parses INP/OUT field string,
-  allocates private data storage area and sets initial configure
-  values.
-*/
+// init_record() initializes record - parses INP/OUT field string,
+// allocates private data storage area and sets initial configure
+// values.
 static long init_record(mbbiRecord *precord)
 {
-    /* Link type must be INST_IO */
+    // Link type must be INST_IO
     if (precord->inp.type != INST_IO) {
         recGblRecordError(S_db_badField, precord,
                           "devMbbiF3RP61SysCtl (init_record) Illegal INP field");
@@ -79,12 +77,12 @@ static long init_record(mbbiRecord *precord)
     }
 
     struct link *plink = &precord->inp;
-    int   size = strlen(plink->value.instio.string) + 1;
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for appending the NULL character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
-    /* Parse device */
+    // Parse device
     char device;
     if (sscanf(buf, "SYS,%c,", &device) < 1) {
         errlogPrintf("devMbbiF3RP61SysCtl: can't get device for %s\n", precord->name);
@@ -92,64 +90,49 @@ static long init_record(mbbiRecord *precord)
         return -1;
     }
 
-    /* Check device validity */
-    if (!(device == 'S')) {
+    // Allocate private data storage area
+    F3RP61SysCtl_MBBI_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SysCtl_MBBI_DPVT), "calloc failed");
+    dpvt->device = device;
+
+    // Check device validity
+    if (0) {                                     // dummy
+
+    } else if (device == 'S') {                  // Mode-SW
+
+    } else {
         errlogPrintf("devMbbiF3RP61SysCtl: unsupported device \'%c\' for %s\n", device, precord->name);
         precord->pact = 1;
         return -1;
     }
-
-    /* Allocate private data storage area */
-    F3RP61SysCtl_MBBI_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SysCtl_MBBI_DPVT), "calloc failed");
-    dpvt->device = device;
-
 
     precord->dpvt = dpvt;
 
     return 0;
 }
 
-/*
-  read_mbbi() is called when there was a request to process a
-  record. When called, it reads the value from the driver and stores
-  to the VAL field.
-*/
+// read_mbbi() is called when there was a request to process a
+// record. When called, it reads the value from the driver and stores
+// to the VAL field.
 static long read_mbbi(mbbiRecord *precord)
 {
     F3RP61SysCtl_MBBI_DPVT *dpvt = precord->dpvt;
+    const char device = dpvt->device;
 
-    char device = dpvt->device;
-    int command;
-    unsigned long data = 3;
+    unsigned long data = -1;
 
-    /* Compose ioctl request */
-    switch (device) {
-    case 'S':
-        command = M3SC_GET_SW;
-        break;
-    default:
-        command = M3SC_GET_SW;
-        break;
-    }
+    // Issue API function
+    if (0) {                                     // dummy
 
-    /* Issue API function */
-    if (device == 'S') {
-        if (ioctl(f3rp61SysCtl_fd, command, &data) < 0) {
+    } else if (device == 'S') {                  // Mode-sw
+        if (ioctl(f3rp61SysCtl_fd, M3SC_GET_SW, &data) < 0) {
             errlogPrintf("devMbbiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, precord->name);
             return -1;
         }
+        precord->rval = data;
     }
 
-    /* fill VAL field */
+    //
     precord->udf = FALSE;
-    switch (device) {
-    case 'S':
-        precord->rval = (long) data;
-        break;
-    default:
-        precord->rval = (long) data;
-        break;
-    }
 
     return 0;
 }

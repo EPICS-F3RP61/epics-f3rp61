@@ -12,6 +12,7 @@
 */
 #include <errno.h>
 #include <fcntl.h>
+//#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,7 +34,7 @@
 
 #include <drvF3RP61SysCtl.h>
 
-/* Create the dset for devBiF3RP61SysCtl */
+// Create the dset for devBiF3RP61SysCtl
 static long init_record();
 static long read_bi();
 struct {
@@ -59,17 +60,15 @@ typedef struct {
     char led;
 } F3RP61SysCtl_BI_DPVT;
 
-/*
-  init_record() initializes record - parses INP/OUT field string,
-  allocates private data storage area and sets initial configure
-  values.
-*/
+// init_record() initializes record - parses INP/OUT field string,
+// allocates private data storage area and sets initial configure
+// values.
 static long init_record(biRecord *precord)
 {
-    char device = 0; /* Valid states: L (LED), R (Status Register) or U (F3RP71 only) */
-    char led = 0;    /* Valid states: R (Run), A (Alarm), E (Error) */
+    char device = 0; // Valid values: L (LED), R (Status Register) or U (User-LED; F3RP71 only)
+    char led = 0;    // Valid values: R (Run), A (Alarm), E (Error), 1-3 (F3RP71 only)
 
-    /* Link type must be INST_IO */
+    // Link type must be INST_IO
     if (precord->inp.type != INST_IO) {
         recGblRecordError(S_db_badField, precord,
                           "devBiF3RP61SysCtl (init_record) Illegal INP field");
@@ -78,12 +77,12 @@ static long init_record(biRecord *precord)
     }
 
     struct link *plink = &precord->inp;
-    int   size = strlen(plink->value.instio.string) + 1;
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for appending the NULL character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
-    /* Parse 'device' and possibly 'led' */
+    // Parse 'device' and possibly 'led'
     if (sscanf(buf, "SYS,%c%c,", &device, &led) < 2) {
         if (sscanf(buf, "SYS,%c", &device) < 1) {
             errlogPrintf("devBiF3RP61SysCtl: can't get device for %s\n", precord->name);
@@ -92,118 +91,96 @@ static long init_record(biRecord *precord)
         }
     }
 
-    /* Check Device validity */
-    if (device != 'L' && device != 'R'
-#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
-        && device != 'U'
-#endif
-        ) {
-        errlogPrintf("devBiF3RP61SysCtl: unsupported device \'%c\' for %s\n", device, precord->name);
-        precord->pact = 1;
-        return -1;
-    }
+    // Allocate private data storage area
+    F3RP61SysCtl_BI_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SysCtl_BI_DPVT), "calloc failed");
+    dpvt->device = device;
 
-    /* Check 'led' validity */
-    if (device == 'L') {
+    // Check device (and LED) validity
+    if (0) {                                     // dummy
+
+    } else if (device == 'R') {                  // Status Register
+
+    } else if (device == 'L') {                  // LED
         if (led != 'R' && led != 'A' && led != 'E' ) {
             errlogPrintf("devBiF3RP61SysCtl: unsupported LED address \'%c\' for %s\n", led, precord->name);
             precord->pact = 1;
             return -1;
         }
-    }
+
 #ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
-    else if (device == 'U') {
+    } else if (device == 'U') {                  // User-LED
         if (led != '1' && led != '2' && led != '3') {
             errlogPrintf("devBiF3RP61SysCtl: unsupported USER LED address \'%c\' for %s\n", led, precord->name);
             precord->pact = 1;
             return -1;
         }
-    }
 #endif
 
-    /* Allocate private data storage area */
-    F3RP61SysCtl_BI_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SysCtl_BI_DPVT), "calloc failed");
-    dpvt->device = device;
-
-    if (device == 'L' || device == 'U') {
-        dpvt->led = led;
+    } else {
+        errlogPrintf("devBiF3RP61SysCtl: unsupported device \'%c\' for %s\n", device, precord->name);
+        precord->pact = 1;
+        return -1;
     }
 
+    dpvt->led = led; // for 'L' and 'U' devices
     precord->dpvt = dpvt;
 
     return 0;
 }
 
-/*
-  read_bi() is called when there was a request to process a
-  record. When called, it reads the value from the driver and stores
-  to the VAL field.
-*/
+// read_bi() is called when there was a request to process a
+// record. When called, it reads the value from the driver and stores
+// to the VAL field.
 static long read_bi(biRecord *precord)
 {
     F3RP61SysCtl_BI_DPVT *dpvt = (F3RP61SysCtl_BI_DPVT *) precord->dpvt;
     const char device = dpvt->device;
     const char led = dpvt->led;
-    int command = 0;
-    unsigned long data = 0;
 
-    /* Compose ioctl request */
-    switch (device) {
-    case 'L':
-        command = M3SC_GET_LED;
-        break;
+    // Buffers for data read
+    unsigned long data = -1;
+
+    // Issue API function
+    if (0) {                    // dummy
+
+    } else if (device == 'L') { // LED
+        if (ioctl(f3rp61SysCtl_fd, M3SC_GET_LED, &data) < 0) {
+            errlogPrintf("devBiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, precord->name);
+            return -1;
+        }
+        if (led == 'R') {
+            precord->rval = (data & LED_RUN_FLG) ? 1 : 0;
+        } else if (led == 'A') {
+            precord->rval = (data & LED_ALM_FLG) ? 1 : 0;
+        } else {/* led == 'E' */
+            precord->rval = (data & LED_ERR_FLG) ? 1 : 0;
+        }
+
 #ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
-    case 'U': /* For User LED */
-        command = M3SC_GET_US_LED;
-        break;
+    } else if (device == 'U') { // User-LED
+        if (ioctl(f3rp61SysCtl_fd, M3SC_GET_US_LED, &data) < 0) {
+            errlogPrintf("devBiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, precord->name);
+            return -1;
+        }
+        if (led == '1') {
+            precord->rval = (data & LED_US1_FLG) ? 1 : 0;
+        } else if (led == '2') {
+            precord->rval = (data & LED_US2_FLG) ? 1 : 0;
+        } else {/* led == '3' */
+            precord->rval = (data & LED_US3_FLG) ? 1 : 0;
+        }
 #endif
-    default: /* For device 'R' */
-        command = M3SC_CHECK_BAT;
-        break;
+
+    } else {/*(device == 'R')*/ // Status Register
+        if (ioctl(f3rp61SysCtl_fd, M3SC_CHECK_BAT, &data) < 0) {
+            errlogPrintf("devBiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, precord->name);
+            return -1;
+        }
+        precord->rval = (data & 0x00000004);
     }
 
-    /* Issue API function */
-    if (ioctl(f3rp61SysCtl_fd, command, &data) < 0) {
-        errlogPrintf("devBiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, precord->name);
-        return -1;
-    }
-
-    /* fill VAL field */
+    //
     precord->udf = FALSE;
-
-    switch (device) {
-    case 'L':
-        switch (led) {
-        case 'R':
-            precord->rval = (unsigned long) (data & LED_RUN_FLG);
-            break;
-        case 'A':
-            precord->rval = (unsigned long) (data & LED_ALM_FLG);
-            break;
-        case 'E':
-            precord->rval = (unsigned long) (data & LED_ERR_FLG);
-            break;
-        }
-        break;
-#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
-    case 'U':
-        switch (led) {
-        case '1':
-            precord->rval = (unsigned long) (data & LED_US1_FLG);
-            break;
-        case '2':
-            precord->rval = (unsigned long) (data & LED_US2_FLG);
-            break;
-        case '3':
-            precord->rval = (unsigned long) (data & LED_US3_FLG);
-            break;
-        }
-        break;
-#endif
-    case 'R':
-        precord->rval = (unsigned long) (data & 0x00000004);
-        break;
-    }
 
     return 0;
 }

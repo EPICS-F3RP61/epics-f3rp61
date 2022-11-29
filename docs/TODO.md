@@ -70,3 +70,7 @@ F3RP61 devices
 - [ ] Add option to access I/O modules in 8-bit data width.
 - [ ] Support for double-word access modules (e.g. F3XP01, F3XP02).
   - [ ] We mey need either dedicated option or dedicated device for those double-word access modules.
+
+F3RP61Seq devices
+====
+- [ ] Add rotary-switch support for longin devices

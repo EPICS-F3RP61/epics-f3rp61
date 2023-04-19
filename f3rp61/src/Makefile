@@ -5,13 +5,13 @@ include $(TOP)/configure/CONFIG
 #  ADD MACRO DEFINITIONS AFTER THIS LINE
 #=============================
 
-#==================================================
-# build a support library
-
-#
 USR_CFLAGS += -std=c99
 USR_CFLAGS += -Wall
 #USR_CFLAGS += -Werror
+USR_CPPFLAGS += -DUSE_TYPED_RSET -DUSE_TYPED_DSET
+
+#==================================================
+# build a support library
 
 ifneq ($(filter $(T_A), linux-f3rp61 linux-f3rp71),)
 LIBRARY_IOC += f3rp61

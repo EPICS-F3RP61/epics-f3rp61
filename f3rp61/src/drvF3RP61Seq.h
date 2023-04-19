@@ -22,6 +22,14 @@
 #  define M3CPU_WRITE_COM       M3IO_WRITE_COM
 #endif
 
+// Access type for sequence CPU device
+typedef enum {
+    kBit   = 0x00,
+    kWord  = 0x02,
+    // kLong = 0x04, // F3RP71 native API does not suport long-word access
+} F3RP61_ACCESS_TYPE;
+
+//
 typedef struct {
     ELLNODE      node;
     MCMD_STRUCT  mcmdStruct;

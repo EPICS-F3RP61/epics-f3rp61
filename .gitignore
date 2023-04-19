@@ -7,7 +7,7 @@ lib/
 dbd/
 O.linux-*
 O.Common
-RELEASE.local
+RELEASE.local*
 *.new
 *.orig
 *.patch

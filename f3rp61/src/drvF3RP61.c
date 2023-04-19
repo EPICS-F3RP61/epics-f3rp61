@@ -1,5 +1,5 @@
 /*************************************************************************
-* Copyright (c) 2008 High Energy Accelerator Reseach Organization (KEK)
+* Copyright (c) 2008 High Energy Accelerator Research Organization (KEK)
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
@@ -34,11 +34,40 @@
 
 #include <drvF3RP61.h>
 
+//
 #define M3IO_NUM_CPUS   4
 
 // A single F3RP61/71 module can work with up to two FL-net interface modules.
 #define M3IO_NUM_LINKS  2
 
+//
+#define NUM_IO_INTR  8
+
+typedef struct {
+    int channel;
+    dbCommon *prec;
+} F3RP61_IO_SCAN;
+
+typedef struct {
+    F3RP61_IO_SCAN ioscan[NUM_IO_INTR];
+    int count;
+} F3RP61_IO_INTR;
+
+static F3RP61_IO_INTR io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
+
+//
+typedef struct {
+    long mtype;
+#if defined(__arm__)
+    M3IO_MSG_IO mtext;
+#elif defined(__powerpc__)
+    M3IO_IO_EVENT mtext;
+#else
+#  error
+#endif
+} MSG_BUF;
+
+//
 static long report();
 static long init();
 
@@ -54,10 +83,9 @@ struct {
 
 epicsExportAddress(drvet, drvF3RP61);
 
-int f3rp61_fd;
+int f3rp61_fd = -1;
 
-static F3RP61_IO_INTR io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
-static int init_flag;
+//
 static void msgrcv_thread(void *);
 static M3LINKDATACONFIG link_data_config;
 static M3COMDATACONFIG com_data_config;
@@ -67,17 +95,19 @@ static void comDeviceConfigureCallFunc(const iocshArgBuf *);
 static void getModuleInfoCallFunc(const iocshArgBuf *);
 static void linkDeviceConfigure(int, int, int);
 static void comDeviceConfigure(int, int, int, int, int);
-static void getModuleInfo(void);
+static void getModuleInfo(int);
 static void drvF3RP61RegisterCommands(void);
 
-/* */
+//
 static long report(void)
 {
     return 0;
 }
 
+//
 static long init(void)
 {
+    static int init_flag = 0;
     if (init_flag) {
         return 0;
     }
@@ -134,6 +164,7 @@ static long init(void)
     return 0;
 }
 
+//
 static void msgrcv_thread(void *arg)
 {
     int msqid = (int) arg;
@@ -154,9 +185,9 @@ static void msgrcv_thread(void *arg)
             continue;
         }
 
-        int unit    = msgbuf.mtext.unit;
-        int slot    = msgbuf.mtext.slot;
-        int channel = msgbuf.mtext.channel;
+        const int unit    = msgbuf.mtext.unit;
+        const int slot    = msgbuf.mtext.slot;
+        const int channel = msgbuf.mtext.channel;
 
         for (int i = 0; i < io_intr[unit][slot].count; i++) {
             if (io_intr[unit][slot].ioscan[i].channel == channel) {
@@ -175,6 +206,8 @@ static void msgrcv_thread(void *arg)
     }
 }
 
+//////////////////////////////////////////////////////////////////////////
+//
 long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channel)
 {
     char thread_name[32];
@@ -186,6 +219,7 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
         return -1;
     }
 
+    // Create a SysV message queue and a thread which reveices the message
     if (count == 0) {
         msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
         if (msqid  == -1) {
@@ -193,7 +227,7 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
             return -1;
         }
 
-#if defined(_ppc_)
+#if defined(__powerpc__)
         if (msqid == 0) {
             // Get another message queue ID when it's 0.
             // Message queue id 0 is valid in SysV IPC but invalid in F3RP61 BSP.
@@ -241,9 +275,10 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
     return 0;
 }
 
-/*******************************************************************************
- * Get io interrupt info
- *******************************************************************************/
+//////////////////////////////////////////////////////////////////////////
+//
+// Get io interrupt info
+//
 long f3rp61GetIoIntInfo(int cmd, dbCommon *pxx, IOSCANPVT *ppvt)
 {
     if (!pxx->dpvt) {
@@ -260,9 +295,10 @@ long f3rp61GetIoIntInfo(int cmd, dbCommon *pxx, IOSCANPVT *ppvt)
     return 0;
 }
 
-/*******************************************************************************
- * Register iocsh command 'f3rp61LinkDeviceConfigure'
- *******************************************************************************/
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61LinkDeviceConfigure'
+//
 static const iocshArg linkDeviceConfigureArg0 = { "sysNo",iocshArgInt};
 static const iocshArg linkDeviceConfigureArg1 = { "nRlys",iocshArgInt};
 static const iocshArg linkDeviceConfigureArg2 = { "nRegs",iocshArgInt};
@@ -302,9 +338,10 @@ static void linkDeviceConfigure(int sysno, int nrlys, int nregs)
     link_data_config.wNumberOfRegister[sysno] = nregs;
 }
 
-/*******************************************************************************
- * Register iocsh command 'f3rp61ComDeviceConfigure'
- *******************************************************************************/
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61ComDeviceConfigure'
+//
 static const iocshArg comDeviceConfigureArg0 = { "cpuNo",     iocshArgInt};
 static const iocshArg comDeviceConfigureArg1 = { "nRlys",     iocshArgInt};
 static const iocshArg comDeviceConfigureArg2 = { "ext_nRlys", iocshArgInt};
@@ -344,63 +381,84 @@ static void comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, i
     ext_com_data_config.wNumberOfRegister[cpuno] = ext_nregs;
 }
 
-/*******************************************************************************
- * Register iocsh command 'f3rp61GetModuleInfo'
- *******************************************************************************/
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61GetModuleInfo'
+//
+// usage: f3rp61GetModuleInfo [arg]
+//
+// List FA-M3/e-RT3 modules installed on the system.
+// Empty slots are shown if whatever argument is given.
+//
+static const iocshArg getModuleInfoArg0 = { "empty",     iocshArgString};
+static const iocshArg *getModuleInfoArgs[] = {
+    &getModuleInfoArg0,
+};
 static const iocshFuncDef getModuleInfoFuncDef = {
     "f3rp61GetModuleInfo",
-    0,
-    NULL
+    1,
+    getModuleInfoArgs
 };
 
 static void getModuleInfoCallFunc(const iocshArgBuf *args)
 {
-    getModuleInfo();
+    if (args[0].sval) {
+        getModuleInfo(1);
+    } else {
+        getModuleInfo(0);
+    }
 }
 
-static void getModuleInfo(void)
+static void getModuleInfo(int verbosity)
 {
-    for (int i = 0; i < M3IO_NUM_UNIT; i++) {
-        for (int j = 1; j < M3IO_NUM_SLOT + 1; j++) {
+    printf("%4s %4s %4s %5s %4s %4s %4s\n",
+           "Unit", "Slot", "Name", "MSize", "Xreg", "Yreg", "Dreg");
+    for (int unit=0; unit<M3IO_NUM_UNIT; unit++) {
+        for (int slot=1; slot<M3IO_NUM_SLOT + 1; slot++) {
 
             M3IO_MODULE_INFORMATION module_info = {
-                .unitno = i,
-                .slotno = j,
+                .unitno = unit,
+                .slotno = slot,
             };
 
             ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info);
 
-            printf("unitno: %0d  ", module_info.unitno);
-            printf("slotno: %02d  ", module_info.slotno);
-            printf("enable: %d  ", module_info.enable);
-
-            for (int k = 0; k < 4; k++) {
-                if (isalnum(module_info.name[k])) {
-                    printf("%c", module_info.name[k]);
-                } else {
-                    printf("%c", ' ');
+            if (!module_info.enable) {
+                if (!verbosity) {
+                    continue;
                 }
+                module_info.name[3] =
+                module_info.name[2] =
+                module_info.name[1] =
+                module_info.name[0] = '-';
             }
 
-            printf("  msize: %5d  ", module_info.msize);
-            printf("  num_xreg: %02d  ", module_info.num_xreg);
-            printf("  num_yreg: %02d  ", module_info.num_yreg);
-            printf("  num_dreg: %02d  ", module_info.num_dreg);
-            printf("\n");
+            char name[5];
+            memcpy(name, module_info.name, 4);
+            name[4] = '\0';
+            printf("%4d %4d %4s %5d %4d %4d %4d\n",
+                   module_info.unitno,
+                   module_info.slotno,
+                   name,
+                   module_info.msize,
+                   module_info.num_xreg,
+                   module_info.num_yreg,
+                   module_info.num_dreg);
         }
     }
 }
 
 static void drvF3RP61RegisterCommands(void)
 {
-    static int firstTime = 1;
-
-    if (firstTime) {
-        iocshRegister(&getModuleInfoFuncDef, getModuleInfoCallFunc);
-        iocshRegister(&comDeviceConfigureFuncDef, comDeviceConfigureCallFunc);
-        iocshRegister(&linkDeviceConfigureFuncDef, linkDeviceConfigureCallFunc);
-        firstTime = 0;
+    static int init_flag = 0;
+    if (init_flag) {
+        return;
     }
+    init_flag = 1;
+
+    iocshRegister(&getModuleInfoFuncDef, getModuleInfoCallFunc);
+    iocshRegister(&comDeviceConfigureFuncDef, comDeviceConfigureCallFunc);
+    iocshRegister(&linkDeviceConfigureFuncDef, linkDeviceConfigureCallFunc);
 }
 
 epicsExportRegistrar(drvF3RP61RegisterCommands);

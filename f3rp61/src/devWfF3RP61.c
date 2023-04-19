@@ -1,5 +1,5 @@
 /*************************************************************************
-* Copyright (c) 2008 High Energy Accelerator Reseach Organization (KEK)
+* Copyright (c) 2008 High Energy Accelerator Research Organization (KEK)
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
@@ -12,6 +12,7 @@
 */
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,7 +35,7 @@
 
 #include <drvF3RP61.h>
 
-/* Create the dset for devWfF3RP61 */
+// Create the dset for devWfF3RP61
 static long init_record();
 static long read_wf();
 
@@ -58,192 +59,224 @@ struct {
 
 epicsExportAddress(dset, devWfF3RP61);
 
-extern F3RP61_IO_INTR f3rp61_io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
-
 typedef struct {
-    IOSCANPVT ioscanpvt; /* must come first */
+    IOSCANPVT ioscanpvt; // must come first
     union {
         M3IO_ACCESS_COM acom;
         M3IO_ACCESS_REG drly;
     } u;
     char device;
+    //char option;
     void *pdata;
 } F3RP61_WF_DPVT;
 
-/*
-  init_record() initializes record - parses INP/OUT field string,
-  allocates private data storage area and sets initial configure
-  values.
-*/
-static long init_record(waveformRecord *pwf)
+// init_record() initializes record - parses INP/OUT field string,
+// allocates private data storage area and sets initial configure
+// values.
+static long init_record(waveformRecord *precord)
 {
-    const int ftvl = pwf->ftvl;
     int unitno = 0, slotno = 0, cpuno = 0, start = 0;
     char device = 0;
     //char option = 'W'; // option is no implemented for waveform Record
+    const int ftvl = precord->ftvl;
 
-    /* Link type must be INST_IO */
-    if (pwf->inp.type != INST_IO) {
-        recGblRecordError(S_db_badField, pwf,
+    // Link type must be INST_IO
+    if (precord->inp.type != INST_IO) {
+        recGblRecordError(S_db_badField, precord,
                           "devWfF3RP61 (init_record) Illegal INP field");
-        pwf->pact = 1;
+        precord->pact = 1;
         return S_db_badField;
     }
 
-    struct link *plink = &pwf->inp;
-    int   size = strlen(plink->value.instio.string) + 1;
+    struct link *plink = &precord->inp;
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for appending the NULL character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
-    /* Parse for possible interrupt source */
-    char *pC = strchr(buf, ':');
-    if (pC) {
-        *pC++ = '\0';
-        if (sscanf(pC, "U%d,S%d,X%d", &unitno, &slotno, &start) < 3) {
-            errlogPrintf("devWfF3RP61: can't get interrupt source address for %s\n", pwf->name);
-            pwf->pact = 1;
-            return -1;
-        }
-
-        if (f3rp61_register_io_interrupt((dbCommon *) pwf, unitno, slotno, start) < 0) {
-            errlogPrintf("devWfF3RP61: can't register I/O interrupt for %s\n", pwf->name);
-            pwf->pact = 1;
-            return -1;
-        }
-    }
-
-    /* Parse slot, device and register number */
-    if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
-        if (sscanf(buf, "CPU%d,R%d", &cpuno, &start) < 2) {
-            if (sscanf(buf, "%c%d", &device, &start) < 2) {
-                errlogPrintf("devWfF3RP61: can't get I/O address for %s\n", pwf->name);
-                pwf->pact = 1;
-                return -1;
-            } else if (device != 'W' && device != 'R') {
-                errlogPrintf("devWfF3RP61: unsupported device \'%c\' for %s\n", device, pwf->name);
-                pwf->pact = 1;
-            }
-        } else {
-            device = 'r';
-        }
-    }
-
+    // Parse option
+    //char *popt = strchr(buf, '&');
+    //if (popt) {
+    //    char option = 'W'; // Dummy option for Word access
+    //    *popt++ = '\0';
+    //    if (sscanf(popt, "%c", &option) < 1) {
+    //        errlogPrintf("devWfF3RP61: can't get option for %s\n", precord->name);
+    //        precord->pact = 1;
+    //        return -1;
+    //    }
+    //    if (1) {                    // Option not recognized
+    //        errlogPrintf("devWfF3RP61: unsupported option \'%c\' for %s\n", option, precord->name);
+    //        precord->pact = 1;
+    //       return -1;
+    //   }
+    //}
     //if (!(option == 'W' || option == 'L' || option == 'U' || option == 'F' || option == 'D')) {
-    //    errlogPrintf("devWfF3RP61: unsupported option \'%c\' for %s\n", option, pwf->name);
-    //    pwf->pact = 1;
+    //    errlogPrintf("devWfF3RP61: unsupported option \'%c\' for %s\n", option, precord->name);
+    //    precord->pact = 1;
     //    return -1;
     //}
 
-    /* Allocate private data storage area */
+    // Parse for possible interrupt source
+    char *pint = strchr(buf, ':'); // check if SCAN is interrupt based (example: @U0,S3,Y1:U0,S4,X1)
+    if (pint) {
+        *pint++ = '\0';
+        if (sscanf(pint, "U%d,S%d,X%d", &unitno, &slotno, &start) < 3) {
+            errlogPrintf("devWfF3RP61: can't get interrupt source address for %s\n", precord->name);
+            precord->pact = 1;
+            return -1;
+        }
+
+        if (f3rp61_register_io_interrupt((dbCommon *) precord, unitno, slotno, start) < 0) {
+            errlogPrintf("devWfF3RP61: can't register I/O interrupt for %s\n", precord->name);
+            precord->pact = 1;
+            return -1;
+        }
+    }
+
+    // Parse slot, device and register number
+    if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
+        if (sscanf(buf, "CPU%d,R%d", &cpuno, &start) < 2) {
+            if (sscanf(buf, "%c%d", &device, &start) < 2) {
+                errlogPrintf("devWfF3RP61: can't get I/O address for %s\n", precord->name);
+                precord->pact = 1;
+                return -1;
+            } else if (device != 'W' && device != 'R') {
+                errlogPrintf("devWfF3RP61: unsupported device \'%c\' for %s\n", device, precord->name);
+                precord->pact = 1;
+            }
+        } else {
+            device = 'r'; // Shared memory (or 'Old interface' for shared registers/relays)
+        }
+    }
+
+    // Allocate private data storage area
     F3RP61_WF_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_WF_DPVT), "calloc failed");
     dpvt->device = device;
 
-    void *pdata = callocMustSucceed(pwf->nelm, dbValueSize(ftvl), "calloc failed");
+    void *pdata = callocMustSucceed(precord->nelm, dbValueSize(ftvl), "calloc failed");
     dpvt->pdata = pdata;
 
-    /* Check device validity and compose data structure for I/O request */
-    if (device == 'r') { /* Shared registers - Using 'Old' interface */
-        M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-        pacom->cpuno = (unsigned short) cpuno;
-        pacom->start = (unsigned short) start;
-        pacom->count = (unsigned short) (pwf->nelm * 1);
-    } else if (device == 'W' || device == 'R') { /* Shared registers and Link registers */
-        M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-        pacom->start = (unsigned short) start;
-        switch (ftvl) {
-        case DBF_DOUBLE:
-            pacom->count = (unsigned short) (pwf->nelm * 4);
-            break;
-        case DBF_FLOAT:
-        case DBF_ULONG:
-        case DBF_LONG:
-            pacom->count = (unsigned short) (pwf->nelm * 2);
-            break;
-        default:
-            pacom->count = (unsigned short) (pwf->nelm * 1);
-        }
-    } else if (device =='A') { /* Registers on I/O modules */
-        M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
-        pdrly->unitno = (unsigned short) unitno;
-        pdrly->slotno = (unsigned short) slotno;
-        pdrly->start  = (unsigned short) start;
-        pdrly->count  = (unsigned short) (pwf->nelm * 1);
-    } else {
-        errlogPrintf("devWfF3RP61: unsupported device \'%c\' for %s\n", device, pwf->name);
-        pwf->pact = 1;
+    // Consider I/O data length
+    // Note : It is **WRONG** that count depending on FTVL.
+    //        What we need are (1) count depending on &L/&F/&D option and (2) check for supported FTVL.
+    int count = 0;
+    switch (ftvl) {
+    case DBF_DOUBLE:
+        count = (unsigned short) (precord->nelm * 4);
+        break;
+    case DBF_FLOAT:
+    case DBF_ULONG:
+    case DBF_LONG:
+        count = (unsigned short) (precord->nelm * 2);
+        break;
+    case DBF_USHORT:
+    case DBF_SHORT:
+        count = (unsigned short) (precord->nelm * 1);
+        break;
+    default: // STRING, CHAR, UCHAR, ENUM
+        errlogPrintf("devWfF3RP61: unsupported FTVL field %d for %s\n", ftvl, precord->name);
+        precord->pact = 1;
         return -1;
     }
 
-    pwf->dpvt = dpvt;
+    // Check device validity and compose data structure for I/O request
+    if (0) {                                     // dummy
+
+    } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
+               device == 'r') {                  // Shared memory
+        M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
+        pacom->cpuno = cpuno; // for 'r' devices
+        pacom->start = start;
+        pacom->count = count;
+
+    } else if (device == 'A') {                  // I/O registers on special modules
+        M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
+        pdrly->unitno = unitno;
+        pdrly->slotno = slotno;
+        pdrly->start  = start;
+        if (ftvl != DBF_USHORT && ftvl != DBF_SHORT) {
+            pdrly->count  = count/2; // we use M3IO_READ_REG_L for DOUBLE, FLOAT, ULONG, and LONG
+        } else {
+            pdrly->count  = count;
+        }
+
+    } else {
+        errlogPrintf("devWfF3RP61: unsupported device \'%c\' for %s\n", device, precord->name);
+        precord->pact = 1;
+        return -1;
+    }
+
+    precord->dpvt = dpvt;
 
     return 0;
 }
 
-/*
-  read_wf() is called when there was a request to process a
-  record. When called, it reads the value from the driver and stores
-  to the VAL field.
-*/
-static long read_wf(waveformRecord *pwf)
+// read_wf() is called when there was a request to process a
+// record. When called, it reads the value from the driver and stores
+// to the VAL field.
+static long read_wf(waveformRecord *precord)
 {
-    F3RP61_WF_DPVT *dpvt = pwf->dpvt;
-    const int ftvl = pwf->ftvl;
+    F3RP61_WF_DPVT *dpvt = precord->dpvt;
+    const int ftvl = precord->ftvl;
     M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
     M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
-    char device = dpvt->device;
-    int command = M3IO_READ_REG;
-    unsigned short *pwdata = dpvt->pdata;
-    unsigned long *pldata = dpvt->pdata;
-    void *p = pdrly;
+    const char device = dpvt->device;
+    //const char option = dpvt->option;
 
-    /* Compose ioctl request */
-    switch (device) {
-    case 'r':
-        command = M3IO_READ_COM;
-        pacom->pdata = pwdata;
-        p = pacom;
-        break;
-    case 'W':
-    case 'R':
-        break;
-    default:
-        switch (ftvl) {
-        case DBF_ULONG:
-            command = M3IO_READ_REG_L;
-            pdrly->u.pldata = pldata;
-            break;
-        case DBF_USHORT:
-        case DBF_SHORT:
-            pdrly->u.pwdata = pwdata;
-            break;
-        default:
-            errlogPrintf("devWfF3RP61: unsupported field type of value for %s\n", pwf->name);
-            pwf->pact = 1;
+    // Buffers for data read
+    uint16_t *wdata = dpvt->pdata;
+    ulong    *ldata = dpvt->pdata;
+
+    // Issue API function
+    if (0) {                    // dummy
+
+    } else if (device == 'R') { // Shared registers
+        if (readM3ComRegister(pacom->start, pacom->count, wdata) < 0) {
+            errlogPrintf("devWfF3RP61: readM3ComRegister failed [%d] for %s\n", errno, precord->name);
             return -1;
+        }
+
+    } else if (device == 'W') { // Link registers
+        if (readM3LinkRegister(pacom->start, pacom->count, wdata) < 0) {
+            errlogPrintf("devWfF3RP61: readM3LinkRegister failed [%d] for %s\n", errno, precord->name);
+            return -1;
+        }
+
+    } else if (device == 'r') { // Shared memory
+#if defined(__powerpc__)
+        pacom->pdata = wdata;
+        if (ioctl(f3rp61_fd, M3IO_READ_COM, pacom) < 0) {
+            errlogPrintf("devWfF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
+            return -1;
+        }
+#else
+        if (readM3CpuMemory(pacom->cpuno, pacom->start, pacom->count, wdata) < 0) {
+            errlogPrintf("devWfF3RP61: readM3CpuMemory failed [%d] for %s\n", errno, precord->name);
+            return -1;
+        }
+#endif
+
+    } else {/*(device == 'A')*/ // I/O registers on special modules
+        if (ftvl != DBF_USHORT && ftvl != DBF_SHORT) {
+            pdrly->u.pldata = ldata;
+            if (ioctl(f3rp61_fd, M3IO_READ_REG_L, pdrly) < 0) {
+                errlogPrintf("devWfF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
+                return -1;
+            }
+        } else {
+            pdrly->u.pwdata = wdata;
+            if (ioctl(f3rp61_fd, M3IO_READ_REG, pdrly) < 0) {
+                errlogPrintf("devWfF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
+                return -1;
+            }
         }
     }
 
-    /* Issue API function */
-    if (device == 'R') { /* Shared registers */
-        if (readM3ComRegister((int) pacom->start, pacom->count, pwdata) < 0) {
-            errlogPrintf("devWfF3RP61: readM3ComRegister failed [%d] for %s\n", errno, pwf->name);
-            return -1;
-        }
-    } else if (device == 'W') { /* Link registers */
-        if (readM3LinkRegister((int) pacom->start, pacom->count, pwdata) < 0) {
-            errlogPrintf("devWfF3RP61: readM3LinkRegister failed [%d] for %s\n", errno, pwf->name);
-            return -1;
-        }
-    } else {
-        if (ioctl(f3rp61_fd, command, p) < 0) {
-            errlogPrintf("devWfF3RP61: ioctl failed [%d] for %s\n", errno, pwf->name);
-            return -1;
-        }
-    }
+    //
+    precord->udf = FALSE;
 
-    /* fill VAL field */
-    pwf->udf = FALSE;
+    // fill VAL field
+    // need clean up
     switch (device) {
         unsigned char  *p1;
         unsigned long  *p2;
@@ -253,64 +286,64 @@ static long read_wf(waveformRecord *pwf)
     case 'R':
         switch (ftvl) {
         case DBF_DOUBLE:
-            p1 = pwf->bptr;
-            for (int i = 0; i < pwf->nelm; i++) {
-                *p1++ = (pwdata[3 + (4 * i)] >> 8) & 0xff; *p1++ = pwdata[3 + (4 * i)] & 0xff;
-                *p1++ = (pwdata[2 + (4 * i)] >> 8) & 0xff; *p1++ = pwdata[2 + (4 * i)] & 0xff;
-                *p1++ = (pwdata[1 + (4 * i)] >> 8) & 0xff; *p1++ = pwdata[1 + (4 * i)] & 0xff;
-                *p1++ = (pwdata[0 + (4 * i)] >> 8) & 0xff; *p1++ = pwdata[0 + (4 * i)] & 0xff;
+            p1 = precord->bptr;
+            for (int i = 0; i < precord->nelm; i++) {
+                *p1++ = (wdata[3 + (4 * i)] >> 8) & 0xff; *p1++ = wdata[3 + (4 * i)] & 0xff;
+                *p1++ = (wdata[2 + (4 * i)] >> 8) & 0xff; *p1++ = wdata[2 + (4 * i)] & 0xff;
+                *p1++ = (wdata[1 + (4 * i)] >> 8) & 0xff; *p1++ = wdata[1 + (4 * i)] & 0xff;
+                *p1++ = (wdata[0 + (4 * i)] >> 8) & 0xff; *p1++ = wdata[0 + (4 * i)] & 0xff;
             }
             break;
         case DBF_FLOAT:
-            p1 = pwf->bptr;
-            for (int i = 0; i < pwf->nelm; i++) {
-                *p1++ = (pwdata[1 + (2 * i)] >> 8) & 0xff; *p1++ = pwdata[1 + (2 * i)] & 0xff;
-                *p1++ = (pwdata[0 + (2 * i)] >> 8) & 0xff; *p1++ = pwdata[0 + (2 * i)] & 0xff;
+            p1 = precord->bptr;
+            for (int i = 0; i < precord->nelm; i++) {
+                *p1++ = (wdata[1 + (2 * i)] >> 8) & 0xff; *p1++ = wdata[1 + (2 * i)] & 0xff;
+                *p1++ = (wdata[0 + (2 * i)] >> 8) & 0xff; *p1++ = wdata[0 + (2 * i)] & 0xff;
             }
             break;
         case DBF_ULONG:
         case DBF_LONG:
-            p2 = pwf->bptr;
-            for (int i = 0; i < pwf->nelm; i++) {
-                p2[i] = ((pwdata[1 + (2 *i)] << 16) & 0xffff0000)  |  (pwdata[0 + (2 * i)] & 0x0000ffff);
+            p2 = precord->bptr;
+            for (int i = 0; i < precord->nelm; i++) {
+                p2[i] = ((wdata[1 + (2 *i)] << 16) & 0xffff0000)  |  (wdata[0 + (2 * i)] & 0x0000ffff);
             }
             break;
         case DBF_USHORT:
         case DBF_SHORT:
-            p3 = pwf->bptr;
-            for (int i = 0; i < pwf->nelm; i++) {
-                p3[i] = pwdata[0 + (1 * i)];
+            p3 = precord->bptr;
+            for (int i = 0; i < precord->nelm; i++) {
+                p3[i] = wdata[0 + (1 * i)];
             }
             break;
         default:
-            errlogPrintf("%s:unsupported field type of value\n", pwf->name);
-            pwf->pact = 1;
+            errlogPrintf("%s:unsupported field type of value\n", precord->name);
+            precord->pact = 1;
             return -1;
         }
         break;
     default:
         switch (ftvl) {
         case DBF_ULONG:
-            p2 = pwf->bptr;
-            for (int i = 0; i < pwf->nelm; i++) {
-                p2[i] = pldata[i];
+            p2 = precord->bptr;
+            for (int i = 0; i < precord->nelm; i++) {
+                p2[i] = ldata[i];
             }
             break;
         case DBF_USHORT:
         case DBF_SHORT:
-            p3 = pwf->bptr;
-            for (int i = 0; i < pwf->nelm; i++) {
-                p3[i] = pwdata[i];
+            p3 = precord->bptr;
+            for (int i = 0; i < precord->nelm; i++) {
+                p3[i] = wdata[i];
             }
             break;
         default:
-            errlogPrintf("%s:unsupported field type of value\n", pwf->name);
-            pwf->pact = 1;
+            errlogPrintf("%s:unsupported field type of value\n", precord->name);
+            precord->pact = 1;
             return -1;
         }
     }
 
-    pwf->nord = pwf->nelm;
+    precord->nord = precord->nelm;
 
     return 0;
 }

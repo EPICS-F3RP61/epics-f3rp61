@@ -66,21 +66,21 @@ epicsExportAddress(dset, devLoF3RP61Seq);
   allocates private data storage area and sets initial configure
   values.
 */
-static long init_record(longoutRecord *plongout)
+static long init_record(longoutRecord *precord)
 {
     int srcSlot = 0, destSlot = 0, top = 0;
     char device = 0;
     char option = 'W'; // Dummy option for Word access
 
     /* Link type must be INST_IO */
-    if (plongout->out.type != INST_IO) {
-        recGblRecordError(S_db_badField, plongout,
+    if (precord->out.type != INST_IO) {
+        recGblRecordError(S_db_badField, precord,
                           "devLoF3RP61Seq (init_record) Illegal OUT field");
-        plongout->pact = 1;
+        precord->pact = 1;
         return S_db_badField;
     }
 
-    struct link *plink = &plongout->out;
+    struct link *plink = &precord->out;
     int   size = strlen(plink->value.instio.string) + 1;
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
@@ -91,8 +91,8 @@ static long init_record(longoutRecord *plongout)
     if (pC) {
         *pC++ = '\0';
         if (sscanf(pC, "%c", &option) < 1) {
-            errlogPrintf("devLoF3RP61Seq: can't get option for %s\n", plongout->name);
-            plongout->pact = 1;
+            errlogPrintf("devLoF3RP61Seq: can't get option for %s\n", precord->name);
+            precord->pact = 1;
             return -1;
         }
 
@@ -101,23 +101,23 @@ static long init_record(longoutRecord *plongout)
         } else if (option == 'U') { // Unsigned integer, perhaps we'd better disable this
         } else if (option == 'B') { // Binary Coded Decimal format
         } else {                    // Option not recognized
-            errlogPrintf("devLoF3RP61Seq: unsupported option \'%c\' for %s\n", option, plongout->name);
-            plongout->pact = 1;
+            errlogPrintf("devLoF3RP61Seq: unsupported option \'%c\' for %s\n", option, precord->name);
+            precord->pact = 1;
             return -1;
         }
     }
 
     /* Parse slot, device and register number */
     if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-        errlogPrintf("devLoF3RP61Seq: can't get device address for %s\n", plongout->name);
-        plongout->pact = 1;
+        errlogPrintf("devLoF3RP61Seq: can't get device address for %s\n", precord->name);
+        precord->pact = 1;
         return -1;
     }
 
     /* Read the slot number of CPU module */
     if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
-        errlogPrintf("devLoF3RP61Seq: ioctl failed [%d] for %s\n", errno, plongout->name);
-        plongout->pact = 1;
+        errlogPrintf("devLoF3RP61Seq: ioctl failed [%d] for %s\n", errno, precord->name);
+        precord->pact = 1;
         return -1;
     }
 
@@ -158,8 +158,8 @@ static long init_record(longoutRecord *plongout)
         pM3WriteSeqdev->devType = 0x09;
         break;
     default:
-        errlogPrintf("devLoF3RP61Seq: unsupported device \'%c\' for %s\n", device, plongout->name);
-        plongout->pact = 1;
+        errlogPrintf("devLoF3RP61Seq: unsupported device \'%c\' for %s\n", device, precord->name);
+        precord->pact = 1;
         return -1;
     }
 
@@ -175,9 +175,9 @@ static long init_record(longoutRecord *plongout)
 
     pmcmdRequest->dataSize = 10 + pM3WriteSeqdev->accessType * pM3WriteSeqdev->dataNum;
     pM3WriteSeqdev->topDevNo = top;
-    callbackSetUser(plongout, &dpvt->callback);
+    callbackSetUser(precord, &dpvt->callback);
 
-    plongout->dpvt = dpvt;
+    precord->dpvt = dpvt;
 
     return 0;
 }
@@ -187,25 +187,25 @@ static long init_record(longoutRecord *plongout)
   record. When called, it sends the value from the VAL filed to the
   driver, then sets PACT field back to TRUE.
  */
-static long write_longout(longoutRecord *plongout)
+static long write_longout(longoutRecord *precord)
 {
-    F3RP61_SEQ_DPVT *dpvt = plongout->dpvt;
+    F3RP61_SEQ_DPVT *dpvt = precord->dpvt;
     MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
 
-    if (plongout->pact) { // Second call (PACT is TRUE)
+    if (precord->pact) { // Second call (PACT is TRUE)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (dpvt->ret < 0) {
-            errlogPrintf("devLoF3RP61Seq: write_longout failed for %s\n", plongout->name);
+            errlogPrintf("devLoF3RP61Seq: write_longout failed for %s\n", precord->name);
             return -1;
         }
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devLoF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, plongout->name);
+            errlogPrintf("devLoF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, precord->name);
             return -1;
         }
 
-        plongout->udf = FALSE;
+        precord->udf = FALSE;
 
     } else { // First call (PACT is still FALSE)
         MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
@@ -213,22 +213,22 @@ static long write_longout(longoutRecord *plongout)
 
         const char option = dpvt->option;
         if (option == 'B') {
-            pM3WriteSeqdev->dataBuff.wData[0] = devF3RP61int2bcd(plongout->val, plongout);
+            pM3WriteSeqdev->dataBuff.wData[0] = devF3RP61int2bcd(precord->val, precord);
         } else if (option == 'L') {
-            pM3WriteSeqdev->dataBuff.lData[0] = (int32_t)plongout->val;
+            pM3WriteSeqdev->dataBuff.lData[0] = (int32_t)precord->val;
         } else if (option == 'U') {
-            pM3WriteSeqdev->dataBuff.wData[0] = (uint16_t)plongout->val;
+            pM3WriteSeqdev->dataBuff.wData[0] = (uint16_t)precord->val;
         } else {
-            pM3WriteSeqdev->dataBuff.wData[0] = (int16_t)plongout->val;
+            pM3WriteSeqdev->dataBuff.wData[0] = (int16_t)precord->val;
         }
 
         /* Issue write request */
         if (f3rp61Seq_queueRequest(dpvt) < 0) {
-            errlogPrintf("devLoF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n", plongout->name);
+            errlogPrintf("devLoF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n", precord->name);
             return -1;
         }
 
-        plongout->pact = 1;
+        precord->pact = 1;
     }
 
     return 0;

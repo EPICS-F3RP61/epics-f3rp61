@@ -1,5 +1,5 @@
 /*************************************************************************
-* Copyright (c) 2013 High Energy Accelerator Reseach Organization (KEK)
+* Copyright (c) 2013 High Energy Accelerator Research Organization (KEK)
 *
 * F3RP61 Device Support 1.3.0
 * and higher are distributed subject to a Software License Agreement found
@@ -47,22 +47,22 @@ struct {
 
 epicsExportAddress(drvet, drvF3RP61SysCtl);
 
-int f3rp61SysCtl_fd;
-static int init_flag;
+int f3rp61SysCtl_fd = -1;
 
 static void setLEDCallFunc(const iocshArgBuf *);
-static void setLED(char, int);
+static void setLED(const char, const int);
 static void drvF3RP61SysCtlRegisterCommands(void);
 
-/* */
+//
 static long report(void)
 {
     return 0;
 }
 
-/* Open and store m3sysctl file descriptor */
+// Open and store m3sysctl file descriptor
 static long init(void)
 {
+    static int init_flag = 0;
     if (init_flag) {
         return 0;
     }
@@ -77,11 +77,14 @@ static long init(void)
     return 0;
 }
 
-/*******************************************************************************
- * Register iocsh command 'setLED'
- *******************************************************************************/
-
-/* Function arguments */
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'setLED'
+//
+// Usage: setLED <led> <value>
+//      led: R|A|E|1|2|3
+//      value: 0=OFF, non-zero=ON
+//
 static const iocshArg setLEDArg0 = {"led",   iocshArgString};
 static const iocshArg setLEDArg1 = {"value", iocshArgInt};
 static const iocshArg *setLEDArgs[] = {
@@ -89,14 +92,12 @@ static const iocshArg *setLEDArgs[] = {
     &setLEDArg1
 };
 
-/* iocshFunction definition */
 static const iocshFuncDef setLEDFuncDef = {
     "f3rp61SetLED",
     2,
     setLEDArgs
 };
 
-/* Callback function */
 static void setLEDCallFunc(const iocshArgBuf *args)
 {
     if (! args[0].sval) {
@@ -107,17 +108,11 @@ static void setLEDCallFunc(const iocshArgBuf *args)
     setLED(args[0].sval[0], args[1].ival);
 }
 
-/* Function Definition */
-/* Function takes two arguments: 'led' (run,alarm,error) and 'value' (1 or 0)
- * and sets LEDs on f3rp61 module accordingly */
-static void setLED(char led, int value)
+static void setLED(const char led, const int value)
 {
-    unsigned long cmd = M3SC_SET_LED;
-    unsigned long data = 0;
-
-    /* Check 'led' validity */
+    // Check 'led' validity
     if (led != 'R' && led != 'A' && led != 'E'
-#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
+#ifdef M3SC_LED_US3_ON // it is assumed that US1 and US2 are also defined
         && led != '1' && led != '2' && led != '3'
 #endif
         ) {
@@ -125,82 +120,62 @@ static void setLED(char led, int value)
         return;
     }
 
-    /* Check 'value' validity */
-    if (!(value == 1 || value == 0)) {
-        errlogPrintf("drvF3RP61SysCtl: f3rp61SetLED: value out of range\n");
-        return;
+    // Check 'value' validity
+    //if (!(value == 1 || value == 0)) {
+    //    errlogPrintf("drvF3RP61SysCtl: f3rp61SetLED: value out of range\n");
+    //    return;
+    //}
+
+
+    // Compose data to write
+    unsigned long cmd = 0;
+    unsigned long data = 0;
+
+    switch (led) {
+#ifdef M3SC_LED_US3_ON // it is assumed that US1 and US2 are also defined
+    case '1':  // US1 LED
+        cmd = M3SC_SET_US_LED;
+        data = value ? M3SC_LED_US1_ON : M3SC_LED_US1_OFF;
+        break;
+    case '2':  // US2 LED
+        cmd = M3SC_SET_US_LED;
+        data = value ? M3SC_LED_US2_ON : M3SC_LED_US2_OFF;
+        break;
+    case '3':  // US3 LED
+        cmd = M3SC_SET_US_LED;
+        data = value ? M3SC_LED_US3_ON : M3SC_LED_US3_OFF;
+        break;
+#endif
+    case 'R':  // Run LED
+        cmd = M3SC_SET_LED;
+        data = value ? M3SC_LED_RUN_ON : M3SC_LED_RUN_OFF;
+        break;
+    case 'A':  // Alarm LED
+        cmd = M3SC_SET_LED;
+        data = value ? M3SC_LED_ALM_ON : M3SC_LED_ALM_OFF;
+        break;
+    default:   //Error LED
+        cmd = M3SC_SET_LED;
+        data = value ? M3SC_LED_ERR_ON : M3SC_LED_ERR_OFF;
+        break;
     }
 
-    /* Set 'cmd' and 'data' according to 'led' and 'value' */
-    if (!value) {  /* When value is 0 */
-        switch (led) {
-#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
-        case '1':  /* US1 LED */
-            cmd = M3SC_SET_US_LED;
-            data = M3SC_LED_US1_OFF;
-            break;
-        case '2':  /* US2 LED */
-            cmd = M3SC_SET_US_LED;
-            data = M3SC_LED_US2_OFF;
-            break;
-        case '3':  /* US3 LED */
-            cmd = M3SC_SET_US_LED;
-            data = M3SC_LED_US3_OFF;
-            break;
-#endif
-        case 'R':  /* Run LED */
-            data = M3SC_LED_RUN_OFF;
-            break;
-        case 'A':  /* Alarm LED */
-            data = M3SC_LED_ALM_OFF;
-            break;
-        default:   /* For 'E' Error LED */
-            data = M3SC_LED_ERR_OFF;
-            break;
-        }
-    } else {  /* When value is 1 */
-        switch (led) {
-#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
-        case '1':  /* US1 LED */
-            cmd = M3SC_SET_US_LED;
-            data = M3SC_LED_US1_ON;
-            break;
-        case '2':  /* US2 LED */
-            cmd = M3SC_SET_US_LED;
-            data = M3SC_LED_US2_ON;
-            break;
-        case '3':  /* US3 LED */
-            cmd = M3SC_SET_US_LED;
-            data = M3SC_LED_US3_ON;
-            break;
-#endif
-        case 'R':  /* Run LED */
-            data = M3SC_LED_RUN_ON;
-            break;
-        case 'A':  /* Alarm LED */
-            data = M3SC_LED_ALM_ON;
-            break;
-        default:  /* For 'E' Error LED */
-            data = M3SC_LED_ERR_ON;
-            break;
-        }
-    }
-
-    /* Write to the device */
+    // Issue API function
     if (ioctl(f3rp61SysCtl_fd, cmd, &data) < 0) {
-        errlogPrintf("drvF3RP61SysCtl: ioctl failed for f3rp61setLED\n");
+        errlogPrintf("drvF3RP61SysCtl: ioctl failed [%d] for f3rp61setLED\n", errno);
         return;
     }
 }
 
 static void drvF3RP61SysCtlRegisterCommands(void)
 {
-    static int firstTimeSysCtl = 1;
-
-    if (firstTimeSysCtl) {
-        iocshRegister(&setLEDFuncDef, setLEDCallFunc);
-        firstTimeSysCtl = 0;
+    static int init_flag = 0;
+    if (init_flag) {
+        return;
     }
+    init_flag = 1;
+
+    iocshRegister(&setLEDFuncDef, setLEDCallFunc);
 }
 
 epicsExportRegistrar(drvF3RP61SysCtlRegisterCommands);

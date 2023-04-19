@@ -1,5 +1,5 @@
 /*************************************************************************
-* Copyright (c) 2008 High Energy Accelerator Reseach Organization (KEK)
+* Copyright (c) 2008 High Energy Accelerator Research Organization (KEK)
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
@@ -34,7 +34,7 @@
 
 #include <drvF3RP61.h>
 
-/* Create the dset for devSoF3RP61 */
+// Create the dset for devSoF3RP61
 static long init_record();
 static long write_so();
 
@@ -59,108 +59,98 @@ struct {
 epicsExportAddress(dset, devSoF3RP61);
 
 typedef struct {
-    IOSCANPVT ioscanpvt; /* must come first */
+    IOSCANPVT ioscanpvt; // must come first
     M3IO_ACCESS_REG drly;
-    char device;
 } F3RP61_SO_DPVT;
 
-/*
-  init_record() initializes record - parses INP/OUT field string,
-  allocates private data storage area and sets initial configure
-  values.
-*/
-static long init_record(stringoutRecord *pso)
+// init_record() initializes record - parses INP/OUT field string,
+// allocates private data storage area and sets initial configure
+// values.
+static long init_record(stringoutRecord *precord)
 {
     int unitno = 0, slotno = 0, start = 0;
     char device = 0;
 
-    /* Link type must be INST_IO */
-    if (pso->out.type != INST_IO) {
-        recGblRecordError(S_db_badField, pso,
+    // Link type must be INST_IO
+    if (precord->out.type != INST_IO) {
+        recGblRecordError(S_db_badField, precord,
                           "devSoF3RP61 (init_record) Illegal OUT field");
-        pso->pact = 1;
+        precord->pact = 1;
         return S_db_badField;
     }
 
-    struct link *plink = &pso->out;
-    int   size = strlen(plink->value.instio.string) + 1;
+    struct link *plink = &precord->out;
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for appending the NULL character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
-    /* Parse for possible interrupt source */
-    char *pC = strchr(buf, ':');
-    if (pC) {
-        *pC++ = '\0';
-        if (sscanf(pC, "U%d,S%d,X%d", &unitno, &slotno, &start) < 3) {
-            errlogPrintf("devSoF3RP61: can't get interrupt source address for %s\n", pso->name);
-            pso->pact = 1;
+    // Parse for possible interrupt source
+    char *pint = strchr(buf, ':');
+    if (pint) {
+        *pint++ = '\0';
+        if (sscanf(pint, "U%d,S%d,X%d", &unitno, &slotno, &start) < 3) {
+            errlogPrintf("devSoF3RP61: can't get interrupt source address for %s\n", precord->name);
+            precord->pact = 1;
             return -1;
         }
 
-        if (f3rp61_register_io_interrupt((dbCommon *) pso, unitno, slotno, start) < 0) {
-            errlogPrintf("devSoF3RP61: can't register I/O interrupt for %s\n", pso->name);
-            pso->pact = 1;
+        if (f3rp61_register_io_interrupt((dbCommon *) precord, unitno, slotno, start) < 0) {
+            errlogPrintf("devSoF3RP61: can't register I/O interrupt for %s\n", precord->name);
+            precord->pact = 1;
             return -1;
         }
     }
 
-    /* Parse slot, device and register number */
+    // Parse slot, device and register number
     if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
-        errlogPrintf("devSoF3RP61: can't get I/O address for %s\n", pso->name);
-        pso->pact = 1;
+        errlogPrintf("devSoF3RP61: can't get I/O address for %s\n", precord->name);
+        precord->pact = 1;
         return -1;
     }
 
-    /* Allocate private data storage area */
+    // Allocate private data storage area
     F3RP61_SO_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_SO_DPVT), "calloc failed");
-    dpvt->device = device;
 
-    /* Check device validity and compose data structure for I/O request */
-    if (device == 'A') {                         // Internal registers on I/O modules
+    // Check device validity and compose data structure for I/O request
+    if (0) {                                     // dummy
+
+    } else if (device == 'A') {                  // I/O registers on special modules
         M3IO_ACCESS_REG *pdrly = &dpvt->drly;
         pdrly->unitno = unitno;
         pdrly->slotno = slotno;
         pdrly->start  = start;
-        /*
-          pdrly->u.pbdata = callocMustSucceed(40, sizeof(unsigned char), "calloc failed");
-        */
         pdrly->u.pwdata = callocMustSucceed(40, sizeof(char),  "calloc failed");
-
-        /*
-          pdrly->count = (unsigned short) 40;
-        */
         pdrly->count = 20;
     } else {
-        errlogPrintf("devSoF3RP61: unsupported device \'%c\' for %s\n", device, pso->name);
-        pso->pact = 1;
+        errlogPrintf("devSoF3RP61: unsupported device \'%c\' for %s\n", device, precord->name);
+        precord->pact = 1;
         return -1;
     }
 
-    pso->dpvt = dpvt;
+    precord->dpvt = dpvt;
 
     return 0;
 }
 
-/*
-  write_so() is called when there was a request to process a
-  record. When called, it sends the value from the VAL field to the
-  driver.
-*/
-static long write_so(stringoutRecord *pso)
+// write_so() is called when there was a request to process a
+// record. When called, it sends the value from the VAL field to the
+// driver.
+static long write_so(stringoutRecord *precord)
 {
-    F3RP61_SO_DPVT *dpvt = pso->dpvt;
+    F3RP61_SO_DPVT *dpvt = precord->dpvt;
     M3IO_ACCESS_REG *pdrly = &dpvt->drly;
 
-    strncpy((char *) pdrly->u.pbdata, (char *)&pso->val, 40);
+    strncpy((char *) pdrly->u.pbdata, precord->val, 40);
 
-    /* Issue API function */
+    // Issue API function
     if (ioctl(f3rp61_fd, M3IO_WRITE_REG, pdrly) < 0) {
-        errlogPrintf("devSoF3RP61: ioctl failed [%d] for %s\n", errno, pso->name);
+        errlogPrintf("devSoF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
         return -1;
     }
 
-    pso->udf = FALSE;
+    //
+    precord->udf = FALSE;
 
     return 0;
 }

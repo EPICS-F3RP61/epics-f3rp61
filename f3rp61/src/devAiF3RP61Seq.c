@@ -1,5 +1,5 @@
 /*************************************************************************
-* Copyright (c) 2008 High Energy Accelerator Reseach Organization (KEK)
+* Copyright (c) 2008 High Energy Accelerator Research Organization (KEK)
 *
 * EPICS BASE Versions 3.13.7
 * and higher are distributed subject to a Software License Agreement found
@@ -65,21 +65,21 @@ epicsExportAddress(dset, devAiF3RP61Seq);
   allocates private data storage area and sets initial configure
   values.
 */
-static long init_record(aiRecord *pai)
+static long init_record(aiRecord *precord)
 {
     int srcSlot = 0, destSlot = 0, top = 0;
     char device = 0;
     char option = 'W'; // Dummy option for Word access
 
     /* Link type must be INST_IO */
-    if (pai->inp.type != INST_IO) {
-        recGblRecordError(S_db_badField, pai,
+    if (precord->inp.type != INST_IO) {
+        recGblRecordError(S_db_badField, precord,
                           "devAiF3RP61Seq (init_record) Illegal INP field");
-        pai->pact = 1;
+        precord->pact = 1;
         return S_db_badField;
     }
 
-    struct link *plink = &pai->inp;
+    struct link *plink = &precord->inp;
     int   size = strlen(plink->value.instio.string) + 1;
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
@@ -90,8 +90,8 @@ static long init_record(aiRecord *pai)
     if (pC) {
         *pC++ = '\0';
         if (sscanf(pC, "%c", &option) < 1) {
-            errlogPrintf("devAiF3RP61Seq: can't get option for %s\n", pai->name);
-            pai->pact = 1;
+            errlogPrintf("devAiF3RP61Seq: can't get option for %s\n", precord->name);
+            precord->pact = 1;
             return -1;
         }
 
@@ -101,23 +101,23 @@ static long init_record(aiRecord *pai)
         } else if (option == 'L') { // Long word
         } else if (option == 'U') { // Unsigned integer
         } else {                    // Option not recognized
-            errlogPrintf("devAiF3RP61Seq: unsupported option \'%c\' for %s\n", option, pai->name);
-            pai->pact = 1;
+            errlogPrintf("devAiF3RP61Seq: unsupported option \'%c\' for %s\n", option, precord->name);
+            precord->pact = 1;
             return -1;
         }
     }
 
     /* Parse slot, device and register number */
     if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-        errlogPrintf("devAiF3RP61Seq: can't get device address for %s\n", pai->name);
-        pai->pact = 1;
+        errlogPrintf("devAiF3RP61Seq: can't get device address for %s\n", precord->name);
+        precord->pact = 1;
         return -1;
     }
 
     /* Read the slot number of CPU module */
     if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
-        errlogPrintf("devAiF3RP61Seq: ioctl failed [%d] for %s\n", errno, pai->name);
-        pai->pact = 1;
+        errlogPrintf("devAiF3RP61Seq: ioctl failed [%d] for %s\n", errno, precord->name);
+        precord->pact = 1;
         return -1;
     }
 
@@ -156,8 +156,8 @@ static long init_record(aiRecord *pai)
         pM3ReadSeqdev->devType = 0x1A;
         break;
     default:
-        errlogPrintf("devAiF3RP61Seq: unsupported device \'%c\' for %s\n", device, pai->name);
-        pai->pact = 1;
+        errlogPrintf("devAiF3RP61Seq: unsupported device \'%c\' for %s\n", device, precord->name);
+        precord->pact = 1;
         return -1;
     }
 
@@ -177,9 +177,9 @@ static long init_record(aiRecord *pai)
     }
 
     pM3ReadSeqdev->topDevNo = top;
-    callbackSetUser(pai, &dpvt->callback);
+    callbackSetUser(precord, &dpvt->callback);
 
-    pai->dpvt = dpvt;
+    precord->dpvt = dpvt;
 
     return 0;
 }
@@ -189,26 +189,26 @@ static long init_record(aiRecord *pai)
   When called, it reads the value from the driver and stores to the
   VAL field, then sets PACT field back to TRUE.
  */
-static long read_ai(aiRecord *pai)
+static long read_ai(aiRecord *precord)
 {
-    F3RP61_SEQ_DPVT *dpvt = pai->dpvt;
+    F3RP61_SEQ_DPVT *dpvt = precord->dpvt;
 
-    if (pai->pact) { // Second call (PACT is TRUE)
+    if (precord->pact) { // Second call (PACT is TRUE)
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (dpvt->ret < 0) {
-            errlogPrintf("devAiF3RP61Seq: read_ai failed for %s\n", pai->name);
+            errlogPrintf("devAiF3RP61Seq: read_ai failed for %s\n", precord->name);
             return -1;
         }
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devAiF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, pai->name);
+            errlogPrintf("devAiF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, precord->name);
             return -1;
         }
 
         /* fill VAL field */
-        pai->udf = FALSE;
+        precord->udf = FALSE;
         const char option = dpvt->option;
         if (option == 'D') {
             uint64_t l0 = pmcmdResponse->dataBuff.lData[0];
@@ -219,8 +219,8 @@ static long read_ai(aiRecord *pai)
 
             // todo : consider ASLO and AOFF field
             // todo : consider SMOO field
-            pai->val = val;
-            pai->udf = isnan(pai->val);
+            precord->val = val;
+            precord->udf = isnan(precord->val);
             return 2; // no conversion
         } else if (option == 'F') {
             float val;
@@ -228,25 +228,25 @@ static long read_ai(aiRecord *pai)
 
             // todo : consider ASLO and AOFF field
             // todo : consider SMOO field
-            pai->val = val;
-            pai->udf = isnan(val);
+            precord->val = val;
+            precord->udf = isnan(val);
             return 2; // no conversion
         } else if (option == 'L') {
-            pai->rval = (int32_t)pmcmdResponse->dataBuff.lData[0];
+            precord->rval = (int32_t)pmcmdResponse->dataBuff.lData[0];
         } else if (option == 'U') {
-            pai->rval = (uint16_t)pmcmdResponse->dataBuff.wData[0];
+            precord->rval = (uint16_t)pmcmdResponse->dataBuff.wData[0];
         } else {
-            pai->rval = (int16_t)pmcmdResponse->dataBuff.wData[0];
+            precord->rval = (int16_t)pmcmdResponse->dataBuff.wData[0];
         }
 
     } else { // First call (PACT is still FALSE)
         /* Issue read request */
         if (f3rp61Seq_queueRequest(dpvt) < 0) {
-            errlogPrintf("devAiF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n", pai->name);
+            errlogPrintf("devAiF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n", precord->name);
             return -1;
         }
 
-        pai->pact = 1;
+        precord->pact = 1;
     }
 
     return 0; // convert

@@ -1,5 +1,5 @@
 /*************************************************************************
-* Copyright (c) 2013 High Energy Accelerator Reseach Organization (KEK)
+* Copyright (c) 2013 High Energy Accelerator Research Organization (KEK)
 *
 * F3RP61 Device Support 1.3.0
 * and higher are distributed subject to a Software License Agreement found
@@ -36,7 +36,7 @@
 
 #include <drvF3RP61.h>
 
-/* Create the dset for devMbboF3RP61 */
+// Create the dset for devMbboF3RP61
 static long init_record();
 static long write_mbbo();
 
@@ -61,7 +61,7 @@ struct {
 epicsExportAddress(dset, devMbboF3RP61);
 
 typedef struct {
-    IOSCANPVT ioscanpvt; /* must come first */
+    IOSCANPVT ioscanpvt; // must come first
     union {
         M3IO_ACCESS_COM acom;
         M3IO_ACCESS_REG drly;
@@ -69,171 +69,204 @@ typedef struct {
     char device;
 } F3RP61_LO_DPVT;
 
-/*
-  init_record() initializes record - parses INP/OUT field string,
-  allocates private data storage area and sets initial configure
-  values.
-*/
-static long init_record(mbboRecord *pmbbo)
+// init_record() initializes record - parses INP/OUT field string,
+// allocates private data storage area and sets initial configure
+// values.
+static long init_record(mbboRecord *precord)
 {
     int unitno = 0, slotno = 0, cpuno = 0, start = 0;
     char device = 0;
 
-    /* Link type must be INST_IO */
-    if (pmbbo->out.type != INST_IO) {
-        recGblRecordError(S_db_badField, pmbbo,
+    // Link type must be INST_IO
+    if (precord->out.type != INST_IO) {
+        recGblRecordError(S_db_badField, precord,
                           "devMbboF3RP61 (init_record) Illegal OUT field");
-        pmbbo->pact = 1;
+        precord->pact = 1;
         return S_db_badField;
     }
 
-    struct link *plink = &pmbbo->out;
-    int   size = strlen(plink->value.instio.string) + 1;
+    struct link *plink = &precord->out;
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for appending the NULL character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
-    /* Parse for possible interrupt source */
-    char *pC = strchr(buf, ':');  /* check if it is interrupt based (example: @U0,S3,Y1:U0,S4,X1) */
-    if (pC) {
-        *pC++ = '\0';
-        if (sscanf(pC, "U%d,S%d,X%d", &unitno, &slotno, &start) < 3) {
-            errlogPrintf("devMbboF3RP61: can't get interrupt source address for %s\n", pmbbo->name);
-            pmbbo->pact = 1;
+    // Parse option
+    //char *popt = strchr(buf, '&');
+    //if (popt) {
+    //    char option = 'W'; // Dummy option for Word access
+    //    *popt++ = '\0';
+    //    if (sscanf(popt, "%c", &option) < 1) {
+    //        errlogPrintf("devMbboF3RP61: can't get option for %s\n", precord->name);
+    //        precord->pact = 1;
+    //        return -1;
+    //    }
+    //    if (1) {                    // Option not recognized
+    //        errlogPrintf("devMbboF3RP61: unsupported option \'%c\' for %s\n", option, precord->name);
+    //        precord->pact = 1;
+    //       return -1;
+    //   }
+    //}
+
+    // Parse for possible interrupt source
+    char *pint = strchr(buf, ':'); // check if SCAN is interrupt based (example: @U0,S3,Y1:U0,S4,X1)
+    if (pint) {
+        *pint++ = '\0';
+        if (sscanf(pint, "U%d,S%d,X%d", &unitno, &slotno, &start) < 3) {
+            errlogPrintf("devMbboF3RP61: can't get interrupt source address for %s\n", precord->name);
+            precord->pact = 1;
             return -1;
         }
 
-        if (f3rp61_register_io_interrupt((dbCommon *) pmbbo, unitno, slotno, start) < 0) {
-            errlogPrintf("devMbboF3RP61: can't register I/O interrupt for %s\n", pmbbo->name);
-            pmbbo->pact = 1;
+        if (f3rp61_register_io_interrupt((dbCommon *) precord, unitno, slotno, start) < 0) {
+            errlogPrintf("devMbboF3RP61: can't register I/O interrupt for %s\n", precord->name);
+            precord->pact = 1;
             return -1;
         }
     }
 
-    /* Parse slot, device and register number */
+    // Parse slot, device and register number
     if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
         if (sscanf(buf, "CPU%d,R%d", &cpuno, &start) < 2) {
             if (sscanf(buf, "%c%d", &device, &start) < 2) {
-                errlogPrintf("devMbboF3RP61: can't get I/O address for %s\n", pmbbo->name);
-                pmbbo->pact = 1;
+                errlogPrintf("devMbboF3RP61: can't get I/O address for %s\n", precord->name);
+                precord->pact = 1;
                 return -1;
             } else if (device != 'W' && device != 'L' && device != 'R' && device != 'E') {
-                errlogPrintf("devMbboF3RP61: unsupported device \'%c\' for %s\n", device, pmbbo->name);
-                pmbbo->pact = 1;
+                errlogPrintf("devMbboF3RP61: unsupported device \'%c\' for %s\n", device, precord->name);
+                precord->pact = 1;
                 return -1;
             }
         } else {
-            device = 'r';
+            device = 'r'; // Shared memory (or 'Old interface' for shared registers/relays)
         }
     }
 
-    /* Allocate private data storage area */
+    // Allocate private data storage area
     F3RP61_LO_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_LO_DPVT), "calloc failed");
     dpvt->device = device;
 
-    /* Check device validity and compose data structure for I/O request */
-    if (device == 'r') {                         // Shared registers - Using 'Old' interface
+    // Check device validity and compose data structure for I/O request
+    if (0) {                                     // dummy
+
+    } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
+               device == 'E' || device == 'L' || // Shared relays and Link relays
+               device == 'r') {                  // Shared memory
         M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-        pacom->cpuno = cpuno;
+        pacom->cpuno = cpuno; // for 'r' devices
         pacom->start = start;
         pacom->count = 1;
-    } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
-               device == 'E' || device == 'L') { // Shared relays and Link relays
-        M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-        pacom->start = start;
+
     } else if (device == 'Y' ||                  // Output relays on I/O modules
-               device == 'A' || device == 'M') { // I/O registers and mode registers on I/O modules
+               device == 'M' ||                  // Mode registers on I/O modules
+               device == 'A' ) {                 // I/O registers on special modules
         M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
         pdrly->unitno = unitno;
         pdrly->slotno = slotno;
         pdrly->start  = start;
         pdrly->count  = 1;
+
     } else {
-        errlogPrintf("devMbboF3RP61: unsupported device \'%c\' for %s\n", device, pmbbo->name);
-        pmbbo->pact = 1;
+        errlogPrintf("devMbboF3RP61: unsupported device \'%c\' for %s\n", device, precord->name);
+        precord->pact = 1;
         return -1;
     }
 
-    pmbbo->dpvt = dpvt;
+    precord->dpvt = dpvt;
 
     return 0;
 }
 
-/*
-  write_mbbo() is called when there was a request to process a
-  record. When called, it sends the value from the VAL field to the
-  driver.
-*/
-static long write_mbbo(mbboRecord *pmbbo)
+// write_mbbo() is called when there was a request to process a
+// record. When called, it sends the value from the VAL field to the
+// driver.
+static long write_mbbo(mbboRecord *precord)
 {
-    F3RP61_LO_DPVT *dpvt = pmbbo->dpvt;
+    F3RP61_LO_DPVT *dpvt = precord->dpvt;
     M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
     M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
-    char device = dpvt->device;
-    int command = 0;
-    unsigned short wdata = 0;
-    void *p = pdrly;
+    const char device = dpvt->device;
 
-    /* Compose ioctl request */
-    switch (device) {
-    case 'W':
-    case 'R':
-    case 'L':
-    case 'E':
-        wdata = (uint16_t)pmbbo->rval;
-        break;
-    case 'Y':
-        command = M3IO_WRITE_OUTRELAY;
-        pdrly->u.outrly[0].data = (uint16_t)pmbbo->rval;
-        pdrly->u.outrly[0].mask = 0xFFFF;
-        break;
-    case 'r':
-        command = M3IO_WRITE_COM;
-        wdata = (unsigned short) pmbbo->rval;
-        pacom->pdata = &wdata;
-        p = pacom;
-        break;
-    case 'M':
-        /* need to use old style */
-        command = M3IO_WRITE_MODE;
-        wdata = (unsigned short) pmbbo->rval;
-        pdrly->u.wdata[0] = wdata;
-        break;
-    default:
-        command = M3IO_WRITE_REG;
-        wdata = (uint16_t)pmbbo->rval;
-        pdrly->u.pwdata = &wdata;
-    }
+    // Compose data to write
+    uint16_t wdata = (uint16_t)precord->val;
+    uint16_t mask = 0xffff;
 
-    /* Issue API function */
-    if (device == 'R') {        // Shared registers
-        if (writeM3ComRegister(pacom->start, 1, &wdata) < 0) {
-            errlogPrintf("devMbboF3RP61: writeM3ComRegister failed [%d] for %s\n", errno, pmbbo->name);
+    // Issue API function
+    if (0) {                    // dummy
+
+    } else if (device == 'R') { // Shared registers
+        if (writeM3ComRegister(pacom->start, pacom->count, &wdata) < 0) {
+            errlogPrintf("devMbboF3RP61: writeM3ComRegister failed [%d] for %s\n", errno, precord->name);
             return -1;
         }
+
     } else if (device == 'E') { // Shared relays
-        if (writeM3ComRelay(pacom->start, 1, &wdata) < 0) {
-            errlogPrintf("devMbboF3RP61: writeM3ComRelay failed [%d] for %s\n", errno, pmbbo->name);
+        if (writeM3ComRelay(pacom->start, pacom->count, &wdata) < 0) {
+            errlogPrintf("devMbboF3RP61: writeM3ComRelay failed [%d] for %s\n", errno, precord->name);
             return -1;
         }
+
     } else if (device == 'W') { // Link registers
-        if (writeM3LinkRegister(pacom->start, 1, &wdata) < 0) {
-            errlogPrintf("devMbboF3RP61: writeM3LinkRegister failed [%d] for %s\n", errno, pmbbo->name);
+        if (writeM3LinkRegister(pacom->start, pacom->count, &wdata) < 0) {
+            errlogPrintf("devMbboF3RP61: writeM3LinkRegister failed [%d] for %s\n", errno, precord->name);
             return -1;
         }
+
     } else if (device == 'L') { // Link relays
-        if (writeM3LinkRelay(pacom->start, 1, &wdata) < 0) {
-            errlogPrintf("devMbboF3RP61: writeM3LinkRelay failed [%d] for %s\n", errno, pmbbo->name);
+        if (writeM3LinkRelay(pacom->start, pacom->count, &wdata) < 0) {
+            errlogPrintf("devMbboF3RP61: writeM3LinkRelay failed [%d] for %s\n", errno, precord->name);
             return -1;
         }
-    } else {                    // Registers and relays on I/O modules
-        if (ioctl(f3rp61_fd, command, p) < 0) {
-            errlogPrintf("devMbboF3RP61: ioctl failed [%d] for %s\n", errno, pmbbo->name);
+
+    } else if (device == 'r') { // Shared memory
+#if defined(__powerpc__)
+        pacom->pdata = &wdata;
+        if (ioctl(f3rp61_fd, M3IO_WRITE_COM, pacom) < 0) {
+            errlogPrintf("devMbbooF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
+            return -1;
+        }
+#else
+        if (writeM3CpuMemory(pacom->cpuno, pacom->start, pacom->count, &wdata) < 0) {
+            errlogPrintf("devMbboF3RP61: writeM3CpuMemory failed [%d] for %s\n", errno, precord->name);
+            return -1;
+        }
+#endif
+     } else if (device == 'Y') { // Output relays on I/O modules
+        pdrly->u.outrly[0].data = wdata;
+        pdrly->u.outrly[0].mask = mask;
+        if (ioctl(f3rp61_fd, M3IO_WRITE_OUTRELAY, pdrly) < 0) {
+            errlogPrintf("devMbboF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
+            return -1;
+        }
+
+    } else if (device == 'M') { // Mode registers on I/O modules
+#if defined(__powerpc__)
+        // On F3RP61 start and count are fixed to 1 and 3 in ioctl() request,
+        // and only the 1st element is valid in the data written.
+        pdrly->start  = 1;
+        pdrly->count  = 3;
+        pdrly->u.wdata[0] = wdata;
+        if (ioctl(f3rp61_fd, M3IO_WRITE_MODE, pdrly) < 0) {
+            errlogPrintf("devMbboF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
+            return -1;
+        }
+#else
+        if (writeM3IoModeRegister(pdrly->unitno, pdrly->slotno, pdrly->start, pdrly->count, &wdata) < 0) {
+            errlogPrintf("devMbboF3RP61: writeM3IoModeRegisterL failed [%d] for %s\n", errno, precord->name);
+            return -1;
+        }
+#endif
+
+    } else {/*(device == 'A')*/ // I/O registers on special modules
+        pdrly->u.pwdata = &wdata;
+        if (ioctl(f3rp61_fd, M3IO_WRITE_REG, pdrly) < 0) {
+            errlogPrintf("devMbboF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
             return -1;
         }
     }
 
-    pmbbo->udf = FALSE;
+    //
+    precord->udf = FALSE;
 
     return 0;
 }

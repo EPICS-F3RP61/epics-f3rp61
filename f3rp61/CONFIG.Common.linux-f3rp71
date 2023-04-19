@@ -11,7 +11,9 @@ include $(CONFIG)/os/CONFIG.Common.linuxCommon
 
 ARCH_CLASS = arm
 
+# We don't need to define _arm_ anymore but keep it for backward compatibility.
 ARCH_DEP_CPPFLAGS += -D_arm_
+
 ARCH_DEP_CFLAGS += -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=softfp
 ARCH_DEP_CXXFLAGS += -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=softfp
 ARCH_DEP_LDFLAGS += -lpthread

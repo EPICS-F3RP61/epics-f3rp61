@@ -13,6 +13,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+//#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,7 +52,7 @@ struct {
 
 epicsExportAddress(drvet, drvF3RP61Seq);
 
-int f3rp61Seq_fd;
+int f3rp61Seq_fd = -1;
 
 void showreq(const iocshArgBuf *);
 void stopshow(const iocshArgBuf *);
@@ -127,9 +128,9 @@ static void mcmd_thread(void *arg)
 
         F3RP61_SEQ_DPVT *dpvt;
         while ((dpvt = get_request_from_queue())) {
+            dpvt->ret = 0;
             MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
             pmcmdStruct->mcmdRequest.comId = ++request_id;
-            dpvt->ret = 0;
 
             if (debug_flag) {
                 dump_mcmd_request(pmcmdStruct);

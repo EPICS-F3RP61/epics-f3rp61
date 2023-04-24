@@ -128,8 +128,9 @@ static long init_record(boRecord *precord)
 
     pM3WriteSeqdev->dataNum = 1;
     pM3WriteSeqdev->topDevNo = top;
-    callbackSetUser(precord, &dpvt->callback);
 
+    //
+    callbackSetUser(precord, &dpvt->callback);
     precord->dpvt = dpvt;
 
     return 0;
@@ -141,15 +142,15 @@ static long init_record(boRecord *precord)
 static long write_bo(boRecord *precord)
 {
     F3RP61_SEQ_DPVT *dpvt = precord->dpvt;
-    MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
 
     if (precord->pact) { // Second call (PACT is TRUE)
-        MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
-
         if (dpvt->ret < 0) {
             errlogPrintf("devBoF3RP61Seq: write_bo failed for %s\n", precord->name);
             return -1;
         }
+
+        MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
+        MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (pmcmdResponse->errorCode) {
             errlogPrintf("devBoF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, precord->name);
@@ -160,8 +161,11 @@ static long write_bo(boRecord *precord)
         precord->udf = FALSE;
 
     } else { // First call (PACT is still FALSE)
+        MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
         MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
+
+        //
         pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) precord->rval;
 
         // Issue write request

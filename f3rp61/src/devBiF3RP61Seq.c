@@ -128,8 +128,9 @@ static long init_record(biRecord *precord)
 
     pM3ReadSeqdev->dataNum = 1;
     pM3ReadSeqdev->topDevNo = top;
-    callbackSetUser(precord, &dpvt->callback);
 
+    //
+    callbackSetUser(precord, &dpvt->callback);
     precord->dpvt = dpvt;
 
     return 0;
@@ -143,13 +144,13 @@ static long read_bi(biRecord *precord)
     F3RP61_SEQ_DPVT *dpvt = precord->dpvt;
 
     if (precord->pact) { // Second call (PACT is TRUE)
-        MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
-        MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
-
         if (dpvt->ret < 0) {
             errlogPrintf("devBiF3RP61Seq: read_bi failed for %s\n", precord->name);
             return -1;
         }
+
+        MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
+        MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (pmcmdResponse->errorCode) {
             errlogPrintf("devBiF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, precord->name);

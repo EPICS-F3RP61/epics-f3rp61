@@ -104,10 +104,10 @@ static long init_record(aoRecord *precord)
         }
 
         if (option == 'W') {        // Dummy option for Word access
-        } else if (option == 'D') { // Double precision floating point
-        } else if (option == 'F') { // Single precision floating point
-        } else if (option == 'L') { // Long word
         } else if (option == 'U') { // Unsigned integer, perhaps we'd better disable this
+        } else if (option == 'L') { // Long word
+        } else if (option == 'F') { // Single precision floating point
+        } else if (option == 'D') { // Double precision floating point
         } else {                    // Option not recognized
             errlogPrintf("devAoF3RP61: unsupported option \'%c\' for %s\n", option, precord->name);
             precord->pact = 1;

@@ -107,9 +107,9 @@ static long init_record(longinRecord *precord)
         }
 
         if (option == 'W') {        // Dummy option for Word access
+        } else if (option == 'B') { // Binary Coded Decimal format
         } else if (option == 'U') { // Unsigned integer
         } else if (option == 'L') { // Long word
-        } else if (option == 'B') { // Binary Coded Decimal format
         } else {                    // Option not recognized
             errlogPrintf("devLiF3RP61: unsupported option \'%c\' for %s\n", option, precord->name);
             precord->pact = 1;

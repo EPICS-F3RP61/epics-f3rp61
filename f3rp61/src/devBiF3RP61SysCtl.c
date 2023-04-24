@@ -61,7 +61,7 @@ typedef struct {
 } F3RP61SysCtl_BI_DPVT;
 
 // init_record() initializes record - parses INP/OUT field string,
-// allocates private data storage area and sets initial configure
+// allocates private data storage area and sets initial configuration
 // values.
 static long init_record(biRecord *precord)
 {
@@ -77,7 +77,7 @@ static long init_record(biRecord *precord)
     }
 
     struct link *plink = &precord->inp;
-    int   size = strlen(plink->value.instio.string) + 1; // + 1 for appending the NULL character
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
@@ -107,7 +107,7 @@ static long init_record(biRecord *precord)
             return -1;
         }
 
-#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
+#ifdef M3SC_LED_US3_ON // it is assumed that US1 and US2 are also defined
     } else if (device == 'U') {                  // User-LED
         if (led != '1' && led != '2' && led != '3') {
             errlogPrintf("devBiF3RP61SysCtl: unsupported USER LED address \'%c\' for %s\n", led, precord->name);
@@ -128,9 +128,9 @@ static long init_record(biRecord *precord)
     return 0;
 }
 
-// read_bi() is called when there was a request to process a
-// record. When called, it reads the value from the driver and stores
-// to the VAL field.
+// read_bi() is called when there was a request to process a record.
+// When called, it reads the value from the driver and stores to the
+// VAL field.
 static long read_bi(biRecord *precord)
 {
     F3RP61SysCtl_BI_DPVT *dpvt = (F3RP61SysCtl_BI_DPVT *) precord->dpvt;
@@ -152,11 +152,11 @@ static long read_bi(biRecord *precord)
             precord->rval = (data & LED_RUN_FLG) ? 1 : 0;
         } else if (led == 'A') {
             precord->rval = (data & LED_ALM_FLG) ? 1 : 0;
-        } else {/* led == 'E' */
+        } else {//(led == 'E)
             precord->rval = (data & LED_ERR_FLG) ? 1 : 0;
         }
 
-#ifdef M3SC_LED_US3_ON /* it is assumed that US1 and US2 are also defined */
+#ifdef M3SC_LED_US3_ON // it is assumed that US1 and US2 are also defined
     } else if (device == 'U') { // User-LED
         if (ioctl(f3rp61SysCtl_fd, M3SC_GET_US_LED, &data) < 0) {
             errlogPrintf("devBiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, precord->name);
@@ -166,12 +166,12 @@ static long read_bi(biRecord *precord)
             precord->rval = (data & LED_US1_FLG) ? 1 : 0;
         } else if (led == '2') {
             precord->rval = (data & LED_US2_FLG) ? 1 : 0;
-        } else {/* led == '3' */
+        } else {//(led == '3')
             precord->rval = (data & LED_US3_FLG) ? 1 : 0;
         }
 #endif
 
-    } else {/*(device == 'R')*/ // Status Register
+    } else {//(device == 'R')   // Status Register
         if (ioctl(f3rp61SysCtl_fd, M3SC_CHECK_BAT, &data) < 0) {
             errlogPrintf("devBiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, precord->name);
             return -1;

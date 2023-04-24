@@ -64,7 +64,7 @@ typedef struct {
 } F3RP61_SO_DPVT;
 
 // init_record() initializes record - parses INP/OUT field string,
-// allocates private data storage area and sets initial configure
+// allocates private data storage area and sets initial configuration
 // values.
 static long init_record(stringoutRecord *precord)
 {
@@ -80,7 +80,7 @@ static long init_record(stringoutRecord *precord)
     }
 
     struct link *plink = &precord->out;
-    int   size = strlen(plink->value.instio.string) + 1; // + 1 for appending the NULL character
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
@@ -133,9 +133,8 @@ static long init_record(stringoutRecord *precord)
     return 0;
 }
 
-// write_so() is called when there was a request to process a
-// record. When called, it sends the value from the VAL field to the
-// driver.
+// write_so() is called when there was a request to process a record.
+// When called, it sends the value from the VAL field to the driver.
 static long write_so(stringoutRecord *precord)
 {
     F3RP61_SO_DPVT *dpvt = precord->dpvt;

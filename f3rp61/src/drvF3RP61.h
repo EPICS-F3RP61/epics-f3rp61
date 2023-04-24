@@ -15,4 +15,4 @@ long f3rp61_register_io_interrupt(dbCommon *, int, int, int);
 
 extern int f3rp61_fd;
 
-#endif /* DRVF3RP61_H */
+#endif // DRVF3RP61_H

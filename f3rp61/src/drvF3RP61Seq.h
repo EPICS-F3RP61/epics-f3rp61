@@ -43,4 +43,4 @@ int f3rp61Seq_queueRequest();
 
 extern int f3rp61Seq_fd;
 
-#endif /* DRVF3RP61SEQ_H */
+#endif // DRVF3RP61SEQ_H

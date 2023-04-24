@@ -34,7 +34,7 @@
 
 #include <drvF3RP61Seq.h>
 
-/* Create the dset for devBiF3RP61Seq */
+// Create the dset for devBiF3RP61Seq
 static long init_record();
 static long read_bi();
 
@@ -56,17 +56,15 @@ struct {
 
 epicsExportAddress(dset, devBiF3RP61Seq);
 
-/*
-  init_record() initializes record - parses INP/OUT field string,
-  allocates private data storage area and sets initial configure
-  values.
-*/
+// init_record() initializes record - parses INP/OUT field string,
+// allocates private data storage area and sets initial configuration
+// values.
 static long init_record(biRecord *precord)
 {
     int srcSlot = 0, destSlot = 0, top = 0;
     char device = 0;
 
-    /* Link type must be INST_IO */
+    // Link type must be INST_IO
     if (precord->inp.type != INST_IO) {
         recGblRecordError(S_db_badField, precord,
                           "devBiF3RP61Seq (init_record) Illegal INP field");
@@ -75,29 +73,29 @@ static long init_record(biRecord *precord)
     }
 
     struct link *plink = &precord->inp;
-    int   size = strlen(plink->value.instio.string) + 1;
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
-    /* Parse slot, device and register number */
+    // Parse slot, device and register number
     if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
         errlogPrintf("devBiF3RP61Seq: can't get device address for %s\n", precord->name);
         precord->pact = 1;
         return -1;
     }
 
-    /* Read the slot number of CPU module */
+    // Read the slot number of CPU module
     if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
         errlogPrintf("devBiF3RP61Seq: ioctl failed [%d] for %s\n", errno, precord->name);
         precord->pact = 1;
         return -1;
     }
 
-    /* Allocate private data storage area */
+    // Allocate private data storage area
     F3RP61_SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_SEQ_DPVT), "calloc failed");
 
-    /* Compose data structure for I/O request to CPU module */
+    // Compose data structure for I/O request to CPU module
     MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
     pmcmdStruct->timeOut = 1;
 
@@ -113,7 +111,7 @@ static long init_record(biRecord *precord)
     M3_READ_SEQDEV *pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
     pM3ReadSeqdev->accessType = 0;
 
-    /* Check device validity and set device type*/
+    // Check device validity and set device type
     switch (device)
     {
     case 'I': // internal relays
@@ -137,11 +135,9 @@ static long init_record(biRecord *precord)
     return 0;
 }
 
-/*
-  read_bi() is called when there was a request to process a record.
-  When called, it reads the value from the driver and stores to the
-  VAL field, then sets PACT field back to TRUE.
-*/
+// read_bi() is called when there was a request to process a record.
+// When called, it reads the value from the driver and stores to the
+// VAL field, then sets PACT field back to TRUE.
 static long read_bi(biRecord *precord)
 {
     F3RP61_SEQ_DPVT *dpvt = precord->dpvt;
@@ -160,12 +156,14 @@ static long read_bi(biRecord *precord)
             return -1;
         }
 
-        /* fill VAL field */
+        //
         precord->udf = FALSE;
+
+        // fill VAL field
         precord->rval = (unsigned long) pmcmdResponse->dataBuff.wData[0];
 
     } else { // First call (PACT is still FALSE)
-        /* Issue read request */
+        // Issue read request
         if (f3rp61Seq_queueRequest(dpvt) < 0) {
             errlogPrintf("devBiF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n", precord->name);
             return -1;

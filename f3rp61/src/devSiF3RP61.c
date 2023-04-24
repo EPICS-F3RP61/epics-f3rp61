@@ -65,7 +65,7 @@ typedef struct {
 } F3RP61_SI_DPVT;
 
 // init_record() initializes record - parses INP/OUT field string,
-// allocates private data storage area and sets initial configure
+// allocates private data storage area and sets initial configuration
 // values.
 static long init_record(stringinRecord *precord)
 {
@@ -81,7 +81,7 @@ static long init_record(stringinRecord *precord)
     }
 
     struct link *plink = &precord->inp;
-    int   size = strlen(plink->value.instio.string) + 1; // + 1 for appending the NULL character
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
@@ -116,7 +116,7 @@ static long init_record(stringinRecord *precord)
     // Check device validity and compose data structure for I/O request
     if (0) {                                     // dummy
 
-    } else  if (device == 'A') {                 // I/O registers on special modules
+    } else if (device == 'A') {                  // I/O registers on special modules
         M3IO_ACCESS_REG *pdrly = &dpvt->drly;
         pdrly->unitno = unitno;
         pdrly->slotno = slotno;
@@ -136,9 +136,9 @@ static long init_record(stringinRecord *precord)
     return 0;
 }
 
-// read_si() is called when there was a request to process a
-// record. When called, it reads the value from the driver and stores
-// to the VAL field.
+// read_si() is called when there was a request to process a record.
+// When called, it reads the value from the driver and stores to the
+// VAL field.
 static long read_si(stringinRecord *precord)
 {
     F3RP61_SI_DPVT *dpvt = precord->dpvt;

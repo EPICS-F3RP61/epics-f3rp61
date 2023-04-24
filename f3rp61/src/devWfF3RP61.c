@@ -71,7 +71,7 @@ typedef struct {
 } F3RP61_WF_DPVT;
 
 // init_record() initializes record - parses INP/OUT field string,
-// allocates private data storage area and sets initial configure
+// allocates private data storage area and sets initial configuration
 // values.
 static long init_record(waveformRecord *precord)
 {
@@ -89,7 +89,7 @@ static long init_record(waveformRecord *precord)
     }
 
     struct link *plink = &precord->inp;
-    int   size = strlen(plink->value.instio.string) + 1; // + 1 for appending the NULL character
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
@@ -211,9 +211,9 @@ static long init_record(waveformRecord *precord)
     return 0;
 }
 
-// read_wf() is called when there was a request to process a
-// record. When called, it reads the value from the driver and stores
-// to the VAL field.
+// read_wf() is called when there was a request to process a record.
+// When called, it reads the value from the driver and stores to the
+// VAL field.
 static long read_wf(waveformRecord *precord)
 {
     F3RP61_WF_DPVT *dpvt = precord->dpvt;
@@ -256,7 +256,7 @@ static long read_wf(waveformRecord *precord)
         }
 #endif
 
-    } else {/*(device == 'A')*/ // I/O registers on special modules
+    } else {//(device == 'A')   // I/O registers on special modules
         if (ftvl != DBF_USHORT && ftvl != DBF_SHORT) {
             pdrly->u.pldata = ldata;
             if (ioctl(f3rp61_fd, M3IO_READ_REG_L, pdrly) < 0) {

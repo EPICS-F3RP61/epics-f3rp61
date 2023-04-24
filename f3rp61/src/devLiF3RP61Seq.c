@@ -39,7 +39,7 @@
 #include <drvF3RP61Seq.h>
 #include <devF3RP61bcd.h>
 
-/* Create the dset for devLiF3RP61Seq */
+// Create the dset for devLiF3RP61Seq
 static long init_record();
 static long read_longin();
 
@@ -61,18 +61,16 @@ struct {
 
 epicsExportAddress(dset, devLiF3RP61Seq);
 
-/*
-  init_record() initializes record - parses INP/OUT field string,
-  allocates private data storage area and sets initial configure
-  values.
-*/
+// init_record() initializes record - parses INP/OUT field string,
+// allocates private data storage area and sets initial configuration
+// values.
 static long init_record(longinRecord *precord)
 {
     int srcSlot = 0, destSlot = 0, top = 0;
     char device = 0;
     char option = 'W'; // Dummy option for Word access
 
-    /* Link type must be INST_IO */
+    // Link type must be INST_IO
     if (precord->inp.type != INST_IO) {
         recGblRecordError(S_db_badField, precord,
                           "devLiF3RP61Seq (init_record) Illegal INP field");
@@ -81,12 +79,12 @@ static long init_record(longinRecord *precord)
     }
 
     struct link *plink = &precord->inp;
-    int   size = strlen(plink->value.instio.string) + 1;
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
-    /* Parse option */
+    // Parse option
     char *pC = strchr(buf, '&');
     if (pC) {
         *pC++ = '\0';
@@ -107,25 +105,25 @@ static long init_record(longinRecord *precord)
         }
     }
 
-    /* Parse slot, device and register number */
+    // Parse slot, device and register number
     if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
         errlogPrintf("devLiF3RP61Seq: can't get device address for %s\n", precord->name);
         precord->pact = 1;
         return -1;
     }
 
-    /* Read the slot number of CPU module */
+    // Read the slot number of CPU module
     if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
         errlogPrintf("devLiF3RP61Seq: ioctl failed [%d] for %s\n", errno, precord->name);
         precord->pact = 1;
         return -1;
     }
 
-    /* Allocate private data storage area */
+    // Allocate private data storage area
     F3RP61_SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_SEQ_DPVT), "calloc failed");
     dpvt->option = option;
 
-    /* Compose data structure for I/O request to CPU module */
+    // Compose data structure for I/O request to CPU module
     MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
     pmcmdStruct->timeOut = 1;
 
@@ -140,7 +138,7 @@ static long init_record(longinRecord *precord)
 
     M3_READ_SEQDEV *pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
 
-    /* Check device validity and set device type*/
+    // Check device validity and set device type
     switch (device)
     {
     case 'D': // data register
@@ -182,11 +180,9 @@ static long init_record(longinRecord *precord)
     return 0;
 }
 
-/*
-  read_longin() is called when there was a request to process a
-  record. When called, it reads the value from the driver and stores
-  to the VAL field, then sets PACT field back to TRUE.
-*/
+// read_longin() is called when there was a request to process a record.
+// When called, it reads the value from the driver and stores to the
+// VAL field, then sets PACT field back to TRUE.
 static long read_longin(longinRecord *precord)
 {
     F3RP61_SEQ_DPVT *dpvt = precord->dpvt;
@@ -205,8 +201,10 @@ static long read_longin(longinRecord *precord)
             return -1;
         }
 
-        /* fill VAL field */
+        //
         precord->udf = FALSE;
+
+        // fill VAL field
         const char option = dpvt->option;
         if (option == 'B') {
             precord->val = devF3RP61bcd2int(pmcmdResponse->dataBuff.wData[0], precord);
@@ -219,7 +217,7 @@ static long read_longin(longinRecord *precord)
         }
 
     } else { // First call (PACT is still FALSE)
-        /* Issue read request */
+        // Issue read request
         if (f3rp61Seq_queueRequest(dpvt) < 0) {
             errlogPrintf("devLiF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n", precord->name);
             return -1;

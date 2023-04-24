@@ -70,7 +70,7 @@ typedef struct {
 } F3RP61_LO_DPVT;
 
 // init_record() initializes record - parses INP/OUT field string,
-// allocates private data storage area and sets initial configure
+// allocates private data storage area and sets initial configuration
 // values.
 static long init_record(mbboDirectRecord *precord)
 {
@@ -86,7 +86,7 @@ static long init_record(mbboDirectRecord *precord)
     }
 
     struct link *plink = &precord->out;
-    int   size = strlen(plink->value.instio.string) + 1; // + 1 for appending the NULL character
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
@@ -258,7 +258,7 @@ static long write_mbboDirect(mbboDirectRecord *precord)
         }
 #endif
 
-    } else {/*(device == 'A')*/ // I/O registers on special modules
+    } else {//(device == 'A')   // I/O registers on special modules
         pdrly->u.pwdata = &wdata;
         if (ioctl(f3rp61_fd, M3IO_WRITE_REG, pdrly) < 0) {
             errlogPrintf("devMbboDirectF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);

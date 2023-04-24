@@ -70,7 +70,7 @@ typedef struct {
 } F3RP61_LO_DPVT;
 
 // init_record() initializes record - parses INP/OUT field string,
-// allocates private data storage area and sets initial configure
+// allocates private data storage area and sets initial configuration
 // values.
 static long init_record(mbboRecord *precord)
 {
@@ -86,7 +86,7 @@ static long init_record(mbboRecord *precord)
     }
 
     struct link *plink = &precord->out;
-    int   size = strlen(plink->value.instio.string) + 1; // + 1 for appending the NULL character
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
@@ -177,9 +177,8 @@ static long init_record(mbboRecord *precord)
     return 0;
 }
 
-// write_mbbo() is called when there was a request to process a
-// record. When called, it sends the value from the VAL field to the
-// driver.
+// write_mbbo() is called when there was a request to process a record.
+// When called, it sends the value from the VAL field to the driver.
 static long write_mbbo(mbboRecord *precord)
 {
     F3RP61_LO_DPVT *dpvt = precord->dpvt;
@@ -231,7 +230,7 @@ static long write_mbbo(mbboRecord *precord)
             return -1;
         }
 #endif
-     } else if (device == 'Y') { // Output relays on I/O modules
+    } else if (device == 'Y') { // Output relays on I/O modules
         pdrly->u.outrly[0].data = wdata;
         pdrly->u.outrly[0].mask = mask;
         if (ioctl(f3rp61_fd, M3IO_WRITE_OUTRELAY, pdrly) < 0) {
@@ -257,7 +256,7 @@ static long write_mbbo(mbboRecord *precord)
         }
 #endif
 
-    } else {/*(device == 'A')*/ // I/O registers on special modules
+    } else {//(device == 'A')   // I/O registers on special modules
         pdrly->u.pwdata = &wdata;
         if (ioctl(f3rp61_fd, M3IO_WRITE_REG, pdrly) < 0) {
             errlogPrintf("devMbboF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);

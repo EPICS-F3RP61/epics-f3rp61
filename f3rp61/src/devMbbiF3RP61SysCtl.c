@@ -64,7 +64,7 @@ typedef struct {
 } F3RP61SysCtl_MBBI_DPVT;
 
 // init_record() initializes record - parses INP/OUT field string,
-// allocates private data storage area and sets initial configure
+// allocates private data storage area and sets initial configuration
 // values.
 static long init_record(mbbiRecord *precord)
 {
@@ -77,7 +77,7 @@ static long init_record(mbbiRecord *precord)
     }
 
     struct link *plink = &precord->inp;
-    int   size = strlen(plink->value.instio.string) + 1; // + 1 for appending the NULL character
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
@@ -110,9 +110,9 @@ static long init_record(mbbiRecord *precord)
     return 0;
 }
 
-// read_mbbi() is called when there was a request to process a
-// record. When called, it reads the value from the driver and stores
-// to the VAL field.
+// read_mbbi() is called when there was a request to process a record.
+// When called, it reads the value from the driver and stores to the
+// VAL field.
 static long read_mbbi(mbbiRecord *precord)
 {
     F3RP61SysCtl_MBBI_DPVT *dpvt = precord->dpvt;

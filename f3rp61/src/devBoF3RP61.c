@@ -64,7 +64,7 @@ typedef struct {
 } F3RP61_BO_DPVT;
 
 // init_record() initializes record - parses INP/OUT field string,
-// allocates private data storage area and sets initial configure
+// allocates private data storage area and sets initial configuration
 // values.
 static long init_record(boRecord *precord)
 {
@@ -80,7 +80,7 @@ static long init_record(boRecord *precord)
     }
 
     struct link *plink = &precord->out;
-    int   size = strlen(plink->value.instio.string) + 1; // + 1 for appending the NULL character
+    int   size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
@@ -160,9 +160,8 @@ static long init_record(boRecord *precord)
     return 0;
 }
 
-// write_bo() is called when there was a request to process a
-// record. When called, it sends the value from the VAL field to the
-// driver.
+// write_bo() is called when there was a request to process a record.
+// When called, it sends the value from the VAL field to the driver.
 static long write_bo(boRecord *precord)
 {
     F3RP61_BO_DPVT *dpvt = precord->dpvt;
@@ -187,7 +186,7 @@ static long write_bo(boRecord *precord)
             return -1;
         }
 
-    } else {/*(device == 'Y')*/ // Relays on I/O modules
+    } else {//(device == 'Y')   // Relays on I/O modules
         poutrlyp->data = cdata;
         if (ioctl(f3rp61_fd, M3IO_WRITE_OUTRELAY_POINT, poutrlyp) < 0) {
             errlogPrintf("devBoF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);

@@ -152,7 +152,7 @@ static long read_bi(biRecord *precord)
             precord->rval = (data & LED_RUN_FLG) ? 1 : 0;
         } else if (led == 'A') {
             precord->rval = (data & LED_ALM_FLG) ? 1 : 0;
-        } else {//(led == 'E)
+        } else {//(led == 'E')
             precord->rval = (data & LED_ERR_FLG) ? 1 : 0;
         }
 

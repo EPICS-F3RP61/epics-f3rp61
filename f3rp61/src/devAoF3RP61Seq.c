@@ -112,6 +112,20 @@ static long init_record(aoRecord *precord)
         return -1;
     }
 
+    // Check device validity
+    switch (device)
+    {
+    case 'D': // data register
+    case 'B': // file register
+    case 'F': // cache register
+    case 'Z': // special register
+        break;
+    default:
+        errlogPrintf("devAoF3RP61Seq: unsupported device \'%c\' for %s\n", device, precord->name);
+        precord->pact = 1;
+        return -1;
+    }
+
     // Read the slot number of CPU module
     if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
         errlogPrintf("devAoF3RP61Seq: ioctl failed [%d] for %s\n", errno, precord->name);
@@ -136,45 +150,17 @@ static long init_record(aoRecord *precord)
     pmcmdRequest->subCode = 0x02;
 
     M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-
-    // Check device validity and set device type
-    switch (device)
-    {
-    case 'D': // data register
-        pM3WriteSeqdev->devType = 0x04;
-        break;
-    case 'B': // file register
-        pM3WriteSeqdev->devType = 0x02;
-        break;
-    case 'F': // cache register
-        pM3WriteSeqdev->devType = 0x06;
-        break;
-    case 'Z': // special register
-        pM3WriteSeqdev->devType = 0x1A;
-        break;
-    default:
-        errlogPrintf("devAoF3RP61Seq: unsupported device \'%c\' for %s\n", device, precord->name);
-        precord->pact = 1;
-        return -1;
-    }
-
-    switch (option) {
-    case 'D':
-        pM3WriteSeqdev->accessType = 4;
+    pM3WriteSeqdev->accessType = kWord;
+    if (option == 'D') {
+        pM3WriteSeqdev->dataNum = 4;
+    } else if (option == 'F' || option == 'L') {
         pM3WriteSeqdev->dataNum = 2;
-        break;
-    case 'L':
-    case 'F':
-        pM3WriteSeqdev->accessType = 4;
-        pM3WriteSeqdev->dataNum = 1;
-        break;
-    default:
-        pM3WriteSeqdev->accessType = 2;
+    } else {
         pM3WriteSeqdev->dataNum = 1;
     }
-
-    pmcmdRequest->dataSize = 10 + pM3WriteSeqdev->accessType * pM3WriteSeqdev->dataNum;
+    pM3WriteSeqdev->devType = device - '@'; // 'D'=>0x04, 'B'=>0x02, 'F'=>0x06, 'Z'=>0x1A
     pM3WriteSeqdev->topDevNo = top;
+    pmcmdRequest->dataSize = 10 + pM3WriteSeqdev->accessType * pM3WriteSeqdev->dataNum;
 
     //
     callbackSetUser(precord, &dpvt->callback);

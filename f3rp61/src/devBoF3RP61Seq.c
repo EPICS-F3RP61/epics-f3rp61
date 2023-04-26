@@ -85,6 +85,18 @@ static long init_record(boRecord *precord)
         return -1;
     }
 
+    // Check device validity
+    switch (device)
+    {
+    case 'I': // internal relays
+    case 'M': // special relays
+        break;
+    default:
+        errlogPrintf("devBoF3RP61Seq: unsupported device \'%c\' for %s\n", device, precord->name);
+        precord->pact = 1;
+        return -1;
+    }
+
     // Read the slot number of CPU module
     if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
         errlogPrintf("devBoF3RP61Seq: ioctl failed [%d] for %s\n", errno, precord->name);
@@ -109,24 +121,9 @@ static long init_record(boRecord *precord)
     pmcmdRequest->dataSize = 12;
 
     M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-    pM3WriteSeqdev->accessType = 0;
-
-    // Check device validity and compose data structure for I/O request
-    switch (device)
-    {
-    case 'I': // internal relays
-        pM3WriteSeqdev->devType = 0x09;
-        break;
-    case 'M': // special relays
-        pM3WriteSeqdev->devType = 0x0D;
-        break;
-    default:
-        errlogPrintf("devBoF3RP61Seq: unsupported device \'%c\' for %s\n", device, precord->name);
-        precord->pact = 1;
-        return -1;
-    }
-
+    pM3WriteSeqdev->accessType = kBit;
     pM3WriteSeqdev->dataNum = 1;
+    pM3WriteSeqdev->devType = device - '@'; // 'I'=>0x09, 'M'=>0x0D
     pM3WriteSeqdev->topDevNo = top;
 
     //

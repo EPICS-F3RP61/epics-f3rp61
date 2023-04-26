@@ -85,6 +85,18 @@ static long init_record(biRecord *precord)
         return -1;
     }
 
+    // Check device validity
+    switch (device)
+    {
+    case 'I': // internal relays
+    case 'M': // special relays
+        break;
+    default:
+        errlogPrintf("devBiF3RP61Seq: unsupported device \'%c\' for %s\n", device, precord->name);
+        precord->pact = 1;
+        return -1;
+    }
+
     // Read the slot number of CPU module
     if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
         errlogPrintf("devBiF3RP61Seq: ioctl failed [%d] for %s\n", errno, precord->name);
@@ -109,24 +121,9 @@ static long init_record(biRecord *precord)
     pmcmdRequest->dataSize = 10;
 
     M3_READ_SEQDEV *pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-    pM3ReadSeqdev->accessType = 0;
-
-    // Check device validity and set device type
-    switch (device)
-    {
-    case 'I': // internal relays
-        pM3ReadSeqdev->devType = 0x09;
-        break;
-    case 'M': // special relays
-        pM3ReadSeqdev->devType = 0x0D;
-        break;
-    default:
-        errlogPrintf("devBiF3RP61Seq: unsupported device \'%c\' for %s\n", device, precord->name);
-        precord->pact = 1;
-        return -1;
-    }
-
+    pM3ReadSeqdev->accessType = kBit;
     pM3ReadSeqdev->dataNum = 1;
+    pM3ReadSeqdev->devType = device - '@'; // 'I'=>0x09, 'M'=>0x0D
     pM3ReadSeqdev->topDevNo = top;
 
     //

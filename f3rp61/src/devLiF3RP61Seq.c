@@ -185,7 +185,7 @@ static long read_longin(longinRecord *precord)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devLiF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, precord->name);
+            errlogPrintf("devLiF3RP61Seq: errorCode 0x%04x returned for %s\n", pmcmdResponse->errorCode, precord->name);
             return -1;
         }
 

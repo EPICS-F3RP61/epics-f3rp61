@@ -186,7 +186,7 @@ static long read_ai(aiRecord *precord)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devAiF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, precord->name);
+            errlogPrintf("devAiF3RP61Seq: errorCode 0x%04x returned for %s\n", pmcmdResponse->errorCode, precord->name);
             return -1;
         }
 

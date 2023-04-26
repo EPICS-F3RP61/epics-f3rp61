@@ -150,7 +150,7 @@ static long read_bi(biRecord *precord)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devBiF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, precord->name);
+            errlogPrintf("devBiF3RP61Seq: errorCode 0x%04x returned for %s\n", pmcmdResponse->errorCode, precord->name);
             return -1;
         }
 

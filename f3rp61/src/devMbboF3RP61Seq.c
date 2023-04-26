@@ -154,7 +154,7 @@ static long write_mbbo(mbboRecord *precord)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devMbboF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, precord->name);
+            errlogPrintf("devMbboF3RP61Seq: errorCode 0x%04x returned for %s\n", pmcmdResponse->errorCode, precord->name);
             return -1;
         }
 

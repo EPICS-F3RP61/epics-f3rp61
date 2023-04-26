@@ -154,7 +154,7 @@ static long read_mbbi(mbbiRecord *precord)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devMbbiF3RP61Seq: errorCode %d returned for %s\n", pmcmdResponse->errorCode, precord->name);
+            errlogPrintf("devMbbiF3RP61Seq: errorCode 0x%04x returned for %s\n", pmcmdResponse->errorCode, precord->name);
             return -1;
         }
 

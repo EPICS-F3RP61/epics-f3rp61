@@ -177,9 +177,8 @@ static long init_record(mbboDirectRecord *precord)
     return 2; // no conversion
 }
 
-// write_mbboDirect() is called when there was a request to process a
-// record. When called, it sends the value from the VAL field to the
-// driver.
+// write_mbboDirect() is called when there was a request to process a record.
+// When called, it sends the value from the VAL field to the driver.
 static long write_mbboDirect(mbboDirectRecord *precord)
 {
     F3RP61_LO_DPVT *dpvt = precord->dpvt;

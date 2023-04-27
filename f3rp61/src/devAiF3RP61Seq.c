@@ -184,6 +184,7 @@ static long read_ai(aiRecord *precord)
 
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
+        uint16_t *wdata = pmcmdResponse->dataBuff.wData;
 
         if (pmcmdResponse->errorCode) {
             errlogPrintf("devAiF3RP61Seq: errorCode 0x%04x returned for %s\n", pmcmdResponse->errorCode, precord->name);
@@ -196,32 +197,44 @@ static long read_ai(aiRecord *precord)
         // fill VAL field
         const char option = dpvt->option;
         if (option == 'D') {
-            uint64_t l0 = pmcmdResponse->dataBuff.lData[0];
-            uint64_t l1 = pmcmdResponse->dataBuff.lData[1];
-            uint64_t lval = l1 << 32 | l0;
+            const uint64_t l0 = wdata[0];
+            const uint64_t l1 = wdata[1];
+            const uint64_t l2 = wdata[2];
+            const uint64_t l3 = wdata[3];
+            const uint64_t lval = l3<<48 | l2<< 32 | l1 << 16 | l0;
             double val;
             memcpy(&val, &lval, sizeof(double));
 
             // todo : consider ASLO and AOFF field
             // todo : consider SMOO field
             precord->val = val;
-            precord->udf = isnan(precord->val);
+            precord->udf = isnan(val);
             return 2; // no conversion
+
         } else if (option == 'F') {
+            const uint32_t l0 = wdata[0];
+            const uint32_t l1 = wdata[1];
+            const uint32_t lval = l1<<16 | l0;
             float val;
-            memcpy(&val, pmcmdResponse->dataBuff.lData, sizeof(float));
+            memcpy(&val, &lval, sizeof(float));
 
             // todo : consider ASLO and AOFF field
             // todo : consider SMOO field
             precord->val = val;
             precord->udf = isnan(val);
             return 2; // no conversion
+
         } else if (option == 'L') {
-            precord->rval = (int32_t)pmcmdResponse->dataBuff.lData[0];
+            const uint32_t l0 = wdata[0];
+            const uint32_t l1 = wdata[1];
+            precord->rval = l1<<16 | l0;
+
         } else if (option == 'U') {
-            precord->rval = (uint16_t)pmcmdResponse->dataBuff.wData[0];
+            precord->rval = (uint16_t)wdata[0];
+
         } else {
-            precord->rval = (int16_t)pmcmdResponse->dataBuff.wData[0];
+            precord->rval = (int16_t)wdata[0];
+
         }
 
     } else { // First call (PACT is still FALSE)
@@ -234,5 +247,5 @@ static long read_ai(aiRecord *precord)
         precord->pact = 1;
     }
 
-    return 0; // convert
+    return 0; // with conversion
 }

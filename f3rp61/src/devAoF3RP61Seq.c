@@ -175,7 +175,7 @@ static long init_record(aoRecord *precord)
 static long write_ao(aoRecord *precord)
 {
     F3RP61_SEQ_DPVT *dpvt = precord->dpvt;
-    int retval = 0; // convert
+    int retval = 0; // with conversion
 
     if (precord->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
@@ -198,6 +198,7 @@ static long write_ao(aoRecord *precord)
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
         MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
+        uint16_t *wdata = pM3WriteSeqdev->dataBuff.wData;
 
         //
         const char option = dpvt->option;
@@ -207,32 +208,38 @@ static long write_ao(aoRecord *precord)
 
             uint64_t lval;
             memcpy(&lval, &val, sizeof(double));
-            uint32_t l0 = (lval>> 0) & 0xFFFFFFFF;
-            uint32_t l1 = (lval>>32) & 0xFFFFFFFF;
-            pM3WriteSeqdev->dataBuff.lData[0] = l0;
-            pM3WriteSeqdev->dataBuff.lData[1] = l1;
+            wdata[0] = (uint16_t)(lval>> 0);
+            wdata[1] = (uint16_t)(lval>>16);
+            wdata[2] = (uint16_t)(lval>>32);
+            wdata[3] = (uint16_t)(lval>>48);
 
-            precord->udf = isnan(val);
-            // do we have to return 2?
+            precord->udf = isnan(val); // does this make sense?
+            // it seems that returning 2 (=no conversion) is meaningless
             //retval = 2; // no conversion
+
         } else if (option == 'F') {
             float val = precord->val;
             // todo : consider ASLO and AOFF field
 
             uint32_t lval;
             memcpy(&lval, &val, sizeof(float));
-            pM3WriteSeqdev->dataBuff.lData[0] = lval;
+            wdata[0] = (uint16_t)(lval>> 0);
+            wdata[1] = (uint16_t)(lval>>16);
 
-            precord->udf = isnan(val);
-            // do we have to return 2?
+            precord->udf = isnan(val); // does this make sense?
+            // it seems that returning 2 (=no conversion) is meaningless
             //retval = 2; // no conversion
+
         } else if (option == 'L') {
-            pM3WriteSeqdev->dataBuff.lData[0] = (int16_t)precord->val;
+            wdata[0] = (uint16_t)(precord->rval>> 0);
+            wdata[1] = (uint16_t)(precord->rval>>16);
+
         } else if (option == 'U') {
-            pM3WriteSeqdev->dataBuff.wData[0] = (uint16_t)precord->val;
+            wdata[0] = (uint16_t)precord->rval;
+
         } else {
-            pM3WriteSeqdev->dataBuff.wData[0] = (int16_t)precord->rval;
-            //pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) precord->rval;
+            wdata[0] = (int16_t)precord->rval;
+
         }
 
         // Issue write request

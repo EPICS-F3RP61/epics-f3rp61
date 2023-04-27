@@ -183,6 +183,7 @@ static long read_longin(longinRecord *precord)
 
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
+        uint16_t *wdata = pmcmdResponse->dataBuff.wData;
 
         if (pmcmdResponse->errorCode) {
             errlogPrintf("devLiF3RP61Seq: errorCode 0x%04x returned for %s\n", pmcmdResponse->errorCode, precord->name);
@@ -195,13 +196,17 @@ static long read_longin(longinRecord *precord)
         // fill VAL field
         const char option = dpvt->option;
         if (option == 'B') {
-            precord->val = devF3RP61bcd2int(pmcmdResponse->dataBuff.wData[0], precord);
+            precord->val = devF3RP61bcd2int(wdata[0], precord);
+
         } else if (option == 'L') {
-            precord->val = (int32_t)pmcmdResponse->dataBuff.lData[0];
+            precord->val = wdata[1]<<16 | wdata[0];
+
         } else if (option == 'U') {
-            precord->val = (uint16_t)pmcmdResponse->dataBuff.wData[0];
+            precord->val = (uint16_t)wdata[0];
+
         } else {
-            precord->val = (int16_t)pmcmdResponse->dataBuff.wData[0];
+            precord->val = (int16_t)wdata[0];
+
         }
 
     } else { // First call (PACT is still FALSE)

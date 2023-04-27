@@ -196,17 +196,23 @@ static long write_longout(longoutRecord *precord)
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
         MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
+        uint16_t *wdata = pM3WriteSeqdev->dataBuff.wData;
 
         //
         const char option = dpvt->option;
         if (option == 'B') {
-            pM3WriteSeqdev->dataBuff.wData[0] = devF3RP61int2bcd(precord->val, precord);
+            wdata[0] = devF3RP61int2bcd(precord->val, precord);
+
         } else if (option == 'L') {
-            pM3WriteSeqdev->dataBuff.lData[0] = (int32_t)precord->val;
+            wdata[0] = (uint16_t)(precord->val>> 0);
+            wdata[1] = (uint16_t)(precord->val>>16);
+
         } else if (option == 'U') {
-            pM3WriteSeqdev->dataBuff.wData[0] = (uint16_t)precord->val;
+            wdata[0] = (uint16_t)precord->val;
+
         } else {
-            pM3WriteSeqdev->dataBuff.wData[0] = (int16_t)precord->val;
+            wdata[0] = (int16_t)precord->val;
+
         }
 
         // Issue write request

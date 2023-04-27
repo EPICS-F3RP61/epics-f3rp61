@@ -13,8 +13,8 @@ F3RP61Seq devices
 - [x] Add special relay (M relay) support.
 - [x] Add Internal relays (I) for longin/longout records.
   - [x] Add &L, &F, &D options.
-- [ ] Add Internal relays (I) for ai/ao records.
-  - [ ] Add &L, &F, &D options.
+- [x] Add Internal relays (I) for ai/ao records.
+  - [x] Add &L, &F, &D options.
 - [ ] Add Internal relays (I) for mbbiDirect/mbboDirect records.
 - [ ] Add Internal relays (I) for mbbi/mbbo records.
   - [ ] Add &U, &L, &F and &D option - do we need these?

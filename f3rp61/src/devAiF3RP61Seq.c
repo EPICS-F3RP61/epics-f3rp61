@@ -115,10 +115,11 @@ static long init_record(aiRecord *precord)
     // Check device validity
     switch (device)
     {
-    case 'D': // data register
-    case 'B': // file register
-    case 'F': // cache register
-    case 'Z': // special register
+    case 'D': // data registers
+    case 'B': // file registers
+    case 'F': // cache registers
+    case 'Z': // special registers
+    case 'I': // internal relays
         break;
     default:
         errlogPrintf("devAiF3RP61Seq: unsupported device \'%c\' for %s\n", device, precord->name);
@@ -159,7 +160,7 @@ static long init_record(aiRecord *precord)
     } else {
         pM3ReadSeqdev->dataNum = 1;
     }
-    pM3ReadSeqdev->devType = device - '@'; // 'D'=>0x04, 'B'=>0x02, 'F'=>0x06, 'Z'=>0x1A
+    pM3ReadSeqdev->devType = device - '@'; // 'D'=>0x04, 'B'=>0x02, 'F'=>0x06, 'Z'=>0x1A, 'I'=>0x09
     pM3ReadSeqdev->topDevNo = top;
 
     //

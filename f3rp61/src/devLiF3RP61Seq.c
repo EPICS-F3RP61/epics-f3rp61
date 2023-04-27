@@ -115,10 +115,10 @@ static long init_record(longinRecord *precord)
     // Check device validity
     switch (device)
     {
-    case 'D': // data register
-    case 'B': // file register
-    case 'F': // cache register
-    case 'Z': // special register
+    case 'D': // data registers
+    case 'B': // file registers
+    case 'F': // cache registers
+    case 'Z': // special registers
     case 'I': // internal relays
         break;
     default:

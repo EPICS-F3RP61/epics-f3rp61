@@ -15,8 +15,9 @@ F3RP61Seq devices
   - [x] Add &L, &F, &D options.
 - [ ] Add Internal relays (I) for ai/ao records.
   - [ ] Add &L, &F, &D options.
+- [ ] Add Internal relays (I) for mbbiDirect/mbboDirect records.
 - [ ] Add Internal relays (I) for mbbi/mbbo records.
-  - [ ] Add &U, &L options.
+  - [ ] Add &U, &L, &F and &D option - do we need these?
 - [x] Fix byte-swap on &F and &D options.
 - [ ] Consider ASLO/AOFF and SMOO fields for ai records.
 - [ ] Consider ASLO/AOFF fields for ao records.

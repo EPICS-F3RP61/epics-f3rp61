@@ -90,10 +90,11 @@ static long init_record(mbboDirectRecord *precord)
     // Check device validity
     switch (device)
     {
-    case 'D': // data register
-    case 'B': // file register
-    case 'F': // cache register
-    case 'Z': // special register
+    case 'D': // data registers
+    case 'B': // file registers
+    case 'F': // cache registers
+    case 'Z': // special registers
+    case 'I': // internal relay
         break;
     default:
         errlogPrintf("devMbboDirectF3RP61Seq: unsupported device \'%c\' for %s\n", device, precord->name);
@@ -127,7 +128,7 @@ static long init_record(mbboDirectRecord *precord)
     M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
     pM3WriteSeqdev->accessType = kWord;
     pM3WriteSeqdev->dataNum = 1;
-    pM3WriteSeqdev->devType = device - '@'; // 'D'=>0x04, 'B'=>0x02, 'F'=>0x06, 'Z'=>0x1A
+    pM3WriteSeqdev->devType = device - '@'; // 'D'=>0x04, 'B'=>0x02, 'F'=>0x06, 'Z'=>0x1A, 'I'=>0x09
     pM3WriteSeqdev->topDevNo = top;
 
     //

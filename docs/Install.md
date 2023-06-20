@@ -30,7 +30,7 @@ driver support for F3RP71 and F3RP61 on linux-x86_64 or linux-x86 host.
 
 # Software Requirements
 ## F3RP71 (e-RT3 plus)
-- This device support works with EPICS base from 3.14.12 on, tested up to R3.15.8.
+- This device support works with EPICS base from R3.14.12 on, tested up to R3.15.8 / R7.0.7.
 - Xilinx Vivado 2013.4 Standalone SDK
 - Linux BSP for F3RP71 (SFRD12), R1.03
 - Refer to User's Manual for installation of Xilinx SDK and Linux BSP:

@@ -187,7 +187,7 @@ static long write_mbbo(mbboRecord *precord)
     const char device = dpvt->device;
 
     // Compose data to write
-    uint16_t wdata = (uint16_t)precord->val;
+    uint16_t wdata = (uint16_t)precord->rval;
     uint16_t mask = 0xffff;
 
     // Issue API function

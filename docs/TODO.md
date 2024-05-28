@@ -26,6 +26,7 @@ F3RP61Seq devices
   - [ ] for stringout records.
 - [ ] Add waveform record support.
 - [ ] Add aai/aao record support.
+- [ ] Add lsi/lso record support.
 
 F3RP61 devices
 ====
@@ -66,10 +67,14 @@ F3RP61 devices
   - [x] for mbbiDirect records.
 - [ ] Revise Mode register (M) supprt:
   - [x] Add mode register (M) support to longin/longout records.
+    - [ ] Add &U option for longin/longout records - do we need this?.
+    - [ ] Add &L option for longin/longout records - do we need this?.
+  - [ ] Add aai/aao record supports - do we need this?
   - [ ] Drop mode register (M) support from Mbbi/Mbbo records (?).
 - [ ] Consider ASLO/AOFF and SMOO fields for ai records.
 - [ ] Consider ASLO/AOFF fields for ao records.
 - [ ] Add support for aai/aao records.
+- [ ] Add support for lsi/lso records.
 - [ ] Secure against reading waveform larger than 4kB.
 - [ ] Read waveform data beyond 4kB.
 - [ ] Add option to access I/O modules in 8-bit data width.

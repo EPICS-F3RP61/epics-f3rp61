@@ -202,7 +202,7 @@ static long read_ai(aiRecord *precord)
             const uint64_t l1 = wdata[1];
             const uint64_t l2 = wdata[2];
             const uint64_t l3 = wdata[3];
-            const uint64_t lval = l3<<48 | l2<< 32 | l1 << 16 | l0;
+            const uint64_t lval = (l3<<48) | (l2<<32) | (l1<<16) | l0;
             double val;
             memcpy(&val, &lval, sizeof(double));
 
@@ -215,7 +215,7 @@ static long read_ai(aiRecord *precord)
         } else if (option == 'F') {
             const uint32_t l0 = wdata[0];
             const uint32_t l1 = wdata[1];
-            const uint32_t lval = l1<<16 | l0;
+            const uint32_t lval = (l1<<16) | l0;
             float val;
             memcpy(&val, &lval, sizeof(float));
 

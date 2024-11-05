@@ -27,6 +27,7 @@ F3RP61Seq devices
 - [ ] Add waveform record support.
 - [ ] Add aai/aao record support.
 - [ ] Add lsi/lso record support.
+- [ ] Add int64in/int64out record support.
 
 F3RP61 devices
 ====
@@ -58,6 +59,12 @@ F3RP61 devices
   - [ ] DOUBLE and FLOAT were unexpectedly rejected.
   - [ ] support for CHAR and UCHAR.
   - [ ] support for LONG.
+- [ ] Revise mbbi/mbbo records
+  - [ ] Add &U option
+  - [ ] Add &B option
+  - [ ] Add &L option
+  - [ ] Add &F option
+  - [ ] Add &D option
 - [x] Add &B option for input relays (X) - do we need this?
   - [x] longin records.
 - [x] Add &B option for output relays (Y) - do we need this?
@@ -65,7 +72,7 @@ F3RP61 devices
 - [x] Workaround for reading output registers (Y) with F3RP61
   - [x] for mbbi records.
   - [x] for mbbiDirect records.
-- [ ] Revise Mode register (M) supprt:
+- [ ] Revise Mode register (M) support:
   - [x] Add mode register (M) support to longin/longout records.
     - [ ] Add &U option for longin/longout records - do we need this?.
     - [ ] Add &L option for longin/longout records - do we need this?.
@@ -75,6 +82,7 @@ F3RP61 devices
 - [ ] Consider ASLO/AOFF fields for ao records.
 - [ ] Add support for aai/aao records.
 - [ ] Add support for lsi/lso records.
+- [ ] Add int64in/int64out record support.
 - [ ] Secure against reading waveform larger than 4kB.
 - [ ] Read waveform data beyond 4kB.
 - [ ] Add option to access I/O modules in 8-bit data width.

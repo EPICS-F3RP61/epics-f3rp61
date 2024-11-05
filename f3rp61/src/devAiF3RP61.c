@@ -315,10 +315,11 @@ static long read_ai(aiRecord *precord)
     if (option == 'D') {
         double val;
         if (device == 'A') {
-            uint64_t lval = (((int64_t)ldata[1])<<32) | ldata[0];
+            uint64_t lval = (((uint64_t)ldata[1])<<32) | (uint64_t)ldata[0];
             memcpy(&val, &lval, sizeof(double));
         } else {
-            uint64_t lval = (((uint64_t)wdata[3])<<48) | (((uint64_t)wdata[2])<<32) | (wdata[1]<<16) | wdata[0];
+            uint64_t lval = (((uint64_t)wdata[3])<<48) | (((uint64_t)wdata[2])<<32) | ((uint64_t)wdata[1]<<16) | (uint64_t)wdata[0];
+
             memcpy(&val, &lval, sizeof(double));
         }
         // todo : consider ASLO and AOFF field

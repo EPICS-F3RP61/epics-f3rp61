@@ -171,20 +171,21 @@ static void msgrcv_thread(void *arg)
 
     for (;;) {
         MSG_BUF msgbuf;
-        const ssize_t val = msgrcv(msqid, &msgbuf, sizeof(MSG_BUF), M3IO_MSGTYPE_IO, MSG_NOERROR);
+        const ssize_t size = msgrcv(msqid, &msgbuf, sizeof(MSG_BUF), M3IO_MSGTYPE_IO, MSG_NOERROR);
 
-        if (val == -1) {
+        if (size == -1) {
             errlogPrintf("drvF3RP61: msgrcv failed [%d] : %s\n", errno, strerror(errno));
             // msgbuf might be uninitialized if msgrcv() failed.
             continue;
         }
 
-        if (val < 16) {
+        if (size < sizeof(msgbuf.mtext)) {
             // for just in case
-            errlogPrintf("drvF3RP61: message received by msgrcv() is too small (%d bytes)\n", val);
+            errlogPrintf("drvF3RP61: message received by msgrcv() is too small (%zu bytes)\n", size);
             continue;
         }
 
+        //const long mtype   = msgbuf.mtype;
         const int unit    = msgbuf.mtext.unit;
         const int slot    = msgbuf.mtext.slot;
         const int channel = msgbuf.mtext.channel;
@@ -272,6 +273,7 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
         return -1;
     }
 
+    //
     return 0;
 }
 
@@ -286,6 +288,7 @@ long f3rp61GetIoIntInfo(int cmd, dbCommon *pxx, IOSCANPVT *ppvt)
         return -1;
     }
 
+    // I/O intr handling
     if ( *((IOSCANPVT *) pxx->dpvt) == NULL) {
         scanIoInit((IOSCANPVT *) pxx->dpvt);
     }

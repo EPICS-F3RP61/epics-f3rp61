@@ -8,7 +8,10 @@ dbd/
 O.linux-*
 O.Common
 RELEASE.local*
+CONFIG_SITE.local*
 *.new
+*.old
 *.orig
 *.patch
 *.rej
+*.LOG*

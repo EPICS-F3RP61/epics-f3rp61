@@ -16,3 +16,13 @@ STATIC_LDLIBS_NO=
 
 SHRLIB_LDFLAGS +=  -shared -fPIC
 LOADABLE_SHRLIB_LDFLAGS = -shared -fPIC
+
+# Executables for F3RP71 that link against libf3rp61 must explicitly
+# link against libm3.
+#
+# The device suport library libf3rp61 is linked against libm3, whose
+# SONAME is libm3.so.1. Therefore, when anapplication is linked
+# against libf3rp61, the linker will implicilty link agains
+# libm3.so.1. However, as libm3.so.1 does not exist in the F3RP71
+# cross development environment, the link will fail.
+PROD_SYS_LIBS += m3

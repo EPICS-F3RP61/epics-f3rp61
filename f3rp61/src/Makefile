@@ -18,6 +18,8 @@ LIBRARY_IOC = $(LIBRARY_IOC_$(T_A))
 LIBRARY_IOC_linux-f3rp71 += f3rp61
 LIBRARY_IOC_linux-f3rp61 += f3rp61
 
+f3rp61_SYS_LIBS_Linux += m3
+
 # install devXxxSoft.dbd into <top>/dbd
 DBD += f3rp61.dbd
 

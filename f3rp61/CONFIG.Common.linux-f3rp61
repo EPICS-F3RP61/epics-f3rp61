@@ -14,8 +14,8 @@ include $(CONFIG)/os/CONFIG.Common.linuxCommon
 #
 ARCH_CLASS = ppc
 
-# We don't need to define _ppc_ anymore but keep it for backward compatibility.
-ARCH_DEP_CPPFLAGS += -D_ppc_
+# We don't need to define _ppc_ anymore
+#ARCH_DEP_CPPFLAGS += -D_ppc_
 
 ARCH_DEP_CFLAGS += -mcpu=603e
 ARCH_DEP_CXXFLAGS += -mcpu=603e

@@ -13,8 +13,10 @@ USR_CPPFLAGS += -DUSE_TYPED_RSET -DUSE_TYPED_DSET
 #==================================================
 # build a support library
 
-ifneq ($(filter $(T_A), linux-f3rp61 linux-f3rp71),)
-LIBRARY_IOC += f3rp61
+LIBRARY_IOC = $(LIBRARY_IOC_$(T_A))
+
+LIBRARY_IOC_linux-f3rp71 += f3rp61
+LIBRARY_IOC_linux-f3rp61 += f3rp61
 
 # install devXxxSoft.dbd into <top>/dbd
 DBD += f3rp61.dbd
@@ -53,8 +55,6 @@ f3rp61_SRCS += devBoF3RP61SysCtl.c
 f3rp61_SRCS += devMbbiF3RP61SysCtl.c
 f3rp61_SRCS += drvF3RP61SysCtl.c
 f3rp61_SRCS += devF3RP61bcd.c
-
-endif
 
 #===========================
 

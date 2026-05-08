@@ -3,7 +3,7 @@
 
 #include <fcntl.h>
 #if defined(__arm__)
-#  include <m3lib.h>
+#  include <ert3/m3lib.h>
 #  define DEVFILE "/dev/m3cpu"
 #elif defined(__powerpc__)
 #  include <asm/fam3rtos/m3iodrv.h>

@@ -29,9 +29,10 @@ include $(TOP)/configure/CONFIG
 #=============================
 # Build the IOC application
 
-ifneq ($(filter $(T_A), linux-f3rp71 linux-f3rp61),) # build only if linux-f3rp71 and/or linux-f3rp61
-PROD_IOC = example
-#endif
+PROD_IOC = $(PROD_IOC_$(T_A))
+
+PROD_IOC_linux-f3rp71 = example
+PROD_IOC_linux-f3rp61 = example
 
 # example.dbd will be created and installed
 DBD += example.dbd

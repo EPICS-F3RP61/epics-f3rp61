@@ -81,7 +81,6 @@ endif
 # Finally link to the EPICS Base libraries
 
 example_LIBS += f3rp61
-PROD_LDLIBS += -lm3
 # USR_LDFLAGS += -L/path/to/bsp/yokogawa/library
 
 example_LIBS += $(EPICS_BASE_IOC_LIBS)

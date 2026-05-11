@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -22,6 +23,9 @@
 #include <sys/stat.h>
 #include <sys/msg.h>
 #include <unistd.h>
+
+#include <linux/version.h>
+#include <sys/utsname.h>
 
 #include <dbCommon.h>
 #include <dbScan.h>
@@ -40,20 +44,14 @@
 // A single F3RP61/71 module can work with up to two FL-net interface modules.
 #define M3IO_NUM_LINKS  2
 
-//
-#define NUM_IO_INTR  8
+// Interrupts are supported by input modules up to 32 channels; 64-channel modules do not support interrupt.
+#define NUM_IRQ_CH  64 // 32?
 
 typedef struct {
-    int channel;
-    dbCommon *prec;
-} F3RP61_IO_SCAN;
+    dbCommon *prec[NUM_IRQ_CH];
+} F3RP61_IRQ;
 
-typedef struct {
-    F3RP61_IO_SCAN ioscan[NUM_IO_INTR];
-    int count;
-} F3RP61_IO_INTR;
-
-static F3RP61_IO_INTR io_intr[M3IO_NUM_UNIT][M3IO_NUM_SLOT];
+static F3RP61_IRQ io_irq[M3IO_NUM_UNIT][M3IO_NUM_SLOT] = {}; // {{{{0}}}};
 
 //
 typedef struct {
@@ -86,10 +84,15 @@ epicsExportAddress(drvet, drvF3RP61);
 int f3rp61_fd = -1;
 
 //
+static long f3rp61EnableIoInterrupt(void);
+
+//
 static void msgrcv_thread(void *);
 static M3LINKDATACONFIG link_data_config;
 static M3COMDATACONFIG com_data_config;
 static M3COMDATACONFIG ext_com_data_config;
+
+//
 static void linkDeviceConfigureCallFunc(const iocshArgBuf *);
 static void comDeviceConfigureCallFunc(const iocshArgBuf *);
 static void getModuleInfoCallFunc(const iocshArgBuf *);
@@ -98,15 +101,21 @@ static void comDeviceConfigure(int, int, int, int, int);
 static void getModuleInfo(int);
 static void drvF3RP61RegisterCommands(void);
 
+//////////////////////////////////////////////////////////////////////////
 //
 static long report(void)
 {
     return 0;
 }
 
+//////////////////////////////////////////////////////////////////////////
 //
-static long init(void)
+static long init()
 {
+    //debug
+    //printf("%s:%s\n", __FILE__, __func__);
+    //printf("io_irq:  %zu\n", sizeof(io_irq));
+
     static int init_flag = 0;
     if (init_flag) {
         return 0;
@@ -158,16 +167,25 @@ static long init(void)
 
             break;
         }
-
     }
 
+    //
     return 0;
 }
 
+//////////////////////////////////////////////////////////////////////////
+//
+// Thread for interrupt handling.
+// When an interrupt occurs, a SysV message is queued.
+// This thread waits for the message and process the PV corresponding to
+// the interrupt source described in the message.
 //
 static void msgrcv_thread(void *arg)
 {
     int msqid = (int) arg;
+
+    //debug
+    //printf("%s:%s %d\n", __FILE__, __func__, msqid);
 
     for (;;) {
         MSG_BUF msgbuf;
@@ -190,90 +208,165 @@ static void msgrcv_thread(void *arg)
         const int slot    = msgbuf.mtext.slot;
         const int channel = msgbuf.mtext.channel;
 
-        for (int i = 0; i < io_intr[unit][slot].count; i++) {
-            if (io_intr[unit][slot].ioscan[i].channel == channel) {
-                dbCommon *prec = io_intr[unit][slot].ioscan[i].prec;
-                if (!prec) {
-                    errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,C%d)\n", unit, slot, channel);
-                    break;
-                }
+        // Note that slot# and channel# starts from 1
+        dbCommon *prec = io_irq[unit][slot-1].prec[channel-1];
+        if (!prec) {
+            // this may not happen
+            errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,X%d)\n", unit, slot, channel);
+            break; // is this OK? - or we'd better to continue?
+        }
 
-                if (prec->scan == SCAN_IO_EVENT) {
-                    IOSCANPVT ioscanpvt = *((IOSCANPVT *) prec->dpvt);
-                    scanIoRequest(ioscanpvt);
-                }
-            }
+        // debug
+        //fprintf(stderr, "%s %d U%d,S%d,X%d %s\n", __func__, msqid, unit, slot, channel, prec->name);
+
+        if (prec->scan == SCAN_IO_EVENT) {
+            IOSCANPVT ioscanpvt = *((IOSCANPVT *) prec->dpvt);
+            scanIoRequest(ioscanpvt);
         }
     }
 }
 
 //////////////////////////////////////////////////////////////////////////
 //
-long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channel)
+long f3rp61RegisterIoInterrupt(dbCommon *prec, int unit, int slot, int channel)
 {
-    char thread_name[32];
-    int msqid = 0;
-    int count = io_intr[unit][slot].count;
+    // debug
+    //printf("%s:%s %s U%d,S%d,X%02d\n", __FILE__, __func__, prec->name, unit, slot, channel);
 
-    if (count == NUM_IO_INTR) {
-        errlogPrintf("drvF3RP61: no interrupt slot\n");
-        return -1;
-    }
-
-    // Create a SysV message queue and a thread which reveices the message
-    if (count == 0) {
-        msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
-        if (msqid  == -1) {
-            errlogPrintf("drvF3RP61: msgget failed [%d] : %s\n", errno, strerror(errno));
-            return -1;
-        }
-
-#if defined(__powerpc__)
-        if (msqid == 0) {
-            // Get another message queue ID when it's 0.
-            // Message queue id 0 is valid in SysV IPC but invalid in F3RP61 BSP.
-            msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
-            if (msqid == -1) {
-                errlogPrintf("drvF3RP61: msgget failed [%d] : %s\n", errno, strerror(errno));
-                return -1;
-            }
-        }
-#endif
-
-        sprintf(thread_name, "msgrcvr%d", msqid);
-        if (epicsThreadCreate(thread_name,
-                              epicsThreadPriorityHigh,
-                              epicsThreadGetStackSize(epicsThreadStackSmall),
-                              (EPICSTHREADFUNC) msgrcv_thread,
-                              (void *)msqid) == 0) {
-            errlogPrintf("drvF3RP61: epicsThreadCreate failed\n");
-            return -1;
-        }
-    }
-
-    io_intr[unit][slot].ioscan[count].channel = channel;
-    io_intr[unit][slot].ioscan[count].prec = prec;
-    io_intr[unit][slot].count++;
-
-    for (int i = 0; i < count; i++) {
-        if (io_intr[unit][slot].ioscan[i].channel == channel) {
-            return 0;
-        }
-    }
-
-    M3IO_INTER_DEFINE arg = {
-        .unitno = unit,
-        .slotno = slot,
-        .defData.relayNo = channel,
-        .msgQId = msqid,
-    };
-
-    if (ioctl(f3rp61_fd, M3IO_ENABLE_INTER, &arg) < 0) {
-        errlogPrintf("drvF3RP61: ioctl failed [%d]\n", errno);
+    //
+    if (io_irq[unit][slot-1].prec[channel-1]) { // slot# and channel# starts from 1
+        errlogPrintf("drvF3RP61: interrupt source U%d,S%d,X%02d already in use for %s\n", unit, slot, channel, prec->name);
         return -1;
     }
 
     //
+    if (channel >= NUM_IRQ_CH) {
+        errlogPrintf("drvF3RP61: interrupt source U%d,S%d,X%02d exceeds ch# limit for %s\n", unit, slot, channel, prec->name);
+        return -1;
+    }
+
+    // Add requested interrup source on the table. Note that oslot# and channel# starts from 1
+    io_irq[unit][slot-1].prec[channel-1] = prec;
+
+    //
+    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Initialize device support in 2 pass.
+// - after==0 : 1st pass: befor initDatabase(), in which calls init_record() for each record instances.
+// - after==0 : 2nd pass: after initDatabase()
+//
+long f3rp61Init(int after)
+{
+    //debug
+    //printf("%s:%s %d\n", __FILE__, __func__, after);
+
+    //
+    if (after) {
+        f3rp61EnableIoInterrupt();
+    }
+
+    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//
+static long f3rp61EnableIoInterrupt(void)
+{
+    static int init_flag = 0;
+
+    //debug
+    //printf("%s:%s %d\n", __FILE__, __func__, init_flag);
+
+    //
+    if (init_flag) {
+        return 0;
+    }
+    init_flag = 1;
+
+    // Create a SysV message queue
+    int msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
+    if (msqid  == -1) {
+        errlogPrintf("drvF3RP61: msgget failed [%d] : %s\n", errno, strerror(errno));
+        return -1;
+    }
+
+#if defined(__powerpc__)
+    if (msqid == 0) {
+        // Get another message queue ID when it's 0.
+        // Message queue id 0 is valid in SysV IPC but invalid in F3RP61 BSP.
+        msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
+        if (msqid == -1) {
+            errlogPrintf("drvF3RP61: msgget failed [%d] : %s\n", errno, strerror(errno));
+            return -1;
+        }
+    }
+#endif
+
+    // Enable IO IRQ
+    for (int unit = 0; unit < M3IO_NUM_UNIT; unit++) {
+        for (int slot = 1; slot <= M3IO_NUM_SLOT; slot++) { // slot# starts from 1
+
+            // check if irq from unit/slot is requested
+            uint16_t mask[4] = {0};
+            for (int channel = 1; channel <= NUM_IRQ_CH; channel++) { // channel# starts from 1
+                dbCommon *prec = io_irq[unit][slot-1].prec[channel-1];
+                if (prec) {
+                    //// debug
+                    //printf("%s:%s %s U%d,S%d,X%02d\n", __FILE__, __func__, prec->name, unit, slot, channel);
+                    int idx = (channel-1)/16;
+                    int bit = channel-(idx*16)-1;
+                    mask[idx] |= (1<<bit);
+                }
+            }
+
+            //
+            if (mask[0]>0||mask[1]>0||mask[2]>0||mask[3]>0) {
+                // debug
+                //printf("%s:%s U%d,S%d mask: 0x%04x%04x%04x%04x\n", __FILE__, __func__, unit, slot, mask[3], mask[2], mask[1], mask[0]);
+
+                M3IO_INTER_DEFINE arg = {
+                    .unitno = unit,
+                    .slotno = slot,
+                    .defData.interMask = {mask[0], mask[1], mask[2], mask[3]},
+                    .msgQId = msqid,
+                };
+
+                //#if defined(__arm__)
+                //    if (enableM3IoIrqP(unit, slot, channel, id) < 0) {
+                //        errlogPrintf("drvF3RP61: enableM3IoIrqP failed [%d]\n", errno);
+                //        return -1;
+                //    }
+                //#else
+                if (ioctl(f3rp61_fd, M3IO_MASK_INTER, &arg) < 0) {
+                    errlogPrintf("drvF3RP61: ioctl failed [%d]\n", errno);
+                    return -1;
+                }
+                //#endif
+            }
+        }
+    }
+
+    // Start IO IRQ handler thread
+    char thread_name[32];
+    sprintf(thread_name, "f3rp61_msgrcv");
+
+    //debug
+    //printf("epicsThreadCreate %s\n", thread_name);
+
+    if (epicsThreadCreate(thread_name,
+                          epicsThreadPriorityHigh,
+                          epicsThreadGetStackSize(epicsThreadStackSmall),
+                          (EPICSTHREADFUNC)msgrcv_thread,
+                          (void *)msqid) == 0) {
+        errlogPrintf("drvF3RP61: epicsThreadCreate failed\n");
+        return -1;
+    }
+
     return 0;
 }
 
@@ -284,7 +377,7 @@ long f3rp61_register_io_interrupt(dbCommon *prec, int unit, int slot, int channe
 long f3rp61GetIoIntInfo(int cmd, dbCommon *pxx, IOSCANPVT *ppvt)
 {
     if (!pxx->dpvt) {
-        errlogPrintf("drvF3RP61: f3rp61GetIoIntInfo is called with null dpvt\n");
+        errlogPrintf("drvF3RP61: f3rp61GetIoIntInfo is called with null dpvt: %s\n", pxx->name);
         return -1;
     }
 
@@ -416,8 +509,8 @@ static void getModuleInfo(int verbosity)
 {
     printf("%4s %4s %4s %5s %4s %4s %4s\n",
            "Unit", "Slot", "Name", "MSize", "Xreg", "Yreg", "Dreg");
-    for (int unit=0; unit<M3IO_NUM_UNIT; unit++) {
-        for (int slot=1; slot<M3IO_NUM_SLOT + 1; slot++) {
+    for (int unit = 0; unit < M3IO_NUM_UNIT; unit++) {
+        for (int slot = 1; slot < M3IO_NUM_SLOT + 1; slot++) {
 
             M3IO_MODULE_INFORMATION module_info = {
                 .unitno = unit,

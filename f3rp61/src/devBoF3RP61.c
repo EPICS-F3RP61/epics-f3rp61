@@ -112,7 +112,7 @@ static long init_record(boRecord *precord)
             return -1;
         }
 
-        if (f3rp61_register_io_interrupt((dbCommon *) precord, unitno, slotno, position) < 0) {
+        if (f3rp61RegisterIoInterrupt((dbCommon *) precord, unitno, slotno, position) < 0) {
             errlogPrintf("devBoF3RP61: can't register I/O interrupt for %s\n", precord->name);
             precord->pact = 1;
             return -1;

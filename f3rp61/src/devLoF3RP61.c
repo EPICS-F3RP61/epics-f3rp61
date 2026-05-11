@@ -54,7 +54,7 @@ struct {
 } devLoF3RP61 = {
     6,
     NULL,
-    NULL,
+    f3rp61Init,
     init_record,
     f3rp61GetIoIntInfo,
     write_longout,
@@ -78,6 +78,9 @@ typedef struct {
 // values.
 static long init_record(longoutRecord *precord)
 {
+    //debug
+    //printf("%s:%s %s\n", __FILE__, __func__, precord->name);
+
     int unitno = 0, slotno = 0, cpuno = 0, start = 0;
     char device = 0;
     char option = 'W'; // Dummy option for Word access
@@ -127,7 +130,7 @@ static long init_record(longoutRecord *precord)
             return -1;
         }
 
-        if (f3rp61_register_io_interrupt((dbCommon *) precord, unitno, slotno, start) < 0) {
+        if (f3rp61RegisterIoInterrupt((dbCommon *) precord, unitno, slotno, start) < 0) {
             errlogPrintf("devLoF3RP61: can't register I/O interrupt for %s\n", precord->name);
             precord->pact = 1;
             return -1;

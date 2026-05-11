@@ -10,8 +10,9 @@
 #  error
 #endif
 
+long f3rp61Init(int after);
 long f3rp61GetIoIntInfo(int, dbCommon *, IOSCANPVT *);
-long f3rp61_register_io_interrupt(dbCommon *, int, int, int);
+long f3rp61RegisterIoInterrupt(dbCommon *, int, int, int);
 
 extern int f3rp61_fd;
 

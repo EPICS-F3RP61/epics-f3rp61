@@ -51,7 +51,7 @@ struct {
 } devAoF3RP61 = {
     6,
     NULL,
-    NULL,
+    f3rp61Init,
     init_record,
     f3rp61GetIoIntInfo,
     write_ao,
@@ -124,7 +124,7 @@ static long init_record(aoRecord *precord)
             precord->pact = 1;
             return -1;
         }
-        if (f3rp61_register_io_interrupt((dbCommon *) precord, unitno, slotno, start) < 0) {
+        if (f3rp61RegisterIoInterrupt((dbCommon *) precord, unitno, slotno, start) < 0) {
             errlogPrintf("devAoF3RP61: can't register I/O interrupt for %s\n", precord->name);
             precord->pact = 1;
             return -1;

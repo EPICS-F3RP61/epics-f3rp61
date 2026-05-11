@@ -3,54 +3,62 @@
 Installing Device and Driver Support for F3RP71 and F3RP61
 ==========================================================
 
-Table Of Contents
-=================
-<!--ts-->
-   * [Introduction](#introduction)
-   * [Software Requirements](#software-requirements)
-      * [F3RP71 (e-RT3 plus)](#f3rp71-e-rt3-plus)
-      * [F3RP61 (e-RT3 2.0)](#f3rp61-e-rt3-20)
-   * [Building EPICS Base for F3RP71 and/or F3RP61](#building-epics-base-for-f3rp71-andor-f3rp61)
-      * [Extracting distribution file](#extracting-distribution-file)
-      * [Install definition files](#install-definition-files)
-      * [Site-specific build configuration](#site-specific-build-configuration)
-   * [Building the Device / Driver Support Library](#building-the-device--driver-support-library)
-   * [Using the Device / Driver Support with IOC Application](#using-the-device--driver-support-with-ioc-application)
-   * [Using real-time scheduling with F3RP71/F3RP61-based IOC](#using-real-time-scheduling-with-f3rp71f3rp61-based-ioc)
-      * [References](#references)
+**Table of Contents**
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-<!-- Added by: shuei, at: 2018-11-30T10:22+0900 -->
+- [Introduction](#introduction)
+- [Prerequisites](#prerequisites)
+  - [F3RP71 (e-RT3 plus)](#f3rp71-e-rt3-plus)
+  - [F3RP61 (e-RT3 2.0)](#f3rp61-e-rt3-20)
+- [Building EPICS Base for F3RP71 and/or F3RP61](#building-epics-base-for-f3rp71-andor-f3rp61)
+  - [Extracting distribution file](#extracting-distribution-file)
+  - [Install definition files](#install-definition-files)
+  - [Site-specific build configuration](#site-specific-build-configuration)
+- [Building the Device / Driver Support Library](#building-the-device--driver-support-library)
+- [Using the Device / Driver Support with IOC Application](#using-the-device--driver-support-with-ioc-application)
+- [Using real-time scheduling with F3RP71/F3RP61-based IOC](#using-real-time-scheduling-with-f3rp71f3rp61-based-ioc)
+  - [References](#references)
 
-<!--te-->
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 # Introduction
 
-This document describes instructions for cross-building the device and
+This document providess instructions for cross-building the device and
 driver support for F3RP71 and F3RP61 on linux-x86_64 or linux-x86 host.
 
-# Software Requirements
+# Prerequisites
+- This device and driver support has been developed with EPICS base R7.0.10 and R3.15.9.
+- You will need to install the Linux BSP and cross-development environment for each target on the host machine.
+
 ## F3RP71 (e-RT3 plus)
-- This device support works with EPICS base from R3.14.12 on, tested up to R3.15.8 / R7.0.7.
 - Xilinx Vivado 2013.4 Standalone SDK
-- Linux BSP for F3RP71 (SFRD12), R1.03
+- Linux BSP for F3RP71 (SFRD12), R1.03 or later
 - Refer to User's Manual for installation of Xilinx SDK and Linux BSP:
   - **IM 34M06M52-22E_002**, "e-RT3 Linux BSP (SFRD12) Programming Manual", 2. Building development environment
-  - It is assumed that Xilinx SDK and Linux BSP are installed in /opt/Xilinx.
-  - In this document, we don't use Eclipse but GNU toolchain installed along with SDK.
+  - It is assumed that Xilinx SDK and Linux BSP are installed in `/opt/Xilinx` on the host development environment.
+  - In this document, we don't use Eclipse but GNU toolchain installed along with the SDK.
+
+- Once you have installed the SDK and BSP, you may need to modify the location of header files:
+```shell
+cd /opt/Xilinx/SDK/2013.4/gnu/arm/lin/arm-xilinx-linux-gnueabi/libc/usr/include
+mkdir ert3
+cd ert3
+ln -fs ../m3*.h ert3
+```
 
 ## F3RP61 (e-RT3 2.0)
-- This device support works with EPICS base from 3.14.11 on, tested up to R3.15.8.
 - Linux BSP for F3RP61 (SFRD11), R2.0x
-  - Refer to User's Manual for installation of BSP:
+  - Refer to User's Manual for installation of development environment and Linux BSP:
     - **IM 34M06M51-43E**, "RTOS-CPU module (F3RP61-␣␣) Linux BSP Start-up Manual", 6. Introduction Methods
     - **IM 34M06M51-44E**, "RTOS-CPU module (F3RP61-␣␣) Linux BSP Reference Manual", 6. PLC Device Access, 6.4 User Interface
-  - It is assumed that Linux BSP is installed in /opt/f3rp6x.
+  - It is assumed that Linux BSP is installed in `/opt/f3rp6x` on the host development environment.
 
 The device and driver support depends on a run-time library,
-libm3.so.1.0.0, which has to be installed manually both on the
-development environment and userland.
+libm3.so.1.0.0, which has to be installed manually in both the
+development environment and the target userland.
 
-- Install the library on the development environment:
+- Install the library in the development environment:
 ```shell
 cd /opt/f3rp6x/ppc_6xx/usr/lib
 cp /path/to/BSP/yokogawa/library/libm3.so.1.0.0 .
@@ -58,7 +66,7 @@ ln -s libm3.so.1.0.0 libm3.so.1
 ln -s libm3.so.1.0.0 libm3.so
 ```
 
-- Install the library on userland:
+- Install the library in the target userland:
 ```shell
 cd /opt
 mv libm3.so.1* /usr/lib
@@ -152,7 +160,7 @@ This section explains how to include the device / driver support components to y
 F3RP61 = ${EPICS_BASE}/../modules/src/epics-f3rp61-2.0.0/f3rp61
 ```
 
-- In the `configure/CONFIG_SIZE` file add linux-f3rp71 (or linux-f3rp61) to `CROSS_COMPILER_TARGET_ARCHS`:
+- In the `configure/CONFIG_SITE` file add linux-f3rp71 (or linux-f3rp61) to `CROSS_COMPILER_TARGET_ARCHS`:
 
 ```makefile
 CROSS_COMPILER_TARGET_ARCHS = linux-f3rp71
@@ -162,20 +170,19 @@ CROSS_COMPILER_TARGET_ARCHS = linux-f3rp71
 - In the `<app>App/src/Makefile` file:
 ```makefile
 ...
-ifneq ($(filter $(T_A), linux-f3rp61 linux-f3rp71),)
-PROD_IOC = <app>
-endif
+PROD_IOC = $(PROD_IOC_$(T_A))
+
+PROD_IOC_linux-f3rp71 = <app>
+PROD_IOC_linux-f3rp61 = <app>
 ...
 <app>_DBD += f3rp61.dbd
 ...
 <app>_LIBS += f3rp61
-PROD_LDLIBS += -lm3
 ```
 
 An example Makefile for ```exampleApp``` is included in the distribution:
 ```
-${EPICS_BASE}/../modules/src/epics-f3rp61-2.0.0/f3rp61/Makefile.testApp
-SampleMakefileForTestApp.
+${EPICS_BASE}/../modules/src/epics-f3rp61-2.0.0/f3rp61/Makefile.exampleApp
 ```
 
 # Using real-time scheduling with F3RP71/F3RP61-based IOC

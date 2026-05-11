@@ -16,8 +16,12 @@ F3RP61Seq devices
 - [x] Add Internal relays (I) for ai/ao records.
   - [x] Add &L, &F, &D options.
 - [x] Add Internal relays (I) for mbbiDirect/mbboDirect records.
+  - [ ] Add &L option
+    - [ ] set NOBT to 32 with &L option, 16 without &L option
 - [x] Add Internal relays (I) for mbbi/mbbo records.
-  - [ ] Add &U, &L, &F and &D option - do we need these?
+  - [ ] Add &U, &F and &D option - do we need these?
+  - [ ] Add &L option - do we need this?
+    - [ ] set NOBT to 32 with &L option, 16 without &L option
 - [x] Fix byte-swap on &F and &D options.
 - [ ] Consider ASLO/AOFF and SMOO fields for ai records.
 - [ ] Consider ASLO/AOFF fields for ao records.
@@ -31,6 +35,12 @@ F3RP61Seq devices
 
 F3RP61 devices
 ====
+- [ ] Control debug print via IOC shell variable
+- [ ] Add F3RPxx internal relay/register support
+- [ ] Reorganize input relay interrupts
+  - [x] Allow multiple interrupt source from different channels on the same slot
+  - [ ] Allow interupt-based process for F3RP61Seq devices
+  - [ ] Allow interupt-based process for F3RP61SysCtl devices
 - [ ] Add Shared relays (E) and Link relays (L).
   - [x] longin/longout records.
   - [ ] ai records.
@@ -63,8 +73,12 @@ F3RP61 devices
   - [ ] Add &U option
   - [ ] Add &B option
   - [ ] Add &L option
+    - [ ] set NOBT to 32 with &L option, 16 without &L option
   - [ ] Add &F option
   - [ ] Add &D option
+- [ ] Revise mbbiDirect/mbboDirect records
+  - [x] Add &L option
+    - [ ] set NOBT to 32 with &L option, 16 without &L option
 - [x] Add &B option for input relays (X) - do we need this?
   - [x] longin records.
 - [x] Add &B option for output relays (Y) - do we need this?
@@ -73,6 +87,7 @@ F3RP61 devices
   - [x] for mbbi records.
   - [x] for mbbiDirect records.
 - [ ] Revise Mode register (M) support:
+  - [ ] Consider that mode registers have different word size in f3rp61 and f3rp71. Perhaps we'd better to use IOC shell function to configure mode registers rather than PV
   - [x] Add mode register (M) support to longin/longout records.
     - [ ] Add &U option for longin/longout records - do we need this?.
     - [ ] Add &L option for longin/longout records - do we need this?.
@@ -86,6 +101,7 @@ F3RP61 devices
 - [ ] Secure against reading waveform larger than 4kB.
 - [ ] Read waveform data beyond 4kB.
 - [ ] Add option to access I/O modules in 8-bit data width.
+- [ ] Define and use dpvt structure which is common for various records.
 - [ ] Support for double-word access modules (e.g. F3XP01, F3XP02).
   - [ ] We mey need either dedicated option or dedicated device for those double-word access modules.
 

@@ -1,58 +1,55 @@
+<!-- -*- coding: utf-8-unix -*- -->
+
 Device and Driver Support for F3RP71 and F3RP61
 ===============================================
 
-Table Of Contents
-=================
-<!--ts-->
-   * [Device and Driver Support for F3RP71 and F3RP61](#device-and-driver-support-for-f3rp71-and-f3rp61)
-   * [Table Of Contents](#table-of-contents)
-   * [Overview](#overview)
-   * [Device Types](#device-types)
-   * [Supported Record Types](#supported-record-types)
-   * [Accessing I/O Module](#accessing-io-module)
-      * [Accessing Input Relay (X)](#accessing-input-relay-x)
-      * [Accessing Output Relay (Y)](#accessing-output-relay-y)
-      * [Accessing Data Register](#accessing-data-register)
-         * [Using 'unsigned' value option](#using-unsigned-value-option)
-         * [Using 'binary-coded-decimal (BCD)' option](#using-binary-coded-decimal-bcd-option)
-         * [Read an array of data](#read-an-array-of-data)
-      * [Accessing Mode Register](#accessing-mode-register)
-   * [Handling Special Module](#handling-special-module)
-   * [Important Notice on Using F3RP71 in Multi-CPU Configuration](#important-notice-on-using-f3rp71-in-multi-cpu-configuration)
-   * [Communication with Sequence CPU](#communication-with-sequence-cpu)
-      * [Communication Based on Shared Device](#communication-based-on-shared-device)
-         * [Communication Based on Shared Device Using New Interface<a name="user-content-UsingNewInterface"></a>](#communication-based-on-shared-device-using-new-interface)
-            * [Notes on Using Shared Device with F3RP71 (<strong>not</strong> F3RP61)<a name="user-content-SharedDeviceWithF3RP71"></a>](#notes-on-using-shared-device-with-f3rp71-not-f3rp61)
-            * [Reading/Writing Shared Relays (1-bit variables)](#readingwriting-shared-relays-1-bit-variables)
-            * [Reading/Writing Shared Registers (16-bit variables)](#readingwriting-shared-registers-16-bit-variables)
-         * [Communication Based on Shared Memory Using Old Interface](#communication-based-on-shared-memory-using-old-interface)
-      * [Accessing Internal Device of Sequence CPU](#accessing-internal-device-of-sequence-cpu)
-   * [I/O Interrupt Support](#io-interrupt-support)
-   * [FL-net Support](#fl-net-support)
-   * [LED / Rotary Switch / Status Register support](#led--rotary-switch--status-register-support)
-      * [LED support](#led-support)
-      * [Rotary switch support](#rotary-switch-support)
-      * [Status register support](#status-register-support)
+**Table of Contents**
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-<!-- Added by: shuei, at: 2019-02-27T18:04+09:00 -->
+- [Overview](#overview)
+- [Device Types](#device-types)
+- [Supported Record Types](#supported-record-types)
+- [Accessing I/O Module](#accessing-io-module)
+  - [Accessing Input Relay (X)](#accessing-input-relay-x)
+  - [Accessing Output Relay (Y)](#accessing-output-relay-y)
+  - [Accessing Data Register](#accessing-data-register)
+    - [Using 'unsigned' value option](#using-unsigned-value-option)
+    - [Using 'binary-coded-decimal (BCD)' option](#using-binary-coded-decimal-bcd-option)
+    - [Read an array of data](#read-an-array-of-data)
+  - [Accessing Mode Register](#accessing-mode-register)
+- [Handling Special Module](#handling-special-module)
+- [Important Notice on Using Linux CPU in Multi-CPU Configuration](#important-notice-on-using-linux-cpu-in-multi-cpu-configuration)
+- [Communication with Sequence CPU](#communication-with-sequence-cpu)
+  - [Communication Based on Shared Device](#communication-based-on-shared-device)
+    - [Communication Based on Shared Device Using New Interface<a name="UsingNewInterface"></a>](#communication-based-on-shared-device-using-new-interfacea-nameusingnewinterfacea)
+      - [Notes on Using Shared Device with F3RP71 (**not** F3RP61)<a name="SharedDeviceWithF3RP71"></a>](#notes-on-using-shared-device-with-f3rp71-not-f3rp61a-nameshareddevicewithf3rp71a)
+      - [Reading/Writing Shared Relays (1-bit variables)](#readingwriting-shared-relays-1-bit-variables)
+      - [Reading/Writing  Shared Registers (16-bit variables)](#readingwriting--shared-registers-16-bit-variables)
+    - [Communication Based on Shared Memory Using Old Interface](#communication-based-on-shared-memory-using-old-interface)
+  - [Accessing Internal Device of Sequence CPU](#accessing-internal-device-of-sequence-cpu)
+- [I/O Interrupt Support](#io-interrupt-support)
+- [FL-net Support](#fl-net-support)
+- [LED / Rotary Switch / Status Register support](#led--rotary-switch--status-register-support)
+  - [LED support](#led-support)
+  - [Rotary switch support](#rotary-switch-support)
+  - [Status register support](#status-register-support)
 
-<!--te-->
-
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 # Overview
 
 This device / driver support can be used to run EPICS iocCore on an
-embedded Linux controller, F3RP71 (e-RT3 plus) and F3RP61 (e-RT3 2.0),
-made by Yokogawa Electric Corporation. Both F3RP71 and F3RP61 are able
-to access most of the I/O modules of the FA-M3 PLC on the
-PLC-bus. This feature opens way for making an FA-M3 PLC itself a new
-type of IOC. The device / driver support provides interfaces for
-iocCore to access I/O modules as well as ordinary sequence CPUs that
-works on the PLC-bus. The device / driver support is implemented by
-wrapping the APIs of the kernel-level driver and the user level
-library, which are included in the Board Support Package (BSP)
-provided by Yokogawa. Read [Install.md](Install.md) for installation
-instruction.
+Linux CPUs, F3RP71 (e-RT3 plus) and F3RP61 (e-RT3 2.0), made by
+Yokogawa Electric Corporation. Linux CPU is able to access most of the
+I/O modules of the FA-M3 PLC on the PLC-bus. This feature opens way
+for making an FA-M3 PLC itself a new type of IOC. The device / driver
+support provides interfaces for iocCore to access I/O modules as well
+as ordinary sequence CPUs that works on the PLC-bus. The device /
+driver support is implemented by wrapping the APIs of the kernel-level
+driver and the user level library, which are included in the Board
+Support Package (BSP) provided by Yokogawa. Read
+[Install.md](Install.md) for installation instruction.
 
 
 As to I/O modules, the device / driver support offers only primitive
@@ -72,16 +69,16 @@ using an EPICS sequencer program, or a run-time database comprised of
 records that have the PINI field value of "YES".
 
 
-An F3RP71/F3RP61 works as an IOC either with or without sequence CPUs
+The Linux CPU works as an IOC either with or without sequence CPUs
 which run ladder programs. If there is no sequence CPU on the PLC-bus,
-F3RP71/RP61 should manage all the I/O activities. If one of more
+the Linux CPU should manage all the I/O activities. If one or more
 sequence CPUs attached to the PLC-bus, some of I/O modules can be
-controlled by sequence CPUs, while the others by F3RP71. It is
+controlled by sequence CPUs, while the others by the Linux CPUs. It is
 recommended that those I/O modules under the control of the sequence
-CPU be indirectly accessed by the IOC (F3RP71) via the internal
-devices of the sequence CPUs. See [Important Notice on Using F3RP71 in
+CPU be indirectly accessed by the Linux CPU via the internal devices
+of the sequence CPUs. See [Important Notice on Using Linux CPU in
 Multi-CPU
-Configuration](#important-notice-on-using-f3rp71-in-multi-cpu-configuration)
+Configuration](#important-notice-on-using-linux-cpu-in-multi-cpu-configuration)
 for more detail.
 
 
@@ -90,6 +87,7 @@ state of the input signal. The BSP has a function that transforms the
 interrupt into a message to a user-level process running on it. Based
 on this function, the device / driver support supports processing
 records upon an I/O interrupt.
+
 
 # Device Types
 
@@ -101,10 +99,11 @@ record must be set to either:
 * "**F3RP61Seq**" or accessing internal devices ("D", "I", "B") of
   the sequence CPUs on the same base unit, or
 * "**F3RP61SysCtl**" for controlling status LEDs and/or reading rotary
-   switch position of F3RP71 module.
+   switch position of the Linux CPU module.
 
-Note that F3RP71 also uses F3RP61, F3RP61Seq, and F3RP61SysCtl for its
-device type.
+Note that F3RP71 also uses "F3RP61", "F3RP61Seq", and "F3RP61SysCtl"
+for its device type.
+
 
 # Supported Record Types
 
@@ -272,6 +271,7 @@ The rules explained in the last two examples apply to the ai
 record. The value read from the input relays goes into the raw value
 (RVAL) field of the ai record.
 
+
 ##  Accessing Output Relay (Y)
 
 Output relays are read-write devices. Just replacing "X" with "Y"
@@ -361,6 +361,7 @@ The rules explained in the last two examples apply to the ao
 record. The value in the raw value (RVAL) field of the ao record is
 written onto the output relays.
 
+
 ##  Accessing Data Register
 
 Analog I/O modules and other special modules, such as motion control
@@ -404,6 +405,7 @@ The rules in the above two examples apply to ai /ao, mbbiDirect /
 mbboDirect records. The value read from (written onto) the device
 comes in (goes out) via the RVAL field of the records.
 
+
 ### Using 'unsigned' value option
 
 As to longin and ai type records, the "&U" option can be specified at
@@ -415,6 +417,7 @@ record(longin, "f3rp61_example_13") {
     field(INP, "@U0,S3,A1&U")
 }
 ```
+
 
 ### Using 'binary-coded-decimal (BCD)' option
 
@@ -447,6 +450,7 @@ record(longout, "f3rp61_example_15") {
 }
 ```
 
+
 ### Read an array of data
 
 Waveform type records are supported to read out an array of data from
@@ -465,6 +469,7 @@ record(waveform, "f3rp61_example_16") {
     field(NELM, "8")
 }
 ```
+
 
 ## Accessing Mode Register
 
@@ -515,6 +520,7 @@ rate, if you complete setting the conditions on a digital I/O module
 bit by bit by using B0, B1, B2, …, BF fields of an mbbo record, you
 are free from the problem mentioned above.
 
+
 # Handling Special Module
 
 This section describes how to handle special modules that require some
@@ -523,19 +529,19 @@ motion control module that controls the motion of a stepping motor by
 sending a train of pulses to the motor driver.
 
 Suppose you drive a motor dedicated to an axis. In the first place,
-you make the F3RP71 set the number of pulses (distance to move) into a
-register of the motion control module by using longout or ao
+you make the Linux CPU set the number of pulses (distance to move)
+into a register of the motion control module by using longout or ao
 record(s). (While the parameter is 32 bit long, the motion control
 modules do not support long word (32 bits) read / write operation. Two
 records, therefore, are necessary to set the upper 16 bits and the
 lower 16 bits.)
 
-Next, you make the F3RP61 turn on an output relay (EXE) to trigger the
-action. This can be performed by putting the value of one (1) into the
-VAL field of the following record. (The relay number varies from type
-to type. The following example records are just for illustration. See
-the manual of the module you use for more detailed information. We
-assume the motion control module is in slot 4.)
+Next, you make the Linux CPU turn on an output relay (EXE) to trigger
+the action. This can be performed by putting the value of one (1) into
+the VAL field of the following record. (The relay number varies from
+type to type. The following example records are just for
+illustration. See the manual of the module you use for more detailed
+information. We assume the motion control module is in slot 4.)
 
 ```
 record(bo, "f3rp61_motion_exe") {
@@ -546,7 +552,7 @@ record(bo, "f3rp61_motion_exe") {
 
 The motion control module will respond to the EXE command by turning
 on an input relay (ACK) if no error is found in the parameters
-given. The F3RP61 needs to check the ACK by using a record shown
+given. The Linux CPU needs to check the ACK by using a record shown
 below.
 
 ```
@@ -557,14 +563,14 @@ record(bi, "f3rp61_motion_ack") {
 }
 ```
 
-And then, the operation (sending pulses) starts. The F3RP61 is
+And then, the operation (sending pulses) starts. The Linux CPU is
 required to turn off the EXE after the ACK is turned on. The motion
 control module, then, turns off the ACK after the EXE is turned off.
 
 When the operation (sending pulses) completes, the motion control
-module informs the F3RP61 of the completion by turning on yet another
-input relay (FIN). Just like the ACK, the FIN needs to be checked by
-using a record shown below.
+module informs the Linux CPU the completion by turning on yet
+another input relay (FIN). Just like the ACK, the FIN needs to be
+checked by using a record shown below.
 
 ```
 record(bi, "f3rp61_motion_fine") {
@@ -619,15 +625,16 @@ control module, and to handle exceptions that can occur in the
 sequence (for example, an error caused by a wrong parameter set by the
 user).
 
-# Important Notice on Using F3RP71 in Multi-CPU Configuration
 
-This section gives you an important notice on using an F3RP71/F3RP61
-CPU together with sequence CPUs on the same unit.
+# Important Notice on Using Linux CPU in Multi-CPU Configuration
+
+This section gives you an important notice on using a Linux CPU
+together with sequence CPUs on the same unit.
 
 A typical use case of multi-CPU configuration is a sequence CPU
-implementing an interlock logic which requires high reliability, and
-F3RP71 controlling or monitoring the interlock system. In such a case,
-one have to pay attention to the following two points:
+implementing an interlock logic which requires high reliability, and a
+Linux CPU controlling or monitoring the interlock system. In such a
+case, one have to pay attention to the following two points:
 
 - The sequence CPU must be in the first slot (slot 1). The CPU in the
   first slot becomes the master of the unit, which resets the whole
@@ -636,22 +643,21 @@ one have to pay attention to the following two points:
   I/O modules used by the sequence CPU for the interlock system.
 
 The reason of the second point is as follows. If an I/O module is
-accessed by an F3RP71 CPU, the I/O module recognizes and remembers
-that the F3RP71 CPU is one of its masters. When the Linux system on
-the F3RP71 CPU is rebooted, the F3RP71 CPU broadcasts the fact by
-using a signal on the PLC-bus. The I/O modules that have been accessed
-by the F3RP71 CPU and recognize it as one of their masters reset
-themselves when they detect the signal. It makes the I/O modules
-inaccessible by the sequence CPU and makes the ladder program stop
-with I/O errors. For this reason, it is highly recommended that you
-make the F3RP71 CPU read the status of interlock indirectly via some
-internal devices ("I", "D", "B") of the sequence CPU or, through the
-shared devices ("E", "R") by using a method described in the next
-section.
+accessed by a Linux CPU, the I/O module recognizes and remembers that
+the Linux CPU is one of its masters. When the Linux system on the CPU
+is rebooted, the Linux CPU broadcasts that it was reset by using a
+signal on the PLC-bus. The I/O modules that have been accessed by the
+Linux CPU and recognize it as one of their masters reset themselves
+when they detect the signal. It makes the I/O modules inaccessible by
+the sequence CPU and makes the ladder program stop with I/O
+errors. For this reason, it is highly recommended that you make the
+Linux CPU read the status of interlock indirectly via some internal
+devices ("I", "D", "B") of the sequence CPU or, through the shared
+devices ("E", "R") by using a method described in the next section.
 
-On the other hand, if one or more I/O modules are used with an F3RP71
+On the other hand, if one or more I/O modules are used with a Linux
 CPU for some control in the multi-CPU configuration, you need to tell
-the sequence CPU not to touch the I/O modules under the F3RP71 CPU's
+the sequence CPU not to touch the I/O modules under the Linux CPU's
 control. This setting can be done on the sequence CPU by using the
 ladder development software, WideField3 (or WideField2). From the menu
 of your "Project", select "Configuration" and then, select "DIO
@@ -661,9 +667,10 @@ channels of the modules with the value of zero even when any I/O
 execution commands on the I/O modules do not appear explicitly in the
 ladder program.
 
+
 # Communication with Sequence CPU
 
-Two different types of methods are supported for an F3RP71 to
+Two different types of methods are supported for a Linux CPU to
 communicate with sequence CPUs that work on the same base unit. One is
 shared-memory-based communication and the other is message-based
 communication. The former is synchronous access that finishes
@@ -673,35 +680,38 @@ complete. For this reason, two different DTYPs are defined in the
 device / driver support, namely "F3RP61" for the former (synchronous)
 and "F3RP61Seq" for the latter (asynchronous).
 
+
 ## Communication Based on Shared Device
 
-The following is the basics to understand how the communication between F3RP71 CPUs and sequence CPUs works.
+The following is the basics to understand how the communication
+between Linux CPUs and sequence CPUs works.
 
-* Each CPU, a sequence CPU or an F3RP71 CPU can have regions allocated
-  to it.
-* Any CPU, a sequence CPU or an F3RP71 CPU can write into only the
+* Each CPU, a sequence CPU or a Linux CPU can have shared memory
   regions allocated to it.
-* Any CPU, a sequence CPU or an F3RP71 CPU can read out from any
+* Any CPU, a sequence CPU or a Linux CPU can write into only the
+  regions allocated to it.
+* Any CPU, a sequence CPU or a Linux CPU can read out from any
   regions.
 
 In order to make the story simple, we consider a case where only one
-sequence CPU in slot 1 works with only one F3RP71 CPU in slot 2 on the
+sequence CPU in slot 1 works with only one Linux CPU in slot 2 on the
 same base unit. From the rules mentioned above, how we use the shared
 memory to make the two CPUs communicate with each other is clear. If
-the data go from the sequence CPU (CPU1) to the F3RP71 CPU (CPU2), use
+the data go from the sequence CPU (CPU1) to the Linux CPU (CPU2), use
 the area allocated to the sequence CPU (CPU1), and vice versa, as
 shown in the figure below.
 
 ![Shared Memory](./shared-memory.png)
 
+
 ### Communication Based on Shared Device Using New Interface<a name="UsingNewInterface"></a>
 
-The device and driver support make use of APIs for shared
-device (i.e., shared relays and shared registers), which are
-available in F3RP71 BSP (R1.03 or later), as well as in F3RP61 BSP
-(R2.01 or later). Calling f3rp61ComDeviceConfigure() prior to
-iocInit() in the IOC start-up script (st.cmd) allocates shared devices
-for specified CPU:
+The device and driver support make use of APIs for shared device
+(i.e., shared relays and shared registers), which are available in
+F3RP71 BSP (R1.03 or later), as well as in F3RP61 BSP (R2.01 or
+later). Calling f3rp61ComDeviceConfigure() prior to iocInit() in the
+IOC start-up script (st.cmd) allocates shared devices for specified
+CPU:
 
 ```shell
 f3rp61ComDeviceConfigure(0, 512, 256, 64, 32)
@@ -717,14 +727,19 @@ the CPU in slot 2 (e.g., F3RP71 CPU).  Note that indices starts from
 sequence CPU shall be consistent with Inter-CPU Shared Memory Setup in
 WideField3.
 
+
 #### Notes on Using Shared Device with F3RP71 (**not** F3RP61)<a name="SharedDeviceWithF3RP71"></a>
+
 Make sure that, when using F3RP71 (**not** F3RP61) in a multi-CPU
 configuration, "Non-Simultaneous" is selected for "Shared Refreshed
-Data" in Inter-CPU Shared Memory Setup.
-Otherwise  even if F3RP71 writes anything to the shared memory, it looks like as if nothing has been modified when read from the sequence CPU.
-Refer to following manuals for the detail:
-- **IM 34M06M52-02E**, "e-RT3 CPU Module (SFRD␣2) BSP Common Function Manual", 5.2 Shared device
-- **IM 34M06Q16-02E**, "FA-M3 Programming Tool WideField3 (Offline)", D3.1.13 Inter-CPU Shared Memory Setup
+Data" in Inter-CPU Shared Memory Setup.  Otherwise even if F3RP71
+writes anything to the shared memory, it looks like as if nothing has
+been modified when read from the sequence CPU.  Refer to following
+manuals for the detail: - **IM 34M06M52-02E**, "e-RT3 CPU Module
+(SFRD␣2) BSP Common Function Manual", 5.2 Shared device - **IM
+34M06Q16-02E**, "FA-M3 Programming Tool WideField3 (Offline)", D3.1.13
+Inter-CPU Shared Memory Setup.
+
 
 #### Reading/Writing Shared Relays (1-bit variables)
 
@@ -752,8 +767,9 @@ record(bo, "f3rp61_example_20") {
 ```
 
 The bo record can be used to write the first shared relay (E1). In
-this case, the relay (E1) must be allocated to the F3RP71-based IOC as
+this case, the relay (E1) must be allocated to the Linux CPU as
 mentioned earlier.
+
 
 #### Reading/Writing  Shared Registers (16-bit variables)
 
@@ -818,8 +834,8 @@ record(longout, "f3rp61_example_24") {
 ```
 
 The longout record can be used to write the first shared register
-(R1). In this case, the register (R1) must be allocated to the
-F3RP71-based IOC.
+(R1). In this case, the register (R1) must be allocated to the Linux
+CPU.
 
 The following example shows usage of "B" option. Value in the VAL
 field is converted to BCD format and written to a shared register.
@@ -902,8 +918,8 @@ record(ao, "f3rp61_example_31") {
 ```
 
 The longout record can be used to write the first shared register
-(R1). In this case, the register (R1) must be allocated to the
-F3RP71-based IOC.
+(R1). In this case, the register (R1) must be allocated to the Linux
+CPU.
 
 In order to write a long word (32-bits) value onto two registers, say,
 R1 and R2, the following record, of which INP field value has the
@@ -957,6 +973,7 @@ record(waveform, "f3rp61_example_35") {
 
 MbbiDirect /mbboDirect and mbbi / mbbo are also supported to read /
 write the shared registers.
+
 
 ### Communication Based on Shared Memory Using Old Interface
 
@@ -1076,11 +1093,12 @@ bit complicated story.
 Ai / ao and longin / longout, are also supported to read / write the
 shared registers.
 
+
 ## Accessing Internal Device of Sequence CPU
 
-The alternative method for an F3RP71 to communicate with a sequence
-CPU is to use the message-based transaction. It enables an F3RP71 to
-access internal relays and registers of Sequence CPU. Currently
+The alternative method for a Linux CPU to communicate with a sequence
+CPU is to use the message-based transaction. It enables the Linux CPU
+to access internal relays and registers of the sequence CPU. Currently
 supported by the device support are internal relays "I", internal
 registers "D", file registers "B", and cache registers "F".
 
@@ -1159,10 +1177,11 @@ record(longout, "f3rp61_example_45") {
 }
 ```
 
+
 # I/O Interrupt Support
 
-Digital input modules of FA-M3 can interrupt the F3RP71-based IOC when
-they detect a rising edge or falling edge of the input signals. The
+Digital input modules of FA-M3 can interrupt the Linux CPU when they
+detect a rising edge or falling edge of the input signals. The
 kernel-level driver of the BSP can transform the interrupt into a
 message to a user-level process. Based on the function, processing
 records by I/O interrupt is supported with the device / driver
@@ -1200,7 +1219,7 @@ record(ao, "f3rp61_example_47") {
 ```
 
 The following example might seem a little bit strange, but it helps
-you see how quick an F3RP71-based IOC can respond to interrupts.
+you see how quick the Linux CPU can respond to interrupts.
 
 ```
 record(bi, "f3rp61_example_48") {
@@ -1219,6 +1238,7 @@ the pulse duration with checking the record value, you can roughly
 measure the time required for the record to get processed with the
 rising edge of the trigger signal as the starting point.
 
+
 # FL-net Support
 
 There are two different methods in using FL-net. One is based on
@@ -1228,8 +1248,8 @@ with fixed link refresh period of 10 milliseconds. It does not support
 FL-net in multi-CPU configuration at present. (setM3FlnSysNo() is
 called without specifying sysNo in the driver support.)
 
-In order to use FL-net with an F3RP71-based IOC, users need to put the
-following IOC command in the startup script for an F3RP71-based IOC to
+In order to use FL-net with a Linux CPU, users need to put the
+following IOC command in the startup script for the Linux CPU to
 specify how many link relays and link registers are allocated to each
 of the links.
 
@@ -1242,20 +1262,20 @@ The command needs to be executed prior to the call to iocInit(). The
 first line implies that 512 bits of link relays and 256 words of link
 registers are allocated to Link1(0 + 1). The next line means that the
 same numbers of link relays and link registers are allocated to
-Link2(1 + 1). (An F3RP71 CPU can handle up to two FL-net interface
+Link2(1 + 1). The Linux CPU can handle up to two FL-net interface
 modules, i.e., up to two links though the author have tested only one
-link so far.)
+link so far.
 
 Allocation of the link relays and link registers to each of the nodes
 on a link needs to be done on a sequence CPU-side by using WideField3
-(or WideField2). There is nothing to be done on the F3RP71-based IOC
-on this point. Only allocation of the link relays and link registers
-to each of the links is needed by using the command described above.
+(or WideField2). There is nothing to be done on the Linux CPU on this
+point. Only allocation of the link relays and link registers to each
+of the links is needed by using the command described above.
 
-How to make an F3RP71-based IOC communicate with other nodes on a link
-is similar with how to make the F3RP71-based IOC communicate with
-another CPU on the same base unit through shared memory based on the
-new APIs as described in [Using New Interface](#UsingNewInterface).
+How to make a Linux CPU communicate with other nodes on a link is
+similar with how to make the F3RP71-based IOC communicate with another
+CPU on the same base unit through shared memory based on the new APIs
+as described in [Using New Interface](#UsingNewInterface).
 
 The following example shows how to read a link relay.
 
@@ -1285,8 +1305,7 @@ record(bo, "f3rp61_example_50") {
 
 The bo record can be used to write the first link relay allocated to a
 node on the Link1(0 + 1). In this case, since it is a write access,
-the relay must be allocated to the F3RP71-based IOC as a node on the
-link.
+the relay must be allocated to the Linux CPU as a node on the link.
 
 The following example shows how to read a link register.
 
@@ -1316,8 +1335,8 @@ record(longout, "f3rp61_example_52") {
 
 The longout record can be used to write the first link register
 allocated to a node on the Link1(0 + 1). In this case, since it is a
-write access, the register must be allocated to the F3RP71-based IOC
-as a node on the link.
+write access, the register must be allocated to the Linux CPU as a
+node on the link.
 
 In order to read / write long word (32-bits) values by using longin /
 longout records, "&L"-option can be used as explained in 6.1.1 in the
@@ -1349,16 +1368,18 @@ record(waveform, "f3rp61_example_53") {
 MbbiDirect /mbboDirect are also supported to read / write link
 registers.
 
+
 # LED / Rotary Switch / Status Register support
 
-On the front panel of F3RP71 module there are status LEDs (namely,
+On the front panel of the Linux CPU there are status LEDs (namely,
 **Run**, **Alarm**, **Error**, **U1**, **U2**, and **U3**) as well as
-an rotary switch that is used to control boot option for
-F3RP71. Device support provides functionality to control those LEDs,
-read position of the rotary switch and read the status register
-(battery status) using EPICS database records. In that case, DTYP of
-the record must be set to "F3RP61SysCtl". Additionally, there is iocsh
-command available to control status LEDs.
+an rotary switch that is used to control boot option for the Linux
+CPU. Device support provides functionality to control those LEDs, read
+position of the rotary switch and read the status register (battery
+status) using EPICS database records. In that case, DTYP of the record
+must be set to "F3RP61SysCtl". Additionally, there is iocsh command
+available to control status LEDs.
+
 
 ## LED support
 
@@ -1419,6 +1440,7 @@ record(bi, "f3rp61_example_56") {
 Set INP field to "@SYS,LA", "@SYS,LE", "@SYS,L2", "@SYS,L3" to read
 status of **Alarm**, **Error**, **U2**, **U3** LEDs, respectively.
 
+
 ## Rotary switch support
 
 The usage of mbbi record to read position of the rotary switch is shown below:
@@ -1432,6 +1454,7 @@ record(mbbi, "f3rp61_example_58") {
 
 It is important to note that returned position will be position of the
 switch at boot time, irrelevant of the current position of the switch.
+
 
 ## Status register support
 

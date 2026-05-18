@@ -10,11 +10,18 @@ USR_CFLAGS += -Wall
 #USR_CFLAGS += -Werror
 USR_CPPFLAGS += -DUSE_TYPED_RSET -DUSE_TYPED_DSET
 
+# Add include path for ert3/m3lib.h when self-building on F3RP70
+ifeq ($(filter linux-f3rp70 linux-arm, $(H_A)),$(H_A))
+USR_INCLUDES_Linux += -I/usr/local/include/ert3
+endif
+
 #==================================================
 # build a support library
 
 LIBRARY_IOC = $(LIBRARY_IOC_$(T_A))
 
+LIBRARY_IOC_linux-arm += f3rp61
+LIBRARY_IOC_linux-f3rp70 += f3rp61
 LIBRARY_IOC_linux-f3rp71 += f3rp61
 LIBRARY_IOC_linux-f3rp61 += f3rp61
 

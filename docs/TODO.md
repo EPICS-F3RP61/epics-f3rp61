@@ -1,4 +1,4 @@
-TODO list for F3RP71/F3RP61 support
+TODO list for F3RP70/F3RP71/F3RP61 support
 ====
 
 ====

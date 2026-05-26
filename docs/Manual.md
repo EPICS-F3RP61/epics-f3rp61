@@ -1,8 +1,9 @@
 <!-- -*- coding: utf-8-unix -*- -->
 
-Device and Driver Support for F3RP71 and F3RP61
-===============================================
+Device and Driver Support for F3RP70, F3RP71, and F3RP61
+========================================================
 
+<!-- npx doctoc /path/to/Manual.md -->
 **Table of Contents**
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -39,23 +40,23 @@ Device and Driver Support for F3RP71 and F3RP61
 
 # Overview
 
-This device / driver support can be used to run EPICS iocCore on an
-Linux CPUs, F3RP71 (e-RT3 plus) and F3RP61 (e-RT3 2.0), made by
-Yokogawa Electric Corporation. Linux CPU is able to access most of the
-I/O modules of the FA-M3 PLC on the PLC-bus. This feature opens way
-for making an FA-M3 PLC itself a new type of IOC. The device / driver
-support provides interfaces for iocCore to access I/O modules as well
-as ordinary sequence CPUs that works on the PLC-bus. The device /
-driver support is implemented by wrapping the APIs of the kernel-level
-driver and the user level library, which are included in the Board
-Support Package (BSP) provided by Yokogawa. Read
-[Install.md](Install.md) for installation instruction.
+This device and driver support can be used to run EPICS ioc core on an
+Linux CPUs, F3RP70, F3RP71, and F3RP61, made by Yokogawa Electric
+Corporation. Linux CPU is able to access most of the I/O modules of
+the FA-M3 PLC on the PLC-bus. This feature opens way for making an
+FA-M3 PLC itself a new type of IOC. This device and driver support
+provides interfaces for iocCore to access I/O modules as well as
+ordinary sequence CPUs that works on the PLC-bus. The device and driver
+support is implemented by wrapping the APIs of the kernel-level driver
+and the user level library, which are included in the Board Support
+Package (BSP) provided by Yokogawa. Read [Install.md](Install.md) for
+installation instruction.
 
 
-As to I/O modules, the device / driver support offers only primitive
+As to I/O modules, the device and driver support offers only primitive
 method to access the relays and registers. In the sense that any
 relays and registers of a supported I/O module can be accessed by
-using the device / driver support, it is universal. However, in order
+using the device and driver support, it is universal. However, in order
 to handle a special module that requires some sequence logic to
 execute I/O operation, such as motion control module, the sequence
 logic needs to be implemented by using an EPICS sequencer program by
@@ -85,13 +86,13 @@ for more detail.
 Digital input modules of FA-M3 can interrupt CPUs upon a change of the
 state of the input signal. The BSP has a function that transforms the
 interrupt into a message to a user-level process running on it. Based
-on this function, the device / driver support supports processing
+on this function, the device and driver support supports processing
 records upon an I/O interrupt.
 
 
 # Device Types
 
-In order to use the device / driver support, the device type (DTYP) field of the
+In order to use the device and driver support, the device type (DTYP) field of the
 record must be set to either:
 
 * "**F3RP61**" for accessing relays and registers on I/O modules, and
@@ -157,10 +158,10 @@ register number, in which register is treated as:
 | bo          | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3                    |                                                                                         |
 | longin      | F3RP61       | X, Y, E, L, R, W,       r                 | U, L, B                                                                                 |
 | longin      | F3RP61       |                      A                    | U, L, B ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module  |
-| longin      | F3RP61Seq    | I,    D, B, F, Z                          | U, L, B                                                                                 |
+| longin      | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B                                                                                 |
 | longout     | F3RP61       |    Y, E, L, R, W,       r                 | U, L, B                                                                                 |
 | longout     | F3RP61       |                      A                    | U, L, B ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module  |
-| longout     | F3RP61Seq    | I,    D, B, F, Z                          | U, L, B                                                                                 |
+| longout     | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B                                                                                 |
 | ai          | F3RP61       | X, Y, E, L, R, W,       r                 | U, L, F, D                                                                              |
 | ai          | F3RP61       |                      A                    | U, L ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module     |
 | ai          | F3RP61Seq    | I,    D, B, F, Z                          | U, L, F, D                                                                              |
@@ -169,15 +170,15 @@ register number, in which register is treated as:
 | ao          | F3RP61Seq    | I,    D, B, F, Z                          | U, L, F, D                                                                              |
 | si          | F3RP61       |                      A                    |                                                                                         |
 | so          | F3RP61       |                      A                    |                                                                                         |
-| mbbi        | F3RP61       | X, Y, E, L, R, W, M, A, r                 |                                                                                         |
-| mbbi        | F3RP61Seq    | I,    D, B, F, Z                          |                                                                                         |
+| mbbi        | F3RP61       | X, Y, E, L, R, W, M, A, r                 | U, L                                                                                    |
+| mbbi        | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                                                                                    |
 | mbbi        | F3RP61SysCtl | Rotary Switch position                    |                                                                                         |
-| mbbo        | F3RP61       |    Y, E, L, W, R, M, A, r                 |                                                                                         |
-| mbbo        | F3RP61Seq    | I,    D, B, F, Z                          |                                                                                         |
-| mbbiDirect  | F3RP61       | X, Y, E, L, R, W, M, A, r                 |                                                                                         |
-| mbbiDirect  | F3RP61Seq    | I,    D, B, F                             |                                                                                         |
-| mbboDirect  | F3RP61       |    Y, E, L, R, W, M, A, r                 |                                                                                         |
-| mbboDirect  | F3RP61Seq    | I,    D, B, F, Z                          |                                                                                         |
+| mbbo        | F3RP61       |    Y, E, L, W, R, M, A, r                 | U, L                                                                                    |
+| mbbo        | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                                                                                    |
+| mbbiDirect  | F3RP61       | X, Y, E, L, R, W, M, A, r                 | U, L                                                                                    |
+| mbbiDirect  | F3RP61Seq    | I, M, D, B, F                             | U, L                                                                                    |
+| mbboDirect  | F3RP61       |    Y, E, L, R, W, M, A, r                 | U, L                                                                                    |
+| mbboDirect  | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                                                                                    |
 | waveform    | F3RP61       |                      A                    | **FTVL field**: DBF\_ULONG, DBF\_USHORT, DBF\_SHORT                                     |
 | waveform    | F3RP61       |             R, W,       r                 | **FTVL field**: DBF\_DOUBLE, DBF\_FLOAT, DBF\_LONG, DBF\_ULONG, DBF\_SHORT, DBF\_USHORT |
 
@@ -368,7 +369,7 @@ Analog I/O modules and other special modules, such as motion control
 modules, etc., have many registers to hold the I/O data and relevant
 parameters. In order to read / write these registers, longin /
 longout, ai / ao and mbbiDirect / mbboDirect records are
-supported. While some of the registers hold 32-bit data, the device /
+supported. While some of the registers hold 32-bit data, the device and
 driver support supports only reading / writing a value of 16
 bits. 32-bit registers must be read / written, according to the
 specification of the I/O module, by using two records, one for the
@@ -677,7 +678,7 @@ communication. The former is synchronous access that finishes
 instantly, just like the access to the I/O relays and registers of an
 I/O module. The latter is asynchronous and takes a few milliseconds to
 complete. For this reason, two different DTYPs are defined in the
-device / driver support, namely "F3RP61" for the former (synchronous)
+device and driver support, namely "F3RP61" for the former (synchronous)
 and "F3RP61Seq" for the latter (asynchronous).
 
 
@@ -979,7 +980,7 @@ write the shared registers.
 
 The author recommends that you choose the method to access the shared
 device (shared relays and shared registers) based on the new APIs
-since it is much easier to understand. The device /driver support,
+since it is much easier to understand. The device and driver support,
 however, still supports accessing the shared memory based on the old
 APIs for backward compatibility. If you choose this option, you need
 to know the following points.
@@ -1184,7 +1185,7 @@ Digital input modules of FA-M3 can interrupt the Linux CPU when they
 detect a rising edge or falling edge of the input signals. The
 kernel-level driver of the BSP can transform the interrupt into a
 message to a user-level process. Based on the function, processing
-records by I/O interrupt is supported with the device / driver
+records by I/O interrupt is supported with the device and driver
 support. Any records that have the DTYP field value of "F3RP61" and
 the SCAN value of "I/O Intr" get processed upon an interrupt on a
 specified channel of the specified module. This feature allows you to
@@ -1243,7 +1244,7 @@ rising edge of the trigger signal as the starting point.
 
 There are two different methods in using FL-net. One is based on
 message transmission and the other is based on cyclic
-transmission. The device / driver support supports only the latter
+transmission. The device and driver support supports only the latter
 with fixed link refresh period of 10 milliseconds. It does not support
 FL-net in multi-CPU configuration at present. (setM3FlnSysNo() is
 called without specifying sysNo in the driver support.)

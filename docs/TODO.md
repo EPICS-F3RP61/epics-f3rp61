@@ -15,13 +15,14 @@ F3RP61Seq devices
   - [x] Add &L, &F, &D options.
 - [x] Add Internal relays (I) for ai/ao records.
   - [x] Add &L, &F, &D options.
-- [x] Add Internal relays (I) for mbbiDirect/mbboDirect records.
-  - [ ] Add &L option
-    - [ ] set NOBT to 32 with &L option, 16 without &L option
-- [x] Add Internal relays (I) for mbbi/mbbo records.
-  - [ ] Add &U, &F and &D option - do we need these?
-  - [ ] Add &L option - do we need this?
-    - [ ] set NOBT to 32 with &L option, 16 without &L option
+- [x] Add support for mbbiDirect/mbboDirect records.
+  - [x] Add &U option support
+  - [x] Add &L option
+  - [x] set NOBT to 32 with &L option, 16 without &L option
+- [x] Add support mbbi/mbbo records.
+  - [x] Add &U option support
+  - [x] Add &L option support
+  - [x] set NOBT to 32 with &L option, 16 without &L option
 - [x] Fix byte-swap on &F and &D options.
 - [ ] Consider ASLO/AOFF and SMOO fields for ai records.
 - [ ] Consider ASLO/AOFF fields for ao records.
@@ -37,29 +38,28 @@ F3RP61 devices
 ====
 - [ ] Control debug print via IOC shell variable
 - [ ] Add F3RPxx internal relay/register support
-- [ ] Reorganize input relay interrupts
+- [x] Reorganize input relay interrupts
   - [x] Allow multiple interrupt source from different channels on the same slot
   - [ ] Allow interupt-based process for F3RP61Seq devices
   - [ ] Allow interupt-based process for F3RP61SysCtl devices
-- [ ] Add Shared relays (E) and Link relays (L).
+- [x] Add Shared relays (E) and Link relays (L).
   - [x] longin/longout records.
   - [ ] ai records.
   - [ ] ao records.
-- [ ] Add Shared registers (R) and Link registers (W).
+- [x] Add Shared registers (R) and Link registers (W).
   - [x] longin/longout records.
   - [x] ai/ao records.
   - [ ] stringin/stringout records.
 - [ ] Revise I/O registers (A) support:
   - [ ] Add &L, &F and &D option for ai/ao records (do we need this?).
-- [ ] Revise input relays (X):
-  - [ ] &D and &F options are missing for ai records.
-- [ ] Revise Shared memory (r) support for F3RP71.
+- [x] Revise input relays (X):
+  - [x] Add &F and &D options for ai/ao records.
+- [x] Revise Shared memory (r) support for F3RP7x.
   - [x] longin/longout records.
     - [x] Add &B and &L option for longin/longout records.
   - [x] for mbbi/mbbo records.
-  - [ ] ai records.
-  - [ ] ao records.
-    - [ ] Add &L, &F and &D option for ai/ao records.
+  - [x] ai/ao records.
+    - [x] Add &L, &F and &D option for ai/ao records.
   - [ ] stringin/stringout records.
 - [ ] Revise waveform records.
   - [ ] Type of FTVL field (such as DBF_LONG/DBF_FLOAT/DBF_DOUBLE) implies &U/&L/&F/&D option. FTVL and option shall be independent.
@@ -70,15 +70,16 @@ F3RP61 devices
   - [ ] support for CHAR and UCHAR.
   - [ ] support for LONG.
 - [ ] Revise mbbi/mbbo records
-  - [ ] Add &U option
+  - [x] Add &U option
+  - [x] Add &L option
+  - [x] set NOBT to 32 with &L option, 16 without &L option
   - [ ] Add &B option
-  - [ ] Add &L option
-    - [ ] set NOBT to 32 with &L option, 16 without &L option
   - [ ] Add &F option
   - [ ] Add &D option
 - [ ] Revise mbbiDirect/mbboDirect records
+  - [x] Add &U option
   - [x] Add &L option
-    - [ ] set NOBT to 32 with &L option, 16 without &L option
+  - [x] set NOBT to 32 with &L option, 16 without &L option
 - [x] Add &B option for input relays (X) - do we need this?
   - [x] longin records.
 - [x] Add &B option for output relays (Y) - do we need this?
@@ -105,6 +106,6 @@ F3RP61 devices
 - [ ] Support for double-word access modules (e.g. F3XP01, F3XP02).
   - [ ] We mey need either dedicated option or dedicated device for those double-word access modules.
 
-F3RP61Seq devices
+F3RP61Sysctl devices
 ====
 - [ ] Add rotary-switch support for longin devices.

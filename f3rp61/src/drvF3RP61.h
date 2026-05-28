@@ -1,6 +1,40 @@
 #ifndef DRVF3RP61_H
 #define DRVF3RP61_H
 
+//
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/msg.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <linux/version.h>
+#include <sys/utsname.h>
+
+//
+//#include <alarm.h>
+//#include <callback.h>
+#include <cantProceed.h>
+#include <dbAccess.h>
+#include <dbCommon.h>
+//#include <dbDefs.h>
+#include <dbScan.h>
+#include <drvSup.h>
+#include <epicsExport.h>
+#include <epicsThread.h>
+#include <errlog.h>
+#include <iocsh.h>
+#include <recGbl.h>
+#include <recSup.h>
+
+//
 #if defined(__arm__)
 #  include <ert3/m3lib.h>
 #elif defined(__powerpc__)
@@ -10,10 +44,37 @@
 #  error
 #endif
 
+//
+typedef struct {
+    int8_t   device;
+    int8_t   option;
+    int8_t   cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
+    int32_t  addr;
+    int32_t  count;
+    int32_t  irq;
+    void    *pdata; // for waveform record
+//    union {
+//        M3IO_ACCESS_COM acom;
+//        M3IO_ACCESS_REG drly;
+//    } u;
+} F3RP61_DPVT;
+
+#define getunit(a)  ((a)/10000)
+#define getslot(a) (((a)%10000)/100)
+#define getaddr(a)  ((a)%100)
+
+//
+#define PARSE_ERROR -1
+#define OPTION_ERROR -2
+
+// callback functions
 long f3rp61Init(int after);
 long f3rp61GetIoIntInfo(int, dbCommon *, IOSCANPVT *);
-long f3rp61RegisterIoInterrupt(dbCommon *, int, int, int);
 
+// helper function(s)
+int f3rp61ParseLink(const struct link *, F3RP61_DPVT *, const dbCommon *, const char *);
+
+//
 extern int f3rp61_fd;
 
 #endif // DRVF3RP61_H

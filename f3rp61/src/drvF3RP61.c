@@ -11,31 +11,7 @@
 *      Date: 6-30-08
 */
 
-#include <ctype.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/msg.h>
-#include <unistd.h>
-
-#include <linux/version.h>
-#include <sys/utsname.h>
-
-#include <dbCommon.h>
-#include <dbScan.h>
-#include <drvSup.h>
-#include <epicsExport.h>
-#include <epicsThread.h>
-#include <errlog.h>
-#include <iocsh.h>
-#include <recSup.h>
-
+//
 #include <drvF3RP61.h>
 
 //
@@ -47,12 +23,9 @@
 // Interrupts are supported by input modules up to 32 channels; 64-channel modules do not support interrupt.
 #define NUM_IRQ_CH  64 // 32?
 
-typedef struct {
-    dbCommon *prec[NUM_IRQ_CH];
-} F3RP61_IRQ;
+static IOSCANPVT ioscanpvt[M3IO_NUM_UNIT][M3IO_NUM_SLOT][NUM_IRQ_CH] = {{{0}}};
 
-static F3RP61_IRQ io_irq[M3IO_NUM_UNIT][M3IO_NUM_SLOT] = {}; // {{{{0}}}};
-
+//
 typedef enum {
     IRQ_FD      = 1, // use device file
     IRQ_MSQ     = 0, // use SysV message queue
@@ -90,23 +63,29 @@ epicsExportAddress(drvet, drvF3RP61);
 
 int f3rp61_fd = -1;
 
-//
-static long f3rp61EnableIoInterrupt(void);
-
-//
+// I/O interrupt handlers
 static void msgrcv_thread(void *);
 static void read_thread(void *);
-static M3LINKDATACONFIG link_data_config;
-static M3COMDATACONFIG com_data_config;
-static M3COMDATACONFIG ext_com_data_config;
+
+// helper fuction(s)
+static int f3rp61RegisterIoInterrupt(const dbCommon *, int, int, int);
+static int f3rp61EnableIoInterrupt(void);
 
 //
+static M3LINKDATACONFIG link_data_config;
 static void linkDeviceConfigureCallFunc(const iocshArgBuf *);
-static void comDeviceConfigureCallFunc(const iocshArgBuf *);
-static void getModuleInfoCallFunc(const iocshArgBuf *);
 static void linkDeviceConfigure(int, int, int);
+
+//
+static M3COMDATACONFIG com_data_config;
+static M3COMDATACONFIG ext_com_data_config;
+static void comDeviceConfigureCallFunc(const iocshArgBuf *);
 static void comDeviceConfigure(int, int, int, int, int);
+
+//
+static void getModuleInfoCallFunc(const iocshArgBuf *);
 static void getModuleInfo(int);
+
 static void drvF3RP61RegisterCommands(void);
 
 //////////////////////////////////////////////////////////////////////////
@@ -117,6 +96,8 @@ static long report(void)
 }
 
 //////////////////////////////////////////////////////////////////////////
+//
+// Open and store file descriptor for I/O module access
 //
 static long init()
 {
@@ -180,13 +161,13 @@ static long init()
     // check interface for the input-relay IRQ
     struct utsname buf;
     if (uname(&buf) != 0) {
-        errlogPrintf("drvF3RP71: uname failed [%d]\n", errno);
+        errlogPrintf("drvF3RP61: uname failed [%d]\n", errno);
         return -1;
     }
 
     int major, patch, sub;
     if (sscanf(buf.release, "%d.%d.%d", &major, &patch, &sub) != 3) {
-        errlogPrintf("drvF3RP71: Invalid kernel release format: %s\n", buf.release);
+        errlogPrintf("drvF3RP61: Invalid kernel release format: %s\n", buf.release);
         return -1;
     }
 
@@ -196,14 +177,14 @@ static long init()
         irq_interface = IRQ_MSQ;
 
         //debug
-        printf("%s:%s : use SysV message queue\n", __FILE__, __func__);
+        //errlogPrintf("drvF3RP61: Use SysV message queue for I/O interrupt\n");
 
     } else {
         //
         irq_interface = IRQ_FD;
 
         //debug
-        printf("%s:%s : use device file\n", __FILE__, __func__);
+        //errlogPrintf("drvF3RP61: Use read() for I/O interrupt\n");
     }
 
     //
@@ -212,7 +193,7 @@ static long init()
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Thread for interrupt handling (for kernel < 6.1.120)
+// Thread for I/O interrupt handling (for kernel < 6.1.120)
 // When an interrupt occurs, a SysV message is queued.
 // This thread waits for the message and process the PV corresponding to
 // the interrupt source described in the message.
@@ -222,7 +203,7 @@ static void msgrcv_thread(void *arg)
     int msqid = (int) arg;
 
     //debug
-    //printf("%s:%s %d\n", __FILE__, __func__, msqid);
+    //fprintf(stderr, "%s:%s %d\n", __FILE__, __func__, msqid);
 
     for (;;) {
         MSG_BUF msgbuf;
@@ -240,32 +221,31 @@ static void msgrcv_thread(void *arg)
             continue;
         }
 
-        //const long mtype   = msgbuf.mtype;
+        //const long mtype  = msgbuf.mtype;
         const int unit    = msgbuf.mtext.unit;
         const int slot    = msgbuf.mtext.slot;
         const int channel = msgbuf.mtext.channel;
 
         // Note that slot# and channel# starts from 1
-        dbCommon *prec = io_irq[unit][slot-1].prec[channel-1];
-        if (!prec) {
-            // this may not happen
-            errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,X%d)\n", unit, slot, channel);
-            break; // is this OK? - or we'd better to continue?
-        }
+        IOSCANPVT pvt = ioscanpvt[unit][slot-1][channel-1];
 
         // debug
-        //printf("%s %d U%d,S%d,X%d %s\n", __func__, msqid, unit, slot, channel, prec->name);
+        //printf("%s:%s U%d,S%d,X%02d %p\n", __FILE__, __func__, unit, slot, channel, pvt);
 
-        if (prec->scan == SCAN_IO_EVENT) {
-            IOSCANPVT ioscanpvt = *((IOSCANPVT *) prec->dpvt);
-            scanIoRequest(ioscanpvt);
-        }
+        //if (pvt) {
+        //    // this may not happen
+        //    errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,X%d)\n", unit, slot, channel);
+        //    break; // is this OK? - or we'd better to continue?
+        //}
+
+        //
+        scanIoRequest(pvt);
     }
 }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Thread for interrupt handling (for kernel >= 6.1.120)
+// Thread for I/O interrupt handling (for kernel >= 6.1.120)
 // Reading from the device file is blocked until an interrupt occures.
 // When an interrupt occurs, its source information is read and
 // process the PV corresponding to the interrupt source described in
@@ -276,7 +256,7 @@ static void read_thread(void *arg)
     int fd = (int) arg;
 
     //debug
-    //printf("%s:%s %d\n", __FILE__, __func__, fd);
+    //fprintf(stderr, "%s:%s %d\n", __FILE__, __func__, fd);
 
     for (;;) {
         struct read_buffer {
@@ -296,63 +276,36 @@ static void read_thread(void *arg)
             continue;
         }
 
-        const int unit    = buf.unit;
-        const int slot    = buf.slot;
-        uint32_t bits = (buf.bits2<<16) | buf.bits1;
+        const int unit = buf.unit;
+        const int slot = buf.slot;
+        uint32_t bits  = (buf.bits2<<16) | buf.bits1;
 
         // debug
-        //printf("size=%d, qid=%d, unit=%d, slot=%d, di=0x%08x\n", size, buf.qid, unit, slot, bits);
+        //fprintf(stderr, "size=%d, qid=%d, unit=%d, slot=%d, di=0x%08x\n", size, buf.qid, unit, slot, bits);
 
         for (int channel=1; channel<=8*sizeof(bits); channel++) {
             const int enabled = (bits>>(channel-1)) & 0x01;
-            dbCommon *prec = io_irq[unit][slot-1].prec[channel-1];
-            // debug
-            //printf("%s:%s ch%02d %d %p\n", __FILE__, __func__, channel, enabled, prec);
+
+            // Note that slot# and channel# starts from 1
+            IOSCANPVT pvt = ioscanpvt[unit][slot-1][channel-1];
+
             if (!enabled) {
                 continue;
             }
 
-            if (!prec) {
-                // this may not happen
-                errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,X%d)\n", unit, slot, channel);
-                continue; // is this OK?
-            }
-
             // debug
-            //printf("%s U%d,S%d,X%d -> scan %s\n", __func__, unit, slot, channel, prec->name);
+            //fprintf(stderr, "%s:%s U%d,S%d,X%02d %p %d\n", __FILE__, __func__, unit, slot, channel, pvt, enabled);
 
-            if (prec->scan == SCAN_IO_EVENT) {
-                IOSCANPVT ioscanpvt = *((IOSCANPVT *) prec->dpvt);
-                scanIoRequest(ioscanpvt);
-            }
+            //if (pvt) {
+            //    // this may not happen
+            //    errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,X%d)\n", unit, slot, channel);
+            //    break; // is this OK? - or we'd better to continue?
+            //}
+
+            //
+            scanIoRequest(pvt);
         }
     }
-}
-
-//////////////////////////////////////////////////////////////////////////
-//
-long f3rp61RegisterIoInterrupt(dbCommon *prec, int unit, int slot, int channel)
-{
-    // debug
-    //printf("%s:%s %s U%d,S%d,X%02d\n", __FILE__, __func__, prec->name, unit, slot, channel);
-
-    //
-    if (io_irq[unit][slot-1].prec[channel-1]) { // slot# and channel# starts from 1
-        errlogPrintf("drvF3RP61: interrupt source U%d,S%d,X%02d already in use for %s\n", unit, slot, channel, prec->name);
-        return -1;
-    }
-
-    //
-    if (channel >= NUM_IRQ_CH) {
-        errlogPrintf("drvF3RP61: interrupt source U%d,S%d,X%02d exceeds ch# limit for %s\n", unit, slot, channel, prec->name);
-        return -1;
-    }
-
-    // Add requested interrup source on the table. Note that oslot# and channel# starts from 1
-    io_irq[unit][slot-1].prec[channel-1] = prec;
-
-    //
-    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -376,9 +329,135 @@ long f3rp61Init(int after)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Parses INP or OUT link and initializes F3RP61_DPVT structure.
+// Registeres IO as well, if specified.
+//
+int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, const dbCommon *prec, const char *sup)
+{
+    const size_t size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
+    //char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
+    char buf[size];
+    strncpy(buf, plink->value.instio.string, size);
+    buf[size - 1] = '\0';
+
+    // Parse option
+    dpvt->option = 'W'; // default option for Word access
+    char *popt = strchr(buf, '&');
+    if (popt) {
+        *popt++ = '\0';
+        if (sscanf(popt, "%c", &dpvt->option) < 1) {
+            errlogPrintf("%s: %s : can't get option\n", sup, prec->name);
+            return -1;
+        }
+    }
+
+    // Parse for possible IO interrupt source
+    dpvt->irq = 0;
+    char *pint = strchr(buf, ':'); // check if SCAN is interrupt based (example: @U0,S3,Y1:U0,S4,X1)
+    if (pint) {
+        *pint++ = '\0';
+
+        int unit = 0, slot = 0, addr = 0;
+        if (0) {
+            //
+        } else if (sscanf(pint, "U%d,S%d,X%d", &unit, &slot, &addr) == 3) {
+            //
+        } else if (sscanf(pint, "S%d,X%d", &slot, &addr) == 2) {
+            //
+        } else if (sscanf(pint, "X%d", &addr) == 1) {
+            //
+        } else {
+            errlogPrintf("%s: %s : can't get interrupt source address\n", sup, prec->name);
+            return -1;
+        }
+        dpvt->irq = unit*10000 + slot*100 + addr;
+
+        //debug
+        //printf("%s : irq X%d\n", prec->name, dpvt->irq);
+
+        // Register IO Interrupt
+        if (dpvt->irq) {
+            int unit = getunit(dpvt->irq);
+            int slot = getslot(dpvt->irq);
+            int addr = getaddr(dpvt->irq);
+            if (f3rp61RegisterIoInterrupt(prec, unit, slot, addr) < 0) {
+                errlogPrintf("%s: %s : can't register I/O interrupt\n", sup, prec->name);
+                return -1;
+            }
+        }
+    }
+
+    // Parse slot, device and register number
+    int8_t device = 0;
+    int32_t unit = 0, slot = 0, addr = 0;
+    uint8_t cpuno = 0; // for Shared memory (or 'Old interface' for shared registers/relays)
+    if (0) {
+        //
+    } else if (sscanf(buf, "CPU%c,R%d", &cpuno, &addr) == 2) {
+        device = 'r'; // Shared memory (or 'Old interface' for shared registers/relays)
+    } else if (sscanf(buf, "U%d,S%d,%c%d", &unit, &slot, &device, &addr) == 4) {
+        //
+    } else if (sscanf(buf, "S%d,%c%d", &slot, &device, &addr) == 3) {
+        //
+    } else if (sscanf(buf, "%c%d", &device, &addr) == 2) {
+        //
+    } else {
+        errlogPrintf("%s: %s : can't get I/O address\n", sup, prec->name);
+        return -1;
+    }
+
+    //
+    dpvt->device = device;
+    dpvt->addr   = unit*10000 + slot*100 + addr;
+
+    // Consider I/O data length
+    dpvt->count = 1;
+    if (dpvt->option == 'F' || dpvt->option == 'L') {
+        dpvt->count = 2; // count for 'A' shold be one, which will be handled later
+    } else if (dpvt->option == 'D') {
+        dpvt->count = 4; // count for 'A' shold be two, which will be handled later
+    }
+
+    // debug
+    //printf("%s:%s %s %c%05d,%05d\n", __FILE__, __func__, prec->name, dpvt->device, dpvt->addr, dpvt->irq);
+
+    // success
+    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+static
+int f3rp61RegisterIoInterrupt(const dbCommon *prec, int unit, int slot, int channel)
+{
+    // debug
+    //printf("%s:%s %s <= U%d,S%d,X%02d\n", __FILE__, __func__, prec->name, unit, slot, channel);
+
+    //
+    if (channel >= NUM_IRQ_CH) {
+        errlogPrintf("drvF3RP61: %s : interrupt source U%d,S%d,X%02d exceeds ch# limit\n", prec->name, unit, slot, channel);
+        return -1;
+    }
+
+    //
+    if (ioscanpvt[unit][slot-1][channel-1] == 0) { // slot# and channel# starts from 1
+        // Add requested interrup source on the table.
+        scanIoInit(&ioscanpvt[unit][slot-1][channel-1]);
+    } else {
+    //    errlogPrintf("drvF3RP61: interrupt source U%d,S%d,X%02d already in use for %s\n", unit, slot, channel, prec->name);
+    //    return -1;
+    }
+
+    //
+    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////
 //
 //
-static long f3rp61EnableIoInterrupt(void)
+//
+static
+int f3rp61EnableIoInterrupt(void)
 {
     static int init_flag = 0;
 
@@ -392,8 +471,11 @@ static long f3rp61EnableIoInterrupt(void)
     init_flag = 1;
 
     //
+    EPICSTHREADFUNC handler = NULL;
     int msqid = -1;
-    if (irq_interface == IRQ_MSQ) {
+    if (irq_interface == IRQ_MSQ) { // for kernel < 6.1.120
+        handler = msgrcv_thread;
+
         // Create a SysV message queue
         msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0666);
         if (msqid  == -1) {
@@ -412,6 +494,11 @@ static long f3rp61EnableIoInterrupt(void)
             }
         }
 #endif
+    } else {                        // for kernel >= 6.1.120
+        handler = read_thread;
+
+        // Use file descriptor to /dev/m3io
+        msqid = f3rp61_fd;
     }
 
     // Enable IO IRQ
@@ -421,10 +508,10 @@ static long f3rp61EnableIoInterrupt(void)
             // check if irq from unit/slot is requested
             uint16_t mask[4] = {0};
             for (int channel = 1; channel <= NUM_IRQ_CH; channel++) { // channel# starts from 1
-                dbCommon *prec = io_irq[unit][slot-1].prec[channel-1];
-                if (prec) {
+                IOSCANPVT pvt = ioscanpvt[unit][slot-1][channel-1];
+                if (pvt) {
                     // debug
-                    //printf("%s:%s %s U%d,S%d,X%02d\n", __FILE__, __func__, prec->name, unit, slot, channel);
+                    //printf("%s:%s U%d,S%d,X%02d %p\n", __FILE__, __func__, unit, slot, channel, pvt);
                     int idx = (channel-1)/16;
                     int bit = channel-(idx*16)-1;
                     mask[idx] |= (1<<bit);
@@ -440,7 +527,7 @@ static long f3rp61EnableIoInterrupt(void)
                     .unitno = unit,
                     .slotno = slot,
                     .defData.interMask = {mask[0], mask[1], mask[2], mask[3]},
-                    .msgQId = (irq_interface==IRQ_FD) ? f3rp61_fd : msqid,
+                    .msgQId = msqid,
                 };
 
                 //#if defined(__arm__)
@@ -468,8 +555,8 @@ static long f3rp61EnableIoInterrupt(void)
     if (epicsThreadCreate(thread_name,
                           epicsThreadPriorityHigh,
                           epicsThreadGetStackSize(epicsThreadStackSmall),
-                          (irq_interface==IRQ_FD) ? (EPICSTHREADFUNC)read_thread : (EPICSTHREADFUNC)msgrcv_thread,
-                          (irq_interface==IRQ_FD) ? (void *)f3rp61_fd : (void *)msqid) == 0) {
+                          handler,
+                          (void *)msqid) == 0) {
         errlogPrintf("drvF3RP61: epicsThreadCreate failed\n");
         return -1;
     }
@@ -481,19 +568,28 @@ static long f3rp61EnableIoInterrupt(void)
 //
 // Get io interrupt info
 //
-long f3rp61GetIoIntInfo(int cmd, dbCommon *pxx, IOSCANPVT *ppvt)
+long f3rp61GetIoIntInfo(int cmd, dbCommon *prec, IOSCANPVT *ppvt)
 {
-    if (!pxx->dpvt) {
-        errlogPrintf("drvF3RP61: f3rp61GetIoIntInfo is called with null dpvt: %s\n", pxx->name);
+    F3RP61_DPVT *dpvt = prec->dpvt;
+    if (!dpvt) {
+        // this may happen if record initialization failed
+        //errlogPrintf("drvF3RP61: f3rp61GetIoIntInfo is called with null dpvt: %s\n", prec->name);
         return -1;
     }
 
     // I/O intr handling
-    if ( *((IOSCANPVT *) pxx->dpvt) == NULL) {
-        scanIoInit((IOSCANPVT *) pxx->dpvt);
+    int unit    = getunit(dpvt->irq);
+    int slot    = getslot(dpvt->irq);
+    int channel = getaddr(dpvt->irq);
+
+    IOSCANPVT pvt = ioscanpvt[unit][slot-1][channel-1];
+    // debug
+    //printf("%s:%s %s U%d,S%d,X%02d %p\n", __FILE__, __func__, prec->name, unit, slot, channel, pvt);
+    if (pvt) {
+        // this may not happen ...
     }
 
-    *ppvt = *((IOSCANPVT *) pxx->dpvt);
+    *ppvt = pvt;
 
     return 0;
 }
@@ -593,11 +689,9 @@ static void comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, i
 // List FA-M3/e-RT3 modules installed on the system.
 // Empty slots are shown if whatever argument is given.
 //
-static const iocshArg getModuleInfoArg0 = { "empty",     iocshArgString};
-static const iocshArg *getModuleInfoArgs[] = {
-    &getModuleInfoArg0,
-};
-static const iocshFuncDef getModuleInfoFuncDef = {
+static const iocshArg      getModuleInfoArg0    = { "dummy",     iocshArgString};
+static const iocshArg     *getModuleInfoArgs[]  = { &getModuleInfoArg0, };
+static const iocshFuncDef  getModuleInfoFuncDef = {
     "f3rp61GetModuleInfo",
     1,
     getModuleInfoArgs
@@ -654,14 +748,12 @@ static void getModuleInfo(int verbosity)
 static void drvF3RP61RegisterCommands(void)
 {
     static int init_flag = 0;
-    if (init_flag) {
-        return;
+    if (!init_flag) {
+        init_flag = 1;
+        iocshRegister(&getModuleInfoFuncDef, getModuleInfoCallFunc);
+        iocshRegister(&comDeviceConfigureFuncDef, comDeviceConfigureCallFunc);
+        iocshRegister(&linkDeviceConfigureFuncDef, linkDeviceConfigureCallFunc);
     }
-    init_flag = 1;
-
-    iocshRegister(&getModuleInfoFuncDef, getModuleInfoCallFunc);
-    iocshRegister(&comDeviceConfigureFuncDef, comDeviceConfigureCallFunc);
-    iocshRegister(&linkDeviceConfigureFuncDef, linkDeviceConfigureCallFunc);
 }
 
 epicsExportRegistrar(drvF3RP61RegisterCommands);

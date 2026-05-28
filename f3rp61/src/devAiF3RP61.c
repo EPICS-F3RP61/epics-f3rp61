@@ -10,31 +10,15 @@
 *      Author: Jun-ichi Odagiri
 *      Date: 6-30-08
 */
-#include <errno.h>
-#include <fcntl.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <math.h>
 
-#include <alarm.h>
-#include <callback.h>
-#include <cantProceed.h>
-#include <dbAccess.h>
-#include <dbDefs.h>
-#include <dbScan.h>
-#include <devSup.h>
-#include <epicsExport.h>
-#include <errlog.h>
-#include <recGbl.h>
-#include <recSup.h>
+//
 #include <aiRecord.h>
 
+//
 #include <drvF3RP61.h>
+
+//
+#include <math.h>
 
 // Create the dset for devAiF3RP61
 static long init_record();
@@ -60,143 +44,67 @@ struct {
 
 epicsExportAddress(dset, devAiF3RP61);
 
-typedef struct {
-    IOSCANPVT ioscanpvt; // must come first
-    union {
-        M3IO_ACCESS_COM acom;
-        M3IO_ACCESS_REG drly;
-    } u;
-    char device;
-    char option;
-} F3RP61_AI_DPVT;
-
 // init_record() initializes record - parses INP/OUT field string,
 // allocates private data storage area and sets initial configuration
 // values.
 static long init_record(aiRecord *precord)
 {
-    int unitno = 0, slotno = 0, cpuno = 0, start = 0;
-    char device = 0;
-    char option = 'W'; // Dummy option for Word access
+    //debug
+    //printf("%s:%s %s\n", __FILE__, __func__, precord->name);
+
+    //
+    struct link *plink = &precord->inp;
 
     // Link type must be INST_IO
-    if (precord->inp.type != INST_IO) {
+    if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, precord,
                           "devAiF3RP61 (init_record) Illegal INP field");
         precord->pact = 1;
         return S_db_badField;
     }
 
-    struct link *plink = &precord->inp;
-    int   size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
-    char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
-    strncpy(buf, plink->value.instio.string, size);
-    buf[size - 1] = '\0';
-
-    // Parse option
-    char *popt = strchr(buf, '&');
-    if (popt) {
-        *popt++ = '\0';
-        if (sscanf(popt, "%c", &option) < 1) {
-            errlogPrintf("devAiF3RP61: can't get option for %s\n", precord->name);
-            precord->pact = 1;
-            return -1;
-        }
-
-        if (option == 'W') {        // Dummy option for Word access
-        } else if (option == 'U') { // Unsigned integer
-        } else if (option == 'L') { // Long word
-        } else if (option == 'F') { // Single precision floating point
-        } else if (option == 'D') { // Double precision floating point
-        } else {                    // Option not recognized
-            errlogPrintf("devAiF3RP61: unsupported option \'%c\' for %s\n", option, precord->name);
-            precord->pact = 1;
-            return -1;
-        }
-    }
-
-    // Parse for possible interrupt source
-    char *pint = strchr(buf, ':'); // check if SCAN is interrupt based (example: @U0,S3,Y1:U0,S4,X1)
-    if (pint) {
-        *pint++ = '\0';
-        if (sscanf(pint, "U%d,S%d,X%d", &unitno, &slotno, &start) < 3) {
-            errlogPrintf("devAiF3RP61: can't get interrupt source address for %s\n", precord->name);
-            precord->pact = 1;
-            return -1;
-        }
-
-        if (f3rp61RegisterIoInterrupt((dbCommon *) precord, unitno, slotno, start) < 0) {
-            errlogPrintf("devAiF3RP61: can't register I/O interrupt for %s\n", precord->name);
-            precord->pact = 1;
-            return -1;
-        }
-    }
-
-    // Parse slot, device and register number
-    if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
-        if (sscanf(buf, "CPU%d,R%d", &cpuno, &start) < 2) {
-            if (sscanf(buf, "%c%d", &device, &start) < 2) {
-                errlogPrintf("devAiF3RP61: can't get I/O address for %s\n", precord->name);
-                precord->pact = 1;
-                return -1;
-            } else if (device != 'W' && device != 'R') {
-                errlogPrintf("devAiF3RP61: unsupported device \'%c\' for %s\n", device, precord->name);
-                precord->pact = 1;
-            }
-        } else {
-            device = 'r'; // Shared memory (or 'Old interface' for shared registers/relays)
-        }
-    }
-
     // Allocate private data storage area
-    F3RP61_AI_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_AI_DPVT), "calloc failed");
-    dpvt->device = device;
-    dpvt->option = option;
+    F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
 
-    // Consider I/O data length
-    int count = 1;
-    if (option == 'F' || option == 'L') {
-        count = 2; // count for 'A' shold be one, which will be handled later
-    } else if (option == 'D') {
-        count = 4; // count for 'A' shold be two, which will be handled later
+    //
+    const int ret = f3rp61ParseLink(plink, dpvt, (dbCommon *)precord, "devAiF3RP61");
+    if (ret < 0) {
+        //errlogPrintf("devAiF3RP61: %s : syntax error in INP field\n", precord->name);
+        precord->pact = 1;
+        return -1;
     }
 
-    // Check device validity and compose data structure for I/O request
-    if (0) {                                     // dummy
+    // Check conversion Option
+    const int8_t option = dpvt->option;
+    if (option == 'W') {        // Dummy option for Word access
+    } else if (option == 'U') { // Unsigned integer
+    } else if (option == 'L') { // Long word
+    } else if (option == 'F') { // Single precision floating point
+    } else if (option == 'D') { // Double precision floating point
+    } else {                    // Option not recognized
+        errlogPrintf("devAiF3RP61: %s : unsupported option \'%c\'\n", precord->name, option);
+        precord->pact = 1;
+        return -1;
+    }
 
+    // Check device validity
+    const int8_t device = dpvt->device;
+    if (0) {                                     // dummy
     } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
                device == 'r') {                  // Shared memory
-        M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-        pacom->cpuno = cpuno; // for 'r' devices
-        pacom->start = start;
-        pacom->count = count;
-
     } else if (device == 'X' || device == 'Y') { // Input and output relays on I/O modules
-        M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
-        pdrly->unitno = unitno;
-        pdrly->slotno = slotno;
-        pdrly->start  = start;
-        pdrly->count  = count;
-
     } else if (device == 'A') {                  // I/O registers on special modules
         // 'D' and 'F' option might not make sence for device 'A'
         //if (option != 'W') { // || option != 'U' || option != 'L'
-        //    errlogPrintf("devAiF3RP61: unsupported option \'%c\' for %s\n", option, precord->name);
+        //    errlogPrintf("devAiF3RP61: %s ; unsupported option \'%c\'\n", precord->name, option);
         //    precord->pact = 1;
         //    return -1;
         //}
-        M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
-        pdrly->unitno = unitno;
-        pdrly->slotno = slotno;
-        pdrly->start  = start;
         if (option == 'L' || option == 'F' || option == 'D') {
-            pdrly->count = count/2; // we use M3IO_READ_REG_L
-        } else {
-            pdrly->count = count;
+            dpvt->count /= 2; // we use M3IO_READ_REG_L
         }
-
     } else {
-        errlogPrintf("devAiF3RP61: unsupported device \'%c\' for %s\n", device, precord->name);
+        errlogPrintf("devAiF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
         precord->pact = 1;
         return -1;
     }
@@ -211,11 +119,16 @@ static long init_record(aiRecord *precord)
 // VAL field.
 static long read_ai(aiRecord *precord)
 {
-    F3RP61_AI_DPVT *dpvt = precord->dpvt;
-    M3IO_ACCESS_COM *pacom = &dpvt->u.acom;
-    M3IO_ACCESS_REG *pdrly = &dpvt->u.drly;
-    const char device = dpvt->device;
-    const char option = dpvt->option;
+    // debug
+    //if (precord->scan == SCAN_IO_EVENT) {
+    //    errlogPrintf("devAiF3RP61: %s : SCAN by I/O intr\n", precord->name);
+    //}
+
+    F3RP61_DPVT  *dpvt = precord->dpvt;
+    const int8_t  device = dpvt->device;
+    const int8_t  option = dpvt->option;
+    const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
+    const int32_t count  = dpvt->count;
 
     // Buffers for data read
     uint16_t wdata[4] = {0};
@@ -225,84 +138,110 @@ static long read_ai(aiRecord *precord)
     if (0) {                    // dummy
 
     } else if (device == 'R') { // Shared registers
-        if (readM3ComRegister(pacom->start, pacom->count, wdata) < 0) {
-            errlogPrintf("devAiF3RP61: readM3ComRegister failed [%d] for %s\n", errno, precord->name);
+        const int32_t addr = dpvt->addr;
+        if (readM3ComRegister(addr, count, wdata) < 0) {
+            errlogPrintf("devAiF3RP61: %s : readM3ComRegister failed [%d]\n", precord->name, errno);
             return -1;
         }
 
     } else if (device == 'W') { // Link registers
-        if (readM3LinkRegister(pacom->start, pacom->count, wdata) < 0) {
-            errlogPrintf("devAiF3RP61: readM3LinkRegister failed [%d] for %s\n", errno, precord->name);
+        const int32_t addr = dpvt->addr;
+        if (readM3LinkRegister(addr, count, wdata) < 0) {
+            errlogPrintf("devAiF3RP61: %s : readM3LinkRegister failed [%d]\n", precord->name, errno);
             return -1;
         }
 
     } else if (device == 'r') { // Shared memory
 #if defined(__powerpc__)
-        pacom->pdata = wdata;
-        if (ioctl(f3rp61_fd, M3IO_READ_COM, pacom) < 0) {
-            errlogPrintf("devAiF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
+        M3IO_ACCESS_COM acom = {
+            .cpuno = cpuno,
+            .start = dpvt->addr,
+            .count = count,
+            .pdata = wdata,
+        };
+        if (ioctl(f3rp61_fd, M3IO_READ_COM, &acom) < 0) {
+            errlogPrintf("devAiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
             return -1;
         }
 #else
-        if (readM3CpuMemory(pacom->cpuno, pacom->start, pacom->count, wdata) < 0) {
-            errlogPrintf("devAiF3RP61: readM3CpuMemory failed [%d] for %s\n", errno, precord->name);
+        const int32_t addr = dpvt->addr;
+        if (readM3CpuMemory(cpuno, addr, count, wdata) < 0) {
+            errlogPrintf("devAiF3RP61: %s : readM3CpuMemory failed [%d]\n", precord->name, errno);
             return -1;
         }
 #endif
 
     } else if (device == 'X') { // Input relays on I/O modules
-        if (ioctl(f3rp61_fd, M3IO_READ_INRELAY, pdrly) < 0) {
-            errlogPrintf("devAiF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
+        M3IO_ACCESS_REG drly = {
+            .unitno = getunit(dpvt->addr),
+            .slotno = getslot(dpvt->addr),
+            .start  = getaddr(dpvt->addr),
+            .count  = count,
+        };
+        if (ioctl(f3rp61_fd, M3IO_READ_INRELAY, &drly) < 0) {
+            errlogPrintf("devAiF3RP61: %s : ioctl failed [%d]n", precord->name, errno);
             return -1;
         }
-        wdata[0] = pdrly->u.inrly[0].data;
+        wdata[0] = drly.u.inrly[0].data;
         if (option == 'L' || option == 'F') { // count == 2
-            wdata[1] = pdrly->u.inrly[1].data;
+            wdata[1] = drly.u.inrly[1].data;
         }
         if (option == 'D') { // count == 4
-            wdata[1] = pdrly->u.inrly[1].data;
-            wdata[2] = pdrly->u.inrly[2].data;
-            wdata[3] = pdrly->u.inrly[3].data;
+            wdata[1] = drly.u.inrly[1].data;
+            wdata[2] = drly.u.inrly[2].data;
+            wdata[3] = drly.u.inrly[3].data;
         }
 
     } else if (device == 'Y') { // Output relays on I/O modules
-        if (ioctl(f3rp61_fd, M3IO_READ_OUTRELAY, pdrly) < 0) {
-            errlogPrintf("devAiF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
+        M3IO_ACCESS_REG drly = {
+            .unitno = getunit(dpvt->addr),
+            .slotno = getslot(dpvt->addr),
+            .start  = getaddr(dpvt->addr),
+            .count  = count,
+        };
+        if (ioctl(f3rp61_fd, M3IO_READ_OUTRELAY, &drly) < 0) {
+            errlogPrintf("devAiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
             return -1;
         }
 #if defined(__powerpc__)
-        wdata[0] = pdrly->u.inrly[0].data;
+        wdata[0] = drly.u.inrly[0].data;
         if (option == 'L' || option == 'F') { // count == 2
-            wdata[1] = pdrly->u.inrly[1].data;
+            wdata[1] = drly.u.inrly[1].data;
         }
         if (option == 'D') { // count == 4
-            wdata[1] = pdrly->u.inrly[1].data;
-            wdata[2] = pdrly->u.inrly[2].data;
-            wdata[3] = pdrly->u.inrly[3].data;
+            wdata[1] = drly.u.inrly[1].data;
+            wdata[2] = drly.u.inrly[2].data;
+            wdata[3] = drly.u.inrly[3].data;
         }
 #else
-        wdata[0] = pdrly->u.outrly[0].data;
+        wdata[0] = drly.u.outrly[0].data;
         if (option == 'L' || option == 'F') { // count == 2
-            wdata[1] = pdrly->u.outrly[1].data;
+            wdata[1] = drly.u.outrly[1].data;
         }
         if (option == 'D') { // count == 4
-            wdata[1] = pdrly->u.outrly[1].data;
-            wdata[2] = pdrly->u.outrly[2].data;
-            wdata[3] = pdrly->u.outrly[3].data;
+            wdata[1] = drly.u.outrly[1].data;
+            wdata[2] = drly.u.outrly[2].data;
+            wdata[3] = drly.u.outrly[3].data;
         }
 #endif
 
     } else {//(device == 'A')   // I/O registers on special modules
+        M3IO_ACCESS_REG drly = {
+            .unitno = getunit(dpvt->addr),
+            .slotno = getslot(dpvt->addr),
+            .start  = getaddr(dpvt->addr),
+            .count  = count,
+        };
         if (option == 'L' || option == 'F' || option == 'D') {
-            pdrly->u.pldata = ldata;
-            if (ioctl(f3rp61_fd, M3IO_READ_REG_L, pdrly) < 0) {
-                errlogPrintf("devAiF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
+            drly.u.pldata = ldata;
+            if (ioctl(f3rp61_fd, M3IO_READ_REG_L, &drly) < 0) {
+                errlogPrintf("devAiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
                 return -1;
             }
         } else {
-            pdrly->u.pwdata = wdata;
-            if (ioctl(f3rp61_fd, M3IO_READ_REG, pdrly) < 0) {
-                errlogPrintf("devAiF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
+            drly.u.pwdata = wdata;
+            if (ioctl(f3rp61_fd, M3IO_READ_REG, &drly) < 0) {
+                errlogPrintf("devAiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
                 return -1;
             }
         }

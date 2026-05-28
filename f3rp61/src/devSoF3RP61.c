@@ -10,28 +10,11 @@
 *      Author: Jun-ichi Odagiri
 *      Date: 6-30-08
 */
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
-#include <alarm.h>
-#include <callback.h>
-#include <cantProceed.h>
-#include <dbAccess.h>
-#include <dbDefs.h>
-#include <dbScan.h>
-#include <devSup.h>
-#include <epicsExport.h>
-#include <errlog.h>
-#include <recGbl.h>
-#include <recSup.h>
+//
 #include <stringoutRecord.h>
 
+//
 #include <drvF3RP61.h>
 
 // Create the dset for devSoF3RP61
@@ -58,18 +41,13 @@ struct {
 
 epicsExportAddress(dset, devSoF3RP61);
 
-typedef struct {
-    IOSCANPVT ioscanpvt; // must come first
-    M3IO_ACCESS_REG drly;
-} F3RP61_SO_DPVT;
-
 // init_record() initializes record - parses INP/OUT field string,
 // allocates private data storage area and sets initial configuration
 // values.
 static long init_record(stringoutRecord *precord)
 {
-    int unitno = 0, slotno = 0, start = 0;
-    char device = 0;
+    //
+    struct link *plink = &precord->out;
 
     // Link type must be INST_IO
     if (precord->out.type != INST_IO) {
@@ -79,51 +57,33 @@ static long init_record(stringoutRecord *precord)
         return S_db_badField;
     }
 
-    struct link *plink = &precord->out;
-    int   size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
-    char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
-    strncpy(buf, plink->value.instio.string, size);
-    buf[size - 1] = '\0';
+    // Allocate private data storage area
+    F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
 
-    // Parse for possible interrupt source
-    char *pint = strchr(buf, ':');
-    if (pint) {
-        *pint++ = '\0';
-        if (sscanf(pint, "U%d,S%d,X%d", &unitno, &slotno, &start) < 3) {
-            errlogPrintf("devSoF3RP61: can't get interrupt source address for %s\n", precord->name);
-            precord->pact = 1;
-            return -1;
-        }
-
-        if (f3rp61RegisterIoInterrupt((dbCommon *) precord, unitno, slotno, start) < 0) {
-            errlogPrintf("devSoF3RP61: can't register I/O interrupt for %s\n", precord->name);
-            precord->pact = 1;
-            return -1;
-        }
-    }
-
-    // Parse slot, device and register number
-    if (sscanf(buf, "U%d,S%d,%c%d", &unitno, &slotno, &device, &start) < 4) {
-        errlogPrintf("devSoF3RP61: can't get I/O address for %s\n", precord->name);
+    //
+    const int ret = f3rp61ParseLink(plink, dpvt, (dbCommon *)precord, "devSoF3RP61");
+    if (ret < 0) {
+        //errlogPrintf("devSoF3RP61: %s : syntax error in INP field\n", precord->name);
         precord->pact = 1;
         return -1;
     }
 
-    // Allocate private data storage area
-    F3RP61_SO_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_SO_DPVT), "calloc failed");
+    // Check conversion Option
+    const int8_t option = dpvt->option;
+    if (option == 'W') {        // Dummy option for Word access
+    } else {                    // Option not recognized
+        errlogPrintf("devSoF3RP61: %s : unsupported option \'%c\'\n", precord->name, option);
+        precord->pact = 1;
+        return -1;
+    }
 
-    // Check device validity and compose data structure for I/O request
+    // Check device validity
+    const int8_t device = dpvt->device;
     if (0) {                                     // dummy
-
     } else if (device == 'A') {                  // I/O registers on special modules
-        M3IO_ACCESS_REG *pdrly = &dpvt->drly;
-        pdrly->unitno = unitno;
-        pdrly->slotno = slotno;
-        pdrly->start  = start;
-        pdrly->u.pwdata = callocMustSucceed(40, sizeof(char),  "calloc failed");
-        pdrly->count = 20;
+        dpvt->count = 20;
     } else {
-        errlogPrintf("devSoF3RP61: unsupported device \'%c\' for %s\n", device, precord->name);
+        errlogPrintf("devSoF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
         precord->pact = 1;
         return -1;
     }
@@ -137,14 +97,27 @@ static long init_record(stringoutRecord *precord)
 // When called, it sends the value from the VAL field to the driver.
 static long write_so(stringoutRecord *precord)
 {
-    F3RP61_SO_DPVT *dpvt = precord->dpvt;
-    M3IO_ACCESS_REG *pdrly = &dpvt->drly;
+    F3RP61_DPVT  *dpvt = precord->dpvt;
+    //const int8_t  device = dpvt->device;
+    //const int8_t  option = dpvt->option;
+    //const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
+    const int32_t count  = dpvt->count;
 
-    strncpy((char *) pdrly->u.pbdata, precord->val, 40);
+    // Compose data to write
+    char bdata[40];
+    strncpy(bdata, precord->val, 40);
 
     // Issue API function
-    if (ioctl(f3rp61_fd, M3IO_WRITE_REG, pdrly) < 0) {
-        errlogPrintf("devSoF3RP61: ioctl failed [%d] for %s\n", errno, precord->name);
+    M3IO_ACCESS_REG drly = {
+        .unitno = getunit(dpvt->addr),
+        .slotno = getslot(dpvt->addr),
+        .start  = getaddr(dpvt->addr),
+        .count  = count,
+    };
+    drly.u.pbdata = (unsigned char *)bdata;
+
+    if (ioctl(f3rp61_fd, M3IO_WRITE_REG, drly) < 0) {
+        errlogPrintf("devSoF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
         return -1;
     }
 

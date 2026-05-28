@@ -28,7 +28,7 @@
 #define BCDMIN_BCD     0 // 0x9999
 #define BCDMIN_INT     0 //
 
-
+//
 uint32_t devF3RP61bcd2int(uint16_t bcd, longinRecord *precord)
 {
     uint32_t base = 1;
@@ -55,6 +55,7 @@ uint32_t devF3RP61bcd2int(uint16_t bcd, longinRecord *precord)
     return dec;
 }
 
+//
 uint16_t devF3RP61int2bcd(int32_t dec, longoutRecord *precord)
 {
     if (dec<BCDMIN_INT) {

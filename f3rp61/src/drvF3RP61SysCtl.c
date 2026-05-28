@@ -11,27 +11,10 @@
 *      Date: Dec. 2013
 */
 
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/msg.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-#include <dbCommon.h>
-#include <dbScan.h>
-#include <drvSup.h>
-#include <epicsExport.h>
-#include <errlog.h>
-#include <iocsh.h>
-#include <recSup.h>
-
+//
 #include <drvF3RP61SysCtl.h>
 
+//
 static long report();
 static long init();
 
@@ -53,13 +36,17 @@ static void setLEDCallFunc(const iocshArgBuf *);
 static void setLED(const char, const int);
 static void drvF3RP61SysCtlRegisterCommands(void);
 
+//////////////////////////////////////////////////////////////////////////
 //
 static long report(void)
 {
     return 0;
 }
 
+//////////////////////////////////////////////////////////////////////////
+//
 // Open and store m3sysctl file descriptor
+//
 static long init(void)
 {
     static int init_flag = 0;
@@ -162,7 +149,7 @@ static void setLED(const char led, const int value)
 
     // Issue API function
     if (ioctl(f3rp61SysCtl_fd, cmd, &data) < 0) {
-        errlogPrintf("drvF3RP61SysCtl: ioctl failed [%d] for f3rp61setLED\n", errno);
+        errlogPrintf("drvF3RP61SysCtl: setLED : ioctl failed [%d]\n", errno);
         return;
     }
 }

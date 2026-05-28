@@ -11,28 +11,11 @@
 *      Author: Gregor Kostevc (Cosylab)
 *      Date: Dec. 2013
 */
-#include <errno.h>
-#include <fcntl.h>
-//#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
-#include <alarm.h>
-#include <cantProceed.h>
-#include <dbAccess.h>
-#include <dbDefs.h>
-#include <dbScan.h>
-#include <devSup.h>
-#include <epicsExport.h>
-#include <errlog.h>
-#include <recGbl.h>
-#include <recSup.h>
+//
 #include <mbbiRecord.h>
 
+//
 #include <drvF3RP61SysCtl.h>
 
 // Create the dset for devMbbiF3RP61SysCtl
@@ -85,7 +68,7 @@ static long init_record(mbbiRecord *precord)
     // Parse device
     char device;
     if (sscanf(buf, "SYS,%c,", &device) < 1) {
-        errlogPrintf("devMbbiF3RP61SysCtl: can't get device for %s\n", precord->name);
+        errlogPrintf("devMbbiF3RP61SysCtl: %s : can't get device\n", precord->name);
         precord->pact = 1;
         return -1;
     }
@@ -100,7 +83,7 @@ static long init_record(mbbiRecord *precord)
     } else if (device == 'S') {                  // Mode-SW
 
     } else {
-        errlogPrintf("devMbbiF3RP61SysCtl: unsupported device \'%c\' for %s\n", device, precord->name);
+        errlogPrintf("devMbbiF3RP61SysCtl: %s : unsupported device \'%c\'s\n", precord->name, device);
         precord->pact = 1;
         return -1;
     }
@@ -125,7 +108,7 @@ static long read_mbbi(mbbiRecord *precord)
 
     } else if (device == 'S') {                  // Mode-sw
         if (ioctl(f3rp61SysCtl_fd, M3SC_GET_SW, &data) < 0) {
-            errlogPrintf("devMbbiF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, precord->name);
+            errlogPrintf("devMbbiF3RP61SysCtl: %s : ioctl failed [%d]\n", precord->name, errno);
             return -1;
         }
         precord->rval = data;

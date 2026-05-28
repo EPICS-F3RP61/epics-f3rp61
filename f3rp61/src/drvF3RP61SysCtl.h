@@ -1,6 +1,35 @@
 #ifndef DRVF3RP61SYSCTL_H
 #define DRVF3RP61SYSCTL_H
 
+//
+#include <errno.h>
+#include <fcntl.h>
+//#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+//#include <sys/msg.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+//
+#include <alarm.h>
+#include <cantProceed.h>
+#include <dbAccess.h>
+#include <dbCommon.h>
+#include <dbDefs.h>
+#include <dbScan.h>
+#include <devSup.h>
+#include <drvSup.h>
+#include <epicsExport.h>
+#include <iocsh.h>
+#include <errlog.h>
+#include <recGbl.h>
+#include <recSup.h>
+
+//
 #if defined(__arm__)
 #  include <ert3/m3lib.h>
 #elif defined(__powerpc__)
@@ -10,6 +39,7 @@
 #  error
 #endif
 
+//
 #if defined(__powerpc__)
 // ioctl
 #  define M3SC_SET_LED      RP6X_SYSIOC_SETLED
@@ -28,6 +58,7 @@
 #  define M3SC_LED_ERR_ON   RP6X_LED_ERR_ON
 #endif
 
+//
 extern int f3rp61SysCtl_fd;
 
 #endif // DRVF3RP61SYSCTL_H

@@ -10,28 +10,11 @@
 *      Author: Gregor Kostevc (Cosylab)
 *      Date: Dec. 2013
 */
-#include <errno.h>
-#include <fcntl.h>
-//#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
-#include <alarm.h>
-#include <cantProceed.h>
-#include <dbAccess.h>
-#include <dbDefs.h>
-#include <dbScan.h>
-#include <devSup.h>
-#include <epicsExport.h>
-#include <errlog.h>
-#include <recGbl.h>
-#include <recSup.h>
+//
 #include <boRecord.h>
 
+//
 #include <drvF3RP61SysCtl.h>
 
 // Create the dset for devBoF3RP61SysCtl
@@ -88,7 +71,7 @@ static long init_record(boRecord *precord)
     // Parse 'device' and possibly 'led'
     if (sscanf(buf, "SYS,%c%c,", &device, &led) < 2) {
         if (sscanf(buf, "SYS,%c", &device) < 1) {
-            errlogPrintf("devBoF3RP61SysCtl: can't get device for %s\n", precord->name);
+            errlogPrintf("devBoF3RP61SysCtl: %s : can't get device\n", precord->name);
             precord->pact = 1;
             return -1;
         }
@@ -103,7 +86,7 @@ static long init_record(boRecord *precord)
 
     } else if (device == 'L') {                  // LED
         if (led != 'R' && led != 'A' && led != 'E') {
-            errlogPrintf("devBoF3RP61SysCtl: unsupported LED address \'%c\' for %s\n", device, precord->name);
+            errlogPrintf("devBoF3RP61SysCtl: %s : unsupported LED address \'%c\'\n", precord->name, device);
             precord->pact = 1;
             return -1;
         }
@@ -111,14 +94,14 @@ static long init_record(boRecord *precord)
 #ifdef M3SC_LED_US3_ON // it is assumed that US1 and US2 are also defined
     } else if (device == 'U') {                  // User-LED
         if (led != '1' && led != '2' && led != '3') {
-            errlogPrintf("devBoF3RP61SysCtl: unsupported LED address \'%c\' for %s\n", device, precord->name);
+            errlogPrintf("devBoF3RP61SysCtl: %s : unsupported LED address \'%c\'\n", precord->name, device);
             precord->pact = 1;
             return -1;
         }
 #endif
 
     } else {
-        errlogPrintf("devBoF3RP61SysCtl: unsupported device \'%c\' for %s\n", device, precord->name);
+        errlogPrintf("devBoF3RP61SysCtl: %s : unsupported device \'%c\'\n", precord->name, device);
         precord->pact = 1;
         return -1;
     }
@@ -152,7 +135,7 @@ static long write_bo(boRecord *precord)
             data = (precord->val) ? M3SC_LED_ERR_ON : M3SC_LED_ERR_OFF;
         }
         if (ioctl(f3rp61SysCtl_fd, M3SC_SET_LED, &data) < 0) {
-            errlogPrintf("devBoF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, precord->name);
+            errlogPrintf("devBoF3RP61SysCtl: %s: ioctl failed [%d]\n", precord->name, errno);
             return -1;
         }
 
@@ -166,7 +149,7 @@ static long write_bo(boRecord *precord)
             data = (precord->val) ? M3SC_LED_US3_ON : M3SC_LED_US3_OFF;
         }
         if (ioctl(f3rp61SysCtl_fd, M3SC_SET_US_LED, &data) < 0) {
-            errlogPrintf("devBoF3RP61SysCtl: ioctl failed [%d] for %s\n", errno, precord->name);
+            errlogPrintf("devBoF3RP61SysCtl: %s : ioctl failed [%d]\n", precord->name, errno);
             return -1;
         }
 #endif

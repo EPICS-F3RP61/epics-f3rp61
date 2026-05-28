@@ -13,29 +13,11 @@
 *      Modified: Gregor Kostevc (Cosylab)
 *      Date: Dec. 2013
 */
-#include <errno.h>
-#include <fcntl.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
-#include <alarm.h>
-#include <callback.h>
-#include <cantProceed.h>
-#include <dbAccess.h>
-#include <dbDefs.h>
-#include <dbScan.h>
-#include <devSup.h>
-#include <epicsExport.h>
-#include <errlog.h>
-#include <recGbl.h>
-#include <recSup.h>
+//
 #include <longoutRecord.h>
 
+//
 #include <drvF3RP61Seq.h>
 #include <devF3RP61bcd.h>
 
@@ -66,100 +48,39 @@ epicsExportAddress(dset, devLoF3RP61Seq);
 // values.
 static long init_record(longoutRecord *precord)
 {
-    int srcSlot = 0, destSlot = 0, top = 0;
-    char device = 0;
-    char option = 'W'; // Dummy option for Word access
+    //
+    struct link *plink = &precord->out;
 
     // Link type must be INST_IO
-    if (precord->out.type != INST_IO) {
+    if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, precord,
                           "devLoF3RP61Seq (init_record) Illegal OUT field");
         precord->pact = 1;
         return S_db_badField;
     }
 
-    struct link *plink = &precord->out;
-    int   size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
-    char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
-    strncpy(buf, plink->value.instio.string, size);
-    buf[size - 1] = '\0';
-
-    // Parse option
-    char *popt = strchr(buf, '&');
-    if (popt) {
-        *popt++ = '\0';
-        if (sscanf(popt, "%c", &option) < 1) {
-            errlogPrintf("devLoF3RP61Seq: can't get option for %s\n", precord->name);
-            precord->pact = 1;
-            return -1;
-        }
-
-        if (option == 'W') {        // Dummy option for Word access
-        } else if (option == 'B') { // Binary Coded Decimal format
-        } else if (option == 'U') { // Unsigned integer, perhaps we'd better disable this
-        } else if (option == 'L') { // Long word
-        } else {                    // Option not recognized
-            errlogPrintf("devLoF3RP61Seq: unsupported option \'%c\' for %s\n", option, precord->name);
-            precord->pact = 1;
-            return -1;
-        }
-    }
-
-    // Parse slot, device and register number
-    if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-        errlogPrintf("devLoF3RP61Seq: can't get device address for %s\n", precord->name);
-        precord->pact = 1;
-        return -1;
-    }
-
-    // Check device validity
-    switch (device)
-    {
-    case 'D': // data registers
-    case 'B': // file registers
-    case 'F': // cache registers
-    case 'Z': // special registers
-    case 'I': // internal relays
-        break;
-    default:
-        errlogPrintf("devLoF3RP61Seq: unsupported device \'%c\' for %s\n", device, precord->name);
-        precord->pact = 1;
-        return -1;
-    }
-
-    // Read the slot number of CPU module
-    if (ioctl(f3rp61Seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
-        errlogPrintf("devLoF3RP61Seq: ioctl failed [%d] for %s\n", errno, precord->name);
-        precord->pact = 1;
-        return -1;
-    }
-
     // Allocate private data storage area
-    F3RP61_SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_SEQ_DPVT), "calloc failed");
-    dpvt->option = option;
+    F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
 
-    // Compose data structure for I/O request to CPU module
-    MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
-    pmcmdStruct->timeOut = 1;
-
-    MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
-    pmcmdRequest->formatCode = 0xf1;
-    pmcmdRequest->responseOption = 1;
-    pmcmdRequest->srcSlot = srcSlot;
-    pmcmdRequest->destSlot = destSlot;
-    pmcmdRequest->mainCode = 0x26;
-    pmcmdRequest->subCode = 0x02;
-
-    M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-    pM3WriteSeqdev->accessType = kWord;
-    if (option=='L') {
-        pM3WriteSeqdev->dataNum = 2;
-    } else {
-        pM3WriteSeqdev->dataNum = 1;
+    //
+    const int ret = f3rp61seqParseLink(plink, dpvt, kWrite, kWord, (dbCommon *)precord, "devLoF3RP61Seq");
+    if (ret < 0) {
+        //errlogPrintf("devLoF3RP61Seq: %s : syntax error in INP field\n", precord->name);
+        precord->pact = 1;
+        return -1;
     }
-    pM3WriteSeqdev->devType = device - '@'; // 'D'=>0x04, 'B'=>0x02, 'F'=>0x06, 'Z'=>0x1A, 'I'=>0x09
-    pM3WriteSeqdev->topDevNo = top;
-    pmcmdRequest->dataSize = 10 + pM3WriteSeqdev->accessType * pM3WriteSeqdev->dataNum;
+
+    // Check conversion Option
+    const int8_t option = dpvt->option;
+    if (option == 'W') {        // Dummy option for Word access
+    } else if (option == 'B') { // Binary Coded Decimal format
+    } else if (option == 'U') { // Unsigned integer
+    } else if (option == 'L') { // Long word
+    } else {                    // Option not recognized
+        errlogPrintf("devLoF3RP61Seq: %s : unsupported option \'%c\'\n", precord->name, option);
+        precord->pact = 1;
+        return -1;
+    }
 
     //
     callbackSetUser(precord, &dpvt->callback);
@@ -173,11 +94,11 @@ static long init_record(longoutRecord *precord)
 // then sets PACT field back to TRUE.
 static long write_longout(longoutRecord *precord)
 {
-    F3RP61_SEQ_DPVT *dpvt = precord->dpvt;
+    F3RP61SEQ_DPVT *dpvt = precord->dpvt;
 
     if (precord->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
-            errlogPrintf("devLoF3RP61Seq: write_longout failed for %s\n", precord->name);
+            errlogPrintf("devLoF3RP61Seq: %s : write_longout failed\n", precord->name);
             return -1;
         }
 
@@ -185,7 +106,7 @@ static long write_longout(longoutRecord *precord)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devLoF3RP61Seq: errorCode 0x%04x returned for %s\n", pmcmdResponse->errorCode, precord->name);
+            errlogPrintf("devLoF3RP61Seq: %s : errorCode 0x%04x returned\n", precord->name, pmcmdResponse->errorCode);
             return -1;
         }
 
@@ -216,8 +137,8 @@ static long write_longout(longoutRecord *precord)
         }
 
         // Issue write request
-        if (f3rp61Seq_queueRequest(dpvt) < 0) {
-            errlogPrintf("devLoF3RP61Seq: f3rp61Seq_queueRequest failed for %s\n", precord->name);
+        if (f3rp61seqQueueRequest(dpvt) < 0) {
+            errlogPrintf("devLoF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", precord->name);
             return -1;
         }
 

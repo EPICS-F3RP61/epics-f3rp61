@@ -11,31 +11,10 @@
 *      Date: 09-02-08
 */
 
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/msg.h>
-#include <unistd.h>
-
-#include <callback.h>
-#include <dbCommon.h>
-#include <dbScan.h>
-#include <drvSup.h>
-#include <epicsEvent.h>
-#include <epicsExport.h>
-#include <epicsMutex.h>
-#include <epicsThread.h>
-#include <errlog.h>
-#include <iocsh.h>
-#include <recSup.h>
-
+//
 #include <drvF3RP61Seq.h>
 
+//
 static long report();
 static long init();
 
@@ -51,8 +30,9 @@ struct {
 
 epicsExportAddress(drvet, drvF3RP61Seq);
 
-int f3rp61Seq_fd = -1;
+int f3rp61seqFd = -1;
 
+//
 void showreq(const iocshArgBuf *);
 void stopshow(const iocshArgBuf *);
 static const iocshFuncDef showreqDef = {"showreq", 0, NULL};
@@ -63,18 +43,22 @@ static unsigned short request_id;
 
 static void mcmd_thread(void *);
 static void dump_mcmd_request(MCMD_STRUCT *);
-static epicsMutexId f3rp61Seq_queueMutex;
-static epicsEventId f3rp61Seq_queueEvent;
-static ELLLIST f3rp61Seq_queueList;
+static epicsMutexId f3rp61seq_queueMutex;
+static epicsEventId f3rp61seq_queueEvent;
+static ELLLIST f3rp61seq_queueList;
 
-static F3RP61_SEQ_DPVT *get_request_from_queue(void);
+static F3RP61SEQ_DPVT *get_request_from_queue(void);
 
+//////////////////////////////////////////////////////////////////////////
 //
 static long report(void)
 {
     return 0;
 }
 
+//////////////////////////////////////////////////////////////////////////
+//
+// Open and store file descriptor for CPU device access
 //
 static long init(void)
 {
@@ -84,27 +68,27 @@ static long init(void)
     }
     init_flag = 1;
 
-    f3rp61Seq_fd = open(DEVFILE, O_RDWR);
-    if (f3rp61Seq_fd < 0) {
+    f3rp61seqFd = open(DEVFILE, O_RDWR);
+    if (f3rp61seqFd < 0) {
         errlogPrintf("drvF3RP61Seq: can't open " DEVFILE "\n");
         return -1;
     }
 
-    f3rp61Seq_queueMutex = epicsMutexCreate();
-    if (f3rp61Seq_queueMutex == 0) {
+    f3rp61seq_queueMutex = epicsMutexCreate();
+    if (f3rp61seq_queueMutex == 0) {
         errlogPrintf("drvF3RP61Seq: epicsMutexCreate failed\n");
         return -1;
     }
 
-    f3rp61Seq_queueEvent = epicsEventCreate(epicsEventEmpty);
-    if (f3rp61Seq_queueEvent == 0) {
+    f3rp61seq_queueEvent = epicsEventCreate(epicsEventEmpty);
+    if (f3rp61seq_queueEvent == 0) {
         errlogPrintf("drvF3RP61Seq: epicsEventCreate failed\n");
         return -1;
     }
 
-    ellInit(&f3rp61Seq_queueList);
+    ellInit(&f3rp61seq_queueList);
 
-    if (epicsThreadCreate("f3rp61Seq_mcmd",
+    if (epicsThreadCreate("f3rp61seq_mcmd",
                           epicsThreadPriorityHigh,
                           epicsThreadGetStackSize(epicsThreadStackSmall),
                           (EPICSTHREADFUNC) mcmd_thread,
@@ -119,13 +103,155 @@ static long init(void)
     return 0;
 }
 
+//////////////////////////////////////////////////////////////////////////
+//
+// Parses INP or OUT link and initializes F3RP61SEQ_DPVT structure.
+//
+int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_DPVT *dpvt, F3RP61SEQ_RW rw, F3RP61SEQ_ACCESS_TYPE type, const dbCommon *prec, const char *sup)
+{
+    const size_t size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
+    //char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
+    char buf[size];
+    strncpy(buf, plink->value.instio.string, size);
+    buf[size - 1] = '\0';
+
+    // Parse option
+    dpvt->option = 'W'; // default option for Word access
+    char *popt = strchr(buf, '&');
+    if (popt) {
+        *popt++ = '\0';
+        if (sscanf(popt, "%c", &dpvt->option) < 1) {
+            errlogPrintf("%s: %s : can't get option\n", sup, prec->name);
+            return -1;
+        }
+    }
+
+    // Data width
+    int num = 1;
+    int width = 2; // We don't use long-word access, so width is fixed to 2
+    if (type == kBit) {
+        //
+    } else { // kWord
+        if (dpvt->option == 'D') {
+            num = 4;
+        } else if (dpvt->option == 'F' || dpvt->option == 'L') {
+            num = 2;
+        }
+    }
+
+    // Parse for possible IO interrupt source
+    //
+    // Empty
+    //
+
+    // Parse slot, device and register number
+    int8_t device = 0;
+    int srcSlot = 0, destSlot = 0, top = 0;
+    if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
+        errlogPrintf("%s: %s : can't get device address\n", sup, prec->name);
+        return -1;
+    }
+
+    // Check device validity
+    switch (type) {
+    case kBit:
+        switch (device) {
+        case 'X': // input relay // preliminary
+            if (rw == kWrite) {
+                errlogPrintf("%s: %s : write access to read-only device \'%c\'\n", sup, prec->name, device);
+                return -1;
+            }
+        case 'Y': // output relay // preliminary
+        case 'I': // internal relays
+        case 'M': // special relays
+            break;
+        default:
+            errlogPrintf("%s: %s : unsupported device \'%c\'\n", sup, prec->name, device);
+            return -1;
+        }
+    default: // kWord
+        switch (device) {
+        case 'X': // input relay // preliminary
+            if (rw == kWrite) {
+                errlogPrintf("%s: %s : write access to read-only device \'%c\'\n", sup, prec->name, device);
+                return -1;
+            }
+        case 'Y': // output relay // preliminary
+        case 'I': // internal relays
+        case 'M': // special relays
+        case 'D': // data registers
+        case 'B': // file registers
+        case 'F': // cache registers
+        case 'Z': // special registers
+            break;
+        default:
+            errlogPrintf("%s: %s : unsupported device \'%c\'\n", sup, prec->name, device);
+            return -1;
+        }
+        break;
+    }
+
+    // Read the slot number of this CPU module
+    if (ioctl(f3rp61seqFd, M3CPU_GET_NUM, &srcSlot) < 0) {
+        errlogPrintf("%s: %s : ioctl failed [%d]\n", sup, prec->name, errno);
+        return -1;
+    }
+    // We'd better to avoid CPU module access for myself, perhaps
+    //if (descSlot == srcSlot) {
+    //    ...;
+    //}
+
+    // Compose data structure for I/O request to CPU module
+    MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
+    pmcmdStruct->timeOut = 1;
+
+    MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
+    pmcmdRequest->formatCode = 0xf1;
+    pmcmdRequest->responseOption = 1;
+    pmcmdRequest->srcSlot = srcSlot;
+    pmcmdRequest->destSlot = destSlot;
+    pmcmdRequest->mainCode = 0x26;
+    pmcmdRequest->subCode = rw;
+
+    if (rw == kRead) {
+        M3_READ_SEQDEV *pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
+        pM3ReadSeqdev->accessType = type;
+        pM3ReadSeqdev->dataNum = num;
+        pM3ReadSeqdev->devType = device - '@'; // 'D'=>0x04, 'B'=>0x02, 'F'=>0x06, 'Z'=>0x1A, 'I'=>0x09
+        pM3ReadSeqdev->topDevNo = top;
+        pmcmdRequest->dataSize = 10;
+    } else {
+        M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
+        pM3WriteSeqdev->accessType = type;
+        pM3WriteSeqdev->dataNum = num;
+        pM3WriteSeqdev->devType = device - '@'; // 'D'=>0x04, 'B'=>0x02, 'F'=>0x06, 'Z'=>0x1A, 'I'=>0x09
+        pM3WriteSeqdev->topDevNo = top;
+        pmcmdRequest->dataSize = 10 + num * width;
+    }
+
+    // success
+    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+int8_t f3rp61seqGetDevice(F3RP61SEQ_DPVT *dpvt)
+{
+    MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
+    MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
+    M3_READ_SEQDEV *pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
+    int8_t device = pM3ReadSeqdev->devType + '@';
+    return device;
+}
+
+//////////////////////////////////////////////////////////////////////////
 //
 static void mcmd_thread(void *arg)
 {
     for (;;) {
-        epicsEventMustWait(f3rp61Seq_queueEvent);
+        epicsEventMustWait(f3rp61seq_queueEvent);
 
-        F3RP61_SEQ_DPVT *dpvt;
+        F3RP61SEQ_DPVT *dpvt;
         while ((dpvt = get_request_from_queue())) {
             dpvt->ret = 0;
             MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
@@ -135,7 +261,7 @@ static void mcmd_thread(void *arg)
                 dump_mcmd_request(pmcmdStruct);
             }
 
-            if (ioctl(f3rp61Seq_fd, M3CPU_ACCS_CMD, pmcmdStruct) < 0) {
+            if (ioctl(f3rp61seqFd, M3CPU_ACCS_CMD, pmcmdStruct) < 0) {
                 errlogPrintf("drvF3RP61Seq: ioctl failed [%d] : %s\n", errno, strerror(errno));
                 dpvt->ret = -1;
             }
@@ -153,33 +279,36 @@ static void mcmd_thread(void *arg)
     }
 }
 
+//////////////////////////////////////////////////////////////////////////
 //
-int f3rp61Seq_queueRequest(F3RP61_SEQ_DPVT *dpvt)
+int f3rp61seqQueueRequest(F3RP61SEQ_DPVT *dpvt)
 {
     if (!dpvt) {
         errlogPrintf("drvF3RP61Seq: null request\n");
         return -1;
     }
 
-    epicsMutexMustLock(f3rp61Seq_queueMutex);
-    ellAdd(&f3rp61Seq_queueList, &dpvt->node);
-    epicsMutexUnlock(f3rp61Seq_queueMutex);
+    epicsMutexMustLock(f3rp61seq_queueMutex);
+    ellAdd(&f3rp61seq_queueList, &dpvt->node);
+    epicsMutexUnlock(f3rp61seq_queueMutex);
 
-    epicsEventSignal(f3rp61Seq_queueEvent);
+    epicsEventSignal(f3rp61seq_queueEvent);
 
     return 0;
 }
 
+//////////////////////////////////////////////////////////////////////////
 //
-static F3RP61_SEQ_DPVT *get_request_from_queue(void)
+static F3RP61SEQ_DPVT *get_request_from_queue(void)
 {
-    epicsMutexMustLock(f3rp61Seq_queueMutex);
-    F3RP61_SEQ_DPVT *dpvt = (F3RP61_SEQ_DPVT *) ellGet(&f3rp61Seq_queueList);
-    epicsMutexUnlock(f3rp61Seq_queueMutex);
+    epicsMutexMustLock(f3rp61seq_queueMutex);
+    F3RP61SEQ_DPVT *dpvt = (F3RP61SEQ_DPVT *) ellGet(&f3rp61seq_queueList);
+    epicsMutexUnlock(f3rp61seq_queueMutex);
 
     return dpvt;
 }
 
+//////////////////////////////////////////////////////////////////////////
 //
 static void dump_mcmd_request(MCMD_STRUCT *pmcmdStruct)
 {
@@ -201,12 +330,14 @@ static void dump_mcmd_request(MCMD_STRUCT *pmcmdStruct)
     printf("\n");
 }
 
+//////////////////////////////////////////////////////////////////////////
 //
 void showreq(const iocshArgBuf *args)
 {
     debug_flag = 1;
 }
 
+//////////////////////////////////////////////////////////////////////////
 //
 void stopshow(const iocshArgBuf *args)
 {

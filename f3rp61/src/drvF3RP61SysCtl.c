@@ -32,8 +32,6 @@ epicsExportAddress(drvet, drvF3RP61SysCtl);
 
 int f3rp61SysCtl_fd = -1;
 
-static void setLEDCallFunc(const iocshArgBuf *);
-static void setLED(const char, const int);
 static void drvF3RP61SysCtlRegisterCommands(void);
 
 //////////////////////////////////////////////////////////////////////////
@@ -72,30 +70,22 @@ static long init(void)
 //      led: R|A|E|1|2|3
 //      value: 0=OFF, non-zero=ON
 //
-static const iocshArg setLEDArg0 = {"led",   iocshArgString};
-static const iocshArg setLEDArg1 = {"value", iocshArgInt};
-static const iocshArg *setLEDArgs[] = {
-    &setLEDArg0,
-    &setLEDArg1
+static const iocshArg      setLEDArg0    = {"LED",     iocshArgString};
+static const iocshArg      setLEDArg1    = {"command", iocshArgString};
+static const iocshArg     *setLEDArgs[]  = { &setLEDArg0, &setLEDArg1 };
+static const iocshFuncDef  setLEDFuncDef = { "f3rp61SetLED", 2, setLEDArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Turns on/off LED on F3RPxx CPU.\n"
+#ifdef M3SC_LED_US3_ON // it is assumed that US1 and US2 are also defined
+    "    LED:     R|A|E|1|2|3\n"
+#else
+    "    LED:     R|A|E\n"
+#endif
+    "    command: on|1|off|0\n"
+#endif
 };
 
-static const iocshFuncDef setLEDFuncDef = {
-    "f3rp61SetLED",
-    2,
-    setLEDArgs
-};
-
-static void setLEDCallFunc(const iocshArgBuf *args)
-{
-    if (! args[0].sval) {
-        printf("Usage: %s %s %s\n", setLEDFuncDef.name, setLEDArg0.name, setLEDArg1.name);
-        return;
-    }
-
-    setLED(args[0].sval[0], args[1].ival);
-}
-
-static void setLED(const char led, const int value)
+static void setLED(const char led, const char *state)
 {
     // Check 'led' validity
     if (led != 'R' && led != 'A' && led != 'E'
@@ -113,6 +103,17 @@ static void setLED(const char led, const int value)
     //    return;
     //}
 
+
+    int value = -1;
+    if (strcasecmp(state, "on")==0 || strcmp(state, "1")==0) {
+        value = 1;
+    } else if (strcasecmp(state, "off")==0 || strcmp(state, "0")==0) {
+        value = 0;
+    }
+    // Check 'value' validity
+    if (value<0) {
+        errlogPrintf("drvF3RP61SysCtl: f3rp61SetLED: invalid command\n");
+    }
 
     // Compose data to write
     unsigned long cmd = 0;
@@ -154,15 +155,27 @@ static void setLED(const char led, const int value)
     }
 }
 
+static void setLEDCallFunc(const iocshArgBuf *args)
+{
+    if (! args[0].sval) {
+        printf("Usage: %s %s %s\n", setLEDFuncDef.name, setLEDArg0.name, setLEDArg1.name);
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+        return;
+    }
+
+    setLED(args[0].sval[0], args[1].sval);
+}
+
+//
 static void drvF3RP61SysCtlRegisterCommands(void)
 {
     static int init_flag = 0;
-    if (init_flag) {
-        return;
+    if (!init_flag) {
+        init_flag = 1;
+        iocshRegister(&setLEDFuncDef, setLEDCallFunc);
     }
-    init_flag = 1;
-
-    iocshRegister(&setLEDFuncDef, setLEDCallFunc);
 }
 
 epicsExportRegistrar(drvF3RP61SysCtlRegisterCommands);

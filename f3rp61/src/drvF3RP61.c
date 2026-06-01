@@ -232,11 +232,11 @@ static void msgrcv_thread(void *arg)
         // debug
         //printf("%s:%s U%d,S%d,X%02d %p\n", __FILE__, __func__, unit, slot, channel, pvt);
 
-        //if (pvt) {
-        //    // this may not happen
-        //    errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,X%d)\n", unit, slot, channel);
-        //    break; // is this OK? - or we'd better to continue?
-        //}
+        if (! pvt) {
+            // this may not happen, as previously enabled I/O interrupt must has been cleared.
+            errlogPrintf("drvF3RP61: no record for I/O interrupt (U%d,S%d,X%d). Previously enable interrupt has not been cleared.\n", unit, slot, channel);
+            continue; // just ignore
+        }
 
         //
         scanIoRequest(pvt);
@@ -294,13 +294,13 @@ static void read_thread(void *arg)
             }
 
             // debug
-            //fprintf(stderr, "%s:%s U%d,S%d,X%02d %p %d\n", __FILE__, __func__, unit, slot, channel, pvt, enabled);
+            fprintf(stderr, "%s:%s U%d,S%d,X%02d %p %d\n", __FILE__, __func__, unit, slot, channel, pvt, enabled);
 
-            //if (pvt) {
-            //    // this may not happen
-            //    errlogPrintf("drvF3RP61: no record for interrupt (U%d,S%d,X%d)\n", unit, slot, channel);
-            //    break; // is this OK? - or we'd better to continue?
-            //}
+            if (! pvt) {
+                // this may not happen, as previously enabled I/O interrupt must has been cleared.
+                errlogPrintf("drvF3RP61: no record for I/O interrupt (U%d,S%d,X%d). Previously enable interrupt has not been cleared.\n", unit, slot, channel);
+                continue; // just ignore
+            }
 
             //
             scanIoRequest(pvt);
@@ -448,7 +448,7 @@ static
 int f3rp61RegisterIoInterrupt(const dbCommon *prec, int unit, int slot, int channel)
 {
     // debug
-    //printf("%s:%s %s <= U%d,S%d,X%02d\n", __FILE__, __func__, prec->name, unit, slot, channel);
+    printf("%s:%s %s <= U%d,S%d,X%02d\n", __FILE__, __func__, prec->name, unit, slot, channel);
 
     //
     if (channel >= NUM_IRQ_CH) {
@@ -479,7 +479,7 @@ int f3rp61EnableIoInterrupt(void)
     static int init_flag = 0;
 
     //debug
-    //printf("%s:%s %d\n", __FILE__, __func__, init_flag);
+    printf("%s:%s %d\n", __FILE__, __func__, init_flag);
 
     //
     if (init_flag) {
@@ -519,10 +519,40 @@ int f3rp61EnableIoInterrupt(void)
     }
 
     // Enable I/O interrupt if requested
+    int irq_requested = 0;
     for (int unit = 0; unit < M3IO_NUM_UNIT; unit++) {
         for (int slot = 1; slot <= M3IO_NUM_SLOT; slot++) { // slot# starts from 1
 
-            // check if I/O interrupt from this unit/slot is requested
+            // First, check if I/O module exist and clear previously enabled I/O interrupt
+            M3IO_MODULE_INFORMATION module_info = {
+                .unitno = unit,
+                .slotno = slot,
+            };
+
+            ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info);
+
+            if (module_info.enable) {
+                // module exists
+                M3IO_INTER_DEFINE arg = {
+                    .unitno = unit,
+                    .slotno = slot,
+                    .defData.interMask = {0, 0, 0, 0},
+                    .msgQId = msqid,
+                };
+
+                if (ioctl(f3rp61_fd, M3IO_MASK_INTER, &arg) < 0) {
+                    // ioctl() will fail if this module does not support I/O interrupt. Just ignore ther error for now.
+
+                    // debug
+                    char name[5];
+                    memcpy(name, module_info.name, 4);
+                    name[4] = '\0';
+                    errlogPrintf("drvF3RP61: failed to clear previously enable I/O interrupt. U%d,S%d %s [%d]\n", unit, slot, name, errno);
+                }
+            }
+
+
+            // Then, check if I/O interrupt from this unit/slot is requested
             uint16_t mask[4] = {0};
             for (int channel = 1; channel <= NUM_IRQ_CH; channel++) { // channel# starts from 1
                 IOSCANPVT pvt = ioscanpvt[unit][slot-1][channel-1];
@@ -537,6 +567,7 @@ int f3rp61EnableIoInterrupt(void)
 
             // If requested, enable I/O interrupt
             if (mask[0]>0||mask[1]>0||mask[2]>0||mask[3]>0) {
+                irq_requested = 1;
 
                 // debug
                 printf("%s:%s U%d,S%d mask: 0x%04x%04x%04x%04x\n", __FILE__, __func__, unit, slot, mask[3], mask[2], mask[1], mask[0]);
@@ -569,14 +600,15 @@ int f3rp61EnableIoInterrupt(void)
 
     //debug
     //printf("epicsThreadCreate %s\n", thread_name);
-
-    if (epicsThreadCreate(thread_name,
-                          epicsThreadPriorityHigh,
-                          epicsThreadGetStackSize(epicsThreadStackSmall),
-                          handler,
-                          (void *)msqid) == 0) {
-        errlogPrintf("drvF3RP61: epicsThreadCreate failed\n");
-        return -1;
+    if (irq_requested) {
+        if (epicsThreadCreate(thread_name,
+                              epicsThreadPriorityHigh,
+                              epicsThreadGetStackSize(epicsThreadStackSmall),
+                              handler,
+                              (void *)msqid) == 0) {
+            errlogPrintf("drvF3RP61: epicsThreadCreate failed\n");
+            return -1;
+        }
     }
 
     return 0;

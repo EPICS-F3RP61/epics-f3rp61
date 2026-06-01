@@ -340,19 +340,21 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, const dbCommon 
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
-    // Parse option
-    dpvt->option = 'W'; // default option for Word access
+    // Parse conversion specifier
+    dpvt->conv = 'W'; // default conversion for Word access
     char *popt = strchr(buf, '&');
     if (popt) {
         *popt++ = '\0';
-        if (sscanf(popt, "%c", &dpvt->option) < 1) {
-            errlogPrintf("%s: %s : can't get option\n", sup, prec->name);
+        if (sscanf(popt, "%c", &dpvt->conv) < 1) {
+            errlogPrintf("%s: %s : can't get conversion specifier\n", sup, prec->name);
             return -1;
         }
     }
 
     // Parse for possible IO interrupt source
-    dpvt->irq = 0;
+    dpvt->irqunit = 0;
+    dpvt->irqslot = 0;
+    dpvt->irqaddr = 0;
     char *pint = strchr(buf, ':'); // check if SCAN is interrupt based (example: @U0,S3,Y1:U0,S4,X1)
     if (pint) {
         *pint++ = '\0';
@@ -366,24 +368,28 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, const dbCommon 
             //
         } else if (sscanf(pint, "X%d", &addr) == 1) {
             //
+            unit =  addr / 10000;
+            slot = (addr % 10000) / 100;
+            addr =  addr % 100;
         } else {
             errlogPrintf("%s: %s : can't get interrupt source address\n", sup, prec->name);
             return -1;
         }
-        dpvt->irq = unit*10000 + slot*100 + addr;
 
-        //debug
-        //printf("%s : irq X%d\n", prec->name, dpvt->irq);
+        if (unit<0  || unit>=M3IO_NUM_UNIT || // unit : 0,2,..., 7
+            slot<=0 || slot>M3IO_NUM_SLOT  || // slot : 1,2,...,16
+            addr<=0 || addr>NUM_IRQ_CH    ) { // addr : 1,2,...,64 (or 32)
+            errlogPrintf("%s: %s : Invalid interrupt source : U%d,S%d,X%d\n", sup, prec->name, unit, slot, addr);
+            return -1;
+        }
 
         // Register IO Interrupt
-        if (dpvt->irq) {
-            int unit = getunit(dpvt->irq);
-            int slot = getslot(dpvt->irq);
-            int addr = getaddr(dpvt->irq);
-            if (f3rp61RegisterIoInterrupt(prec, unit, slot, addr) < 0) {
-                errlogPrintf("%s: %s : can't register I/O interrupt\n", sup, prec->name);
-                return -1;
-            }
+        dpvt->irqunit = unit;
+        dpvt->irqslot = slot;
+        dpvt->irqaddr = addr;
+        if (f3rp61RegisterIoInterrupt(prec, unit, slot, addr) < 0) {
+            errlogPrintf("%s: %s : can't register I/O interrupt\n", sup, prec->name);
+            return -1;
         }
     }
 
@@ -400,7 +406,16 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, const dbCommon 
     } else if (sscanf(buf, "S%d,%c%d", &slot, &device, &addr) == 3) {
         //
     } else if (sscanf(buf, "%c%d", &device, &addr) == 2) {
-        //
+        if (0) {
+        } else if (device == 'X' || device == 'Y' || // Input and output relays on I/O modules
+                   device == 'M') {                  // Mode registers on I/O modules
+            unit =  addr / 10000;
+            slot = (addr % 10000) / 100;
+            addr =  addr % 100;
+        } else if (device == 'A') { // Address for 'A' may exceed 1000
+            errlogPrintf("%s: %s : Invalid device : %s\n", sup, prec->name, buf);
+            return -1;
+        }
     } else {
         errlogPrintf("%s: %s : can't get I/O address\n", sup, prec->name);
         return -1;
@@ -408,18 +423,20 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, const dbCommon 
 
     //
     dpvt->device = device;
-    dpvt->addr   = unit*10000 + slot*100 + addr;
+    dpvt->unit   = unit;
+    dpvt->slot   = slot;
+    dpvt->addr   = addr;
 
     // Consider I/O data length
     dpvt->count = 1;
-    if (dpvt->option == 'F' || dpvt->option == 'L') {
-        dpvt->count = 2; // count for 'A' shold be one, which will be handled later
-    } else if (dpvt->option == 'D') {
-        dpvt->count = 4; // count for 'A' shold be two, which will be handled later
+    if (dpvt->conv == 'F' || dpvt->conv == 'L') {
+        dpvt->count = 2;
+    } else if (dpvt->conv == 'D') {
+        dpvt->count = 4;
     }
 
     // debug
-    //printf("%s:%s %s %c%05d,%05d\n", __FILE__, __func__, prec->name, dpvt->device, dpvt->addr, dpvt->irq);
+    //printf("%s:%s %s U%d,S%d%c%d,U%d,S%d,X%d\n", __FILE__, __func__, prec->name, dpvt->unit, dpvt->slot, dpvt->device, dpvt->addr, dpvt->irqunit, dpvt->irqslot, dpvt->irqaddr);
 
     // success
     return 0;
@@ -501,11 +518,11 @@ int f3rp61EnableIoInterrupt(void)
         msqid = f3rp61_fd;
     }
 
-    // Enable IO IRQ
+    // Enable I/O interrupt if requested
     for (int unit = 0; unit < M3IO_NUM_UNIT; unit++) {
         for (int slot = 1; slot <= M3IO_NUM_SLOT; slot++) { // slot# starts from 1
 
-            // check if irq from unit/slot is requested
+            // check if I/O interrupt from this unit/slot is requested
             uint16_t mask[4] = {0};
             for (int channel = 1; channel <= NUM_IRQ_CH; channel++) { // channel# starts from 1
                 IOSCANPVT pvt = ioscanpvt[unit][slot-1][channel-1];
@@ -518,10 +535,11 @@ int f3rp61EnableIoInterrupt(void)
                 }
             }
 
-            //
+            // If requested, enable I/O interrupt
             if (mask[0]>0||mask[1]>0||mask[2]>0||mask[3]>0) {
+
                 // debug
-                //printf("%s:%s U%d,S%d mask: 0x%04x%04x%04x%04x\n", __FILE__, __func__, unit, slot, mask[3], mask[2], mask[1], mask[0]);
+                printf("%s:%s U%d,S%d mask: 0x%04x%04x%04x%04x\n", __FILE__, __func__, unit, slot, mask[3], mask[2], mask[1], mask[0]);
 
                 M3IO_INTER_DEFINE arg = {
                     .unitno = unit,
@@ -578,14 +596,14 @@ long f3rp61GetIoIntInfo(int cmd, dbCommon *prec, IOSCANPVT *ppvt)
     }
 
     // I/O intr handling
-    int unit    = getunit(dpvt->irq);
-    int slot    = getslot(dpvt->irq);
-    int channel = getaddr(dpvt->irq);
+    int unit    = dpvt->irqunit;
+    int slot    = dpvt->irqslot;
+    int channel = dpvt->irqaddr;
 
     IOSCANPVT pvt = ioscanpvt[unit][slot-1][channel-1];
     // debug
     //printf("%s:%s %s U%d,S%d,X%02d %p\n", __FILE__, __func__, prec->name, unit, slot, channel, pvt);
-    if (pvt) {
+    if (! pvt) {
         // this may not happen ...
     }
 

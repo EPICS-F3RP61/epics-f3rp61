@@ -74,15 +74,15 @@ static long init_record(aiRecord *precord)
         return -1;
     }
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
-    } else if (option == 'U') { // Unsigned integer
-    } else if (option == 'L') { // Long word
-    } else if (option == 'F') { // Single precision floating point
-    } else if (option == 'D') { // Double precision floating point
-    } else {                    // Option not recognized
-        errlogPrintf("devAiF3RP61: %s : unsupported option \'%c\'\n", precord->name, option);
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
+    } else if (conv == 'U') { // Unsigned integer
+    } else if (conv == 'L') { // Long word
+    } else if (conv == 'F') { // Single precision floating point
+    } else if (conv == 'D') { // Double precision floating point
+    } else {
+        errlogPrintf("devAiF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
         return -1;
     }
@@ -94,15 +94,12 @@ static long init_record(aiRecord *precord)
                device == 'r') {                  // Shared memory
     } else if (device == 'X' || device == 'Y') { // Input and output relays on I/O modules
     } else if (device == 'A') {                  // I/O registers on special modules
-        // 'D' and 'F' option might not make sence for device 'A'
-        //if (option != 'W') { // || option != 'U' || option != 'L'
-        //    errlogPrintf("devAiF3RP61: %s ; unsupported option \'%c\'\n", precord->name, option);
+        // 'D' and 'F' conversion might not make sence for device 'A'
+        //if (conv != 'W') { // || conv != 'U' || conv != 'L'
+        //    errlogPrintf("devAiF3RP61: %s ; unsupported conversion specifier \'%c\'\n", precord->name, conv);
         //    precord->pact = 1;
         //    return -1;
         //}
-        if (option == 'L' || option == 'F' || option == 'D') {
-            dpvt->count /= 2; // we use M3IO_READ_REG_L
-        }
     } else {
         errlogPrintf("devAiF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
         precord->pact = 1;
@@ -126,13 +123,12 @@ static long read_ai(aiRecord *precord)
 
     F3RP61_DPVT  *dpvt = precord->dpvt;
     const int8_t  device = dpvt->device;
-    const int8_t  option = dpvt->option;
+    const int8_t  conv   = dpvt->conv;
     const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
     const int32_t count  = dpvt->count;
 
     // Buffers for data read
     uint16_t wdata[4] = {0};
-    ulong    ldata[2] = {0};
 
     // Issue API function
     if (0) {                    // dummy
@@ -173,9 +169,9 @@ static long read_ai(aiRecord *precord)
 
     } else if (device == 'X') { // Input relays on I/O modules
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
-            .start  = getaddr(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
+            .start  = dpvt->addr,
             .count  = count,
         };
         if (ioctl(f3rp61_fd, M3IO_READ_INRELAY, &drly) < 0) {
@@ -183,10 +179,10 @@ static long read_ai(aiRecord *precord)
             return -1;
         }
         wdata[0] = drly.u.inrly[0].data;
-        if (option == 'L' || option == 'F') { // count == 2
+        if (conv == 'L' || conv == 'F') { // count == 2
             wdata[1] = drly.u.inrly[1].data;
         }
-        if (option == 'D') { // count == 4
+        if (conv == 'D') { // count == 4
             wdata[1] = drly.u.inrly[1].data;
             wdata[2] = drly.u.inrly[2].data;
             wdata[3] = drly.u.inrly[3].data;
@@ -194,9 +190,9 @@ static long read_ai(aiRecord *precord)
 
     } else if (device == 'Y') { // Output relays on I/O modules
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
-            .start  = getaddr(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
+            .start  = dpvt->addr,
             .count  = count,
         };
         if (ioctl(f3rp61_fd, M3IO_READ_OUTRELAY, &drly) < 0) {
@@ -205,20 +201,20 @@ static long read_ai(aiRecord *precord)
         }
 #if defined(__powerpc__)
         wdata[0] = drly.u.inrly[0].data;
-        if (option == 'L' || option == 'F') { // count == 2
+        if (conv == 'L' || conv == 'F') { // count == 2
             wdata[1] = drly.u.inrly[1].data;
         }
-        if (option == 'D') { // count == 4
+        if (conv == 'D') { // count == 4
             wdata[1] = drly.u.inrly[1].data;
             wdata[2] = drly.u.inrly[2].data;
             wdata[3] = drly.u.inrly[3].data;
         }
 #else
         wdata[0] = drly.u.outrly[0].data;
-        if (option == 'L' || option == 'F') { // count == 2
+        if (conv == 'L' || conv == 'F') { // count == 2
             wdata[1] = drly.u.outrly[1].data;
         }
-        if (option == 'D') { // count == 4
+        if (conv == 'D') { // count == 4
             wdata[1] = drly.u.outrly[1].data;
             wdata[2] = drly.u.outrly[2].data;
             wdata[3] = drly.u.outrly[3].data;
@@ -227,23 +223,15 @@ static long read_ai(aiRecord *precord)
 
     } else {//(device == 'A')   // I/O registers on special modules
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
-            .start  = getaddr(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
+            .start  = dpvt->addr,
             .count  = count,
         };
-        if (option == 'L' || option == 'F' || option == 'D') {
-            drly.u.pldata = ldata;
-            if (ioctl(f3rp61_fd, M3IO_READ_REG_L, &drly) < 0) {
-                errlogPrintf("devAiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
-                return -1;
-            }
-        } else {
-            drly.u.pwdata = wdata;
-            if (ioctl(f3rp61_fd, M3IO_READ_REG, &drly) < 0) {
-                errlogPrintf("devAiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
-                return -1;
-            }
+        drly.u.pwdata = wdata;
+        if (ioctl(f3rp61_fd, M3IO_READ_REG, &drly) < 0) {
+            errlogPrintf("devAiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
+            return -1;
         }
     }
 
@@ -251,42 +239,32 @@ static long read_ai(aiRecord *precord)
     precord->udf = FALSE;
 
     // fill VAL field
-    if (option == 'D') {
+    if (conv == 'D') {
         double val;
-        if (device == 'A') {
-            uint64_t lval = (((uint64_t)ldata[1])<<32) | (uint64_t)ldata[0];
-            memcpy(&val, &lval, sizeof(double));
-        } else {
-            uint64_t lval = (((uint64_t)wdata[3])<<48) | (((uint64_t)wdata[2])<<32) | ((uint64_t)wdata[1]<<16) | (uint64_t)wdata[0];
+        uint64_t w0 = wdata[0];
+        uint64_t w1 = wdata[1];
+        uint64_t w2 = wdata[2];
+        uint64_t w3 = wdata[3];
+        uint64_t lval = (w3<<48) | (w2<<32) | (w1<<16) | w0;
 
-            memcpy(&val, &lval, sizeof(double));
-        }
+        memcpy(&val, &lval, sizeof(double));
         // todo : consider ASLO and AOFF field
         // todo : consider SMOO field
         precord->val = val;
         precord->udf = isnan(precord->val);
         return 2; // no conversion
-    } else if (option == 'F') {
+    } else if (conv == 'F') {
         float val;
-        if (device == 'A') {
-            uint32_t lval = ldata[0];
-            memcpy(&val, &lval, sizeof(float));
-        } else {
-            uint32_t lval = (wdata[1]<<16) | wdata[0];
-            memcpy(&val, &lval, sizeof(float));
-        }
+        uint32_t lval = (wdata[1]<<16) | wdata[0];
+        memcpy(&val, &lval, sizeof(float));
         // todo : consider ASLO and AOFF field
         // todo : consider SMOO field
         precord->val = val;
         precord->udf = isnan(precord->val);
         return 2; // no conversion
-    } else if (option == 'L') {
-        if (device == 'A') {
-            precord->rval = ldata[0];
-        } else {
-            precord->rval = wdata[1]<<16 | wdata[0];
-        }
-    } else if (option == 'U') {
+    } else if (conv == 'L') {
+        precord->rval = wdata[1]<<16 | wdata[0];
+    } else if (conv == 'U') {
         precord->rval = (uint16_t)wdata[0];
     } else {
         precord->rval = (int16_t)wdata[0];

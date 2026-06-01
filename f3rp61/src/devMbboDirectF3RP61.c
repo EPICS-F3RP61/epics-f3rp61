@@ -69,22 +69,22 @@ static long init_record(mbboDirectRecord *precord)
         return -1;
     }
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
         precord->nobt = 16;
         precord->mask = 0xffff;
         precord->shft = 0;
-    } else if (option == 'U') { // Unsigned integer
+    } else if (conv == 'U') { // Unsigned integer
         precord->nobt = 16;
         precord->mask = 0xffff;
         precord->shft = 0;
-    } else if (option == 'L') { // Long word
+    } else if (conv == 'L') { // Long word
         precord->nobt = 32;
         precord->mask = 0xffffffff;
         precord->shft = 0;
-    } else {                    // Option not recognized
-        errlogPrintf("devMbboDirectF3RP61: %s : unsupported option \'%c\'\n", precord->name, option);
+    } else {
+        errlogPrintf("devMbboDirectF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
         return -1;
     }
@@ -98,7 +98,6 @@ static long init_record(mbboDirectRecord *precord)
     } else if (device == 'Y' ||                  // Output relays on I/O modules
                device == 'M') {                  // Mode registers on I/O modules
     } else if (device == 'A') {                  // I/O registers on special modules
-        dpvt->count = 1; // we use M3IO_READ_REG_L for 'L' option therefore count must be always 1
     } else {
         errlogPrintf("devMbboDirectF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
         precord->pact = 1;
@@ -116,24 +115,17 @@ static long write_mbboDirect(mbboDirectRecord *precord)
 {
     F3RP61_DPVT  *dpvt = precord->dpvt;
     const int8_t  device = dpvt->device;
-    const int8_t  option = dpvt->option;
+    const int8_t  conv   = dpvt->conv;
     const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
     const int32_t count  = dpvt->count;
 
     // Compose data to write
     uint16_t wdata[8] = {0}; // 2 would be enough, but readM3IoModeRegister requires 8
     uint16_t mask[2]  = {0xffff, 0xffff};
-    ulong    ldata[1] = {0};
 
-    if (option == 'L') {
-        // for (device == 'A')
-        ldata[0] = (uint32_t)precord->rval;
-
-        // for (device != 'A')
-        wdata[0] = (uint16_t)(precord->rval>> 0);
+    wdata[0] = (uint16_t)precord->rval;
+    if (conv == 'L') {
         wdata[1] = (uint16_t)(precord->rval>>16);
-    } else {
-        wdata[0] = (uint16_t)precord->rval;
     }
 
     // Issue API function
@@ -189,14 +181,14 @@ static long write_mbboDirect(mbboDirectRecord *precord)
 
     } else if (device == 'Y') { // Output relays on I/O modules
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
-            .start  = getaddr(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
+            .start  = dpvt->addr,
             .count  = count,
         };
         drly.u.outrly[0].data = wdata[0];
         drly.u.outrly[0].mask = mask[0];
-        if (option == 'L') {
+        if (conv == 'L') {
             drly.u.outrly[1].data = wdata[1];
             drly.u.outrly[1].mask = mask[1];
         }
@@ -210,8 +202,8 @@ static long write_mbboDirect(mbboDirectRecord *precord)
         // On F3RP61 start and count are fixed to 1 and 3 in ioctl() request,
         // and only the 1st element is valid in the data written.
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
             .start  = 1,
             .count  = 3,
         };
@@ -221,9 +213,9 @@ static long write_mbboDirect(mbboDirectRecord *precord)
             return -1;
         }
 #else
-        const int32_t unit   = getunit(dpvt->addr);
-        const int32_t slot   = getslot(dpvt->addr);
-        const int32_t addr   = getaddr(dpvt->addr);
+        const int32_t unit = dpvt->unit;
+        const int32_t slot = dpvt->slot;
+        const int32_t addr = dpvt->addr;
         if (writeM3IoModeRegister(unit, slot, addr, count, wdata) < 0) {
             errlogPrintf("devMbboDirectF3RP61: %s : writeM3IoModeRegisterL failed [%d]\n", precord->name, errno);
             return -1;
@@ -232,23 +224,15 @@ static long write_mbboDirect(mbboDirectRecord *precord)
 
     } else {//(device == 'A')   // I/O registers on special modules
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
-            .start  = getaddr(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
+            .start  = dpvt->addr,
             .count  = count,
         };
-        if (option == 'L') {
-            drly.u.pldata = ldata;
-            if (ioctl(f3rp61_fd, M3IO_WRITE_REG_L, &drly) < 0) {
-                errlogPrintf("devLoF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
-                return -1;
-            }
-        } else {
-            drly.u.pwdata = wdata;
-            if (ioctl(f3rp61_fd, M3IO_WRITE_REG, &drly) < 0) {
-                errlogPrintf("devMbboDirectF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
-                return -1;
-            }
+        drly.u.pwdata = wdata;
+        if (ioctl(f3rp61_fd, M3IO_WRITE_REG, &drly) < 0) {
+            errlogPrintf("devMbboDirectF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
+            return -1;
         }
     }
 

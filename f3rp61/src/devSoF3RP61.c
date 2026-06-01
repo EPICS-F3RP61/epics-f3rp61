@@ -68,11 +68,11 @@ static long init_record(stringoutRecord *precord)
         return -1;
     }
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
-    } else {                    // Option not recognized
-        errlogPrintf("devSoF3RP61: %s : unsupported option \'%c\'\n", precord->name, option);
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
+    } else {
+        errlogPrintf("devSoF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
         return -1;
     }
@@ -99,7 +99,7 @@ static long write_so(stringoutRecord *precord)
 {
     F3RP61_DPVT  *dpvt = precord->dpvt;
     //const int8_t  device = dpvt->device;
-    //const int8_t  option = dpvt->option;
+    //const int8_t  conv   = dpvt->conv;
     //const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
     const int32_t count  = dpvt->count;
 
@@ -109,9 +109,9 @@ static long write_so(stringoutRecord *precord)
 
     // Issue API function
     M3IO_ACCESS_REG drly = {
-        .unitno = getunit(dpvt->addr),
-        .slotno = getslot(dpvt->addr),
-        .start  = getaddr(dpvt->addr),
+        .unitno = dpvt->unit,
+        .slotno = dpvt->slot,
+        .start  = dpvt->addr,
         .count  = count,
     };
     drly.u.pbdata = (unsigned char *)bdata;

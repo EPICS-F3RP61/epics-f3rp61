@@ -71,22 +71,22 @@ static long init_record(waveformRecord *precord)
         return -1;
     }
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
-    //} else if (option == 'U') { // Unsigned integer
-    //} else if (option == 'L') { // Long word
-    //} else if (option == 'F') { // Single precision floating point
-    //} else if (option == 'D') { // Double precision floating point
-    } else {                    // Option not recognized
-        errlogPrintf("devWfF3RP61: %s : unsupported option \'%c\'\n", precord->name, option);
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
+    //} else if (conv == 'U') { // Unsigned integer
+    //} else if (conv == 'L') { // Long word
+    //} else if (conv == 'F') { // Single precision floating point
+    //} else if (conv == 'D') { // Double precision floating point
+    } else {
+        errlogPrintf("devWfF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
         return -1;
     }
 
     // Consider I/O data length
     // Note : It is **WRONG** that count depending on FTVL.
-    //        What we need are (1) count depending on &L/&F/&D option and (2) check for supported FTVL.
+    //        What we need are (1) count depending on &L/&F/&D conversion and (2) check for supported FTVL.
     dpvt->count = 0;
     switch (ftvl) {
     case DBF_DOUBLE:
@@ -113,10 +113,6 @@ static long init_record(waveformRecord *precord)
     } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
                device == 'r') {                  // Shared memory
     } else if (device == 'A') {                  // I/O registers on special modules
-        if (ftvl != DBF_USHORT && ftvl != DBF_SHORT) {
-            dpvt->count  /= 2; // we use M3IO_READ_REG_L for DOUBLE, FLOAT, ULONG, and LONG
-        }
-
     } else {
         errlogPrintf("devWfF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
         precord->pact = 1;
@@ -135,7 +131,7 @@ static long read_wf(waveformRecord *precord)
 {
     F3RP61_DPVT  *dpvt = precord->dpvt;
     const int8_t  device = dpvt->device;
-    //const int8_t  option = dpvt->option;
+    //const int8_t  conv   = dpvt->conv;
     const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
     const int32_t count  = dpvt->count;
 
@@ -185,9 +181,9 @@ static long read_wf(waveformRecord *precord)
 
     } else {//(device == 'A')   // I/O registers on special modules
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
-            .start  = getaddr(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
+            .start  = dpvt->addr,
             .count  = count,
         };
         if (ftvl != DBF_USHORT && ftvl != DBF_SHORT) {

@@ -74,15 +74,15 @@ static long init_record(aoRecord *precord)
         return -1;
     }
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
-    } else if (option == 'U') { // Unsigned integer, perhaps we'd better disable this
-    } else if (option == 'L') { // Long word
-    } else if (option == 'F') { // Single precision floating point
-    } else if (option == 'D') { // Double precision floating point
-    } else {                    // Option not recognized
-        errlogPrintf("devAoF3RP61: %s : unsupported option \'%c\'\n", precord->name, option);
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
+    } else if (conv == 'U') { // Unsigned integer, perhaps we'd better disable this
+    } else if (conv == 'L') { // Long word
+    } else if (conv == 'F') { // Single precision floating point
+    } else if (conv == 'D') { // Double precision floating point
+    } else {
+        errlogPrintf("devAoF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
         return -1;
     }
@@ -94,15 +94,12 @@ static long init_record(aoRecord *precord)
                device == 'r') {                  // Shared registers - Using 'Old' interface
     } else if (device == 'Y') {                  // Output relays on I/O modules
     } else if (device == 'A') {                  // I/O registers on special modules
-        // 'D' and 'F' option might not make sence for device 'A'
-        //if (option != 'W') { // || option != 'U' || option != 'L'
-        //    errlogPrintf("devAoF3RP61: %s : unsupported option \'%c\'\n", precord->name, option);
+        // 'D' and 'F' conversion might not make sence for device 'A'
+        //if (conv != 'W') { // || conv != 'U' || conv != 'L'
+        //    errlogPrintf("devAoF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         //    precord->pact = 1;
         //    return -1;
         //}
-        if (option == 'L' || option == 'F' || option == 'D') {
-            dpvt->count  /= 2; // we use M3IO_WRITE_REG_L
-        }
     } else {
         errlogPrintf("devAoF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
         precord->pact = 1;
@@ -125,49 +122,35 @@ static long write_ao(aoRecord *precord)
 
     F3RP61_DPVT  *dpvt = precord->dpvt;
     const int8_t  device = dpvt->device;
-    const int8_t  option = dpvt->option;
+    const int8_t  conv   = dpvt->conv;
     const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
     const int32_t count  = dpvt->count;
 
     // Compose data to write
     uint16_t wdata[8] = {0}; // 4 would be enough, but readM3IoModeRegister requires 8
     uint16_t mask[4]  = {0xffff, 0xffff, 0xffff, 0xffff};
-    ulong    ldata[2] = {0};
 
-    if (option == 'D') {
+    if (conv == 'D') {
         double val = precord->val;
         // todo : consider ASLO and AOFF field
 
         int64_t lval;
         memcpy(&lval, &val, sizeof(double));
 
-        // for (device == 'A')
-        ldata[0] = (uint32_t)(lval>> 0);
-        ldata[1] = (uint32_t)(lval>>32);
-
-        // for (device != 'A')
         wdata[0] = (uint16_t)(lval>> 0);
         wdata[1] = (uint16_t)(lval>>16);
         wdata[2] = (uint16_t)(lval>>32);
         wdata[3] = (uint16_t)(lval>>48);
-    } else if (option == 'F') {
+    } else if (conv == 'F') {
         float val = precord->val;
         // todo : consider ASLO and AOFF field
 
         int32_t lval;
         memcpy(&lval, &val, sizeof(float));
 
-        // for (device == 'A')
-        ldata[0] = (uint32_t)lval;
-
-        // for (device != 'A')
         wdata[0] = (uint16_t)(lval>> 0);
         wdata[1] = (uint16_t)(lval>>16);
-    } else if (option == 'L') {
-        // for (device == 'A')
-        ldata[0] = (uint32_t)precord->rval;
-
-        // for (device != 'A')
+    } else if (conv == 'L') {
         wdata[0] = (uint16_t)(precord->rval>> 0);
         wdata[1] = (uint16_t)(precord->rval>>16);
     } else {
@@ -213,19 +196,19 @@ static long write_ao(aoRecord *precord)
 
     } else if (device == 'Y') { // Output relays on I/O modules
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
-            .start  = getaddr(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
+            .start  = dpvt->addr,
             .count  = count,
         };
         drly.u.outrly[0].data = wdata[0];
         drly.u.outrly[0].mask = mask[0];
-        if (option == 'L' || option == 'F') { // count == 2
+        if (conv == 'L' || conv == 'F') { // count == 2
             drly.u.outrly[1].data = wdata[1];
             drly.u.outrly[1].mask = mask[1];
 
         }
-        if (option == 'D') { // count == 4
+        if (conv == 'D') { // count == 4
             drly.u.outrly[1].data = wdata[1];
             drly.u.outrly[1].mask = mask[1];
             drly.u.outrly[2].data = wdata[2];
@@ -239,29 +222,21 @@ static long write_ao(aoRecord *precord)
         }
     } else {//(device == 'A')   // I/O registers on special modules
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
-            .start  = getaddr(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
+            .start  = dpvt->addr,
             .count  = count,
         };
-        if (option == 'L' || option == 'F' || option == 'D') { // count == 2 || count == 4
-            drly.u.pldata = ldata;
-            if (ioctl(f3rp61_fd, M3IO_WRITE_REG_L, &drly) < 0) {
-                errlogPrintf("devAoF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
-                return -1;
-            }
-        } else {
-            drly.u.pwdata = wdata;
-            if (ioctl(f3rp61_fd, M3IO_WRITE_REG, &drly) < 0) {
-                errlogPrintf("devAoF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
-                return -1;
-            }
+        drly.u.pwdata = wdata;
+        if (ioctl(f3rp61_fd, M3IO_WRITE_REG, &drly) < 0) {
+            errlogPrintf("devAoF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
+            return -1;
         }
     }
 
     //
     precord->udf = FALSE;
-    if (option == 'D' || option == 'F') {
+    if (conv == 'D' || conv == 'F') {
         precord->udf = isnan(precord->val);
     }
 

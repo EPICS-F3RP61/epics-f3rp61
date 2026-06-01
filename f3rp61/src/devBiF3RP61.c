@@ -66,11 +66,11 @@ static long init_record(biRecord *precord)
         return -1;
     }
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
-    } else {                    // Option not recognized
-        errlogPrintf("devBiF3RP61: %s : unsupported option \'%c\'\n", precord->name, option);
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
+    } else {
+        errlogPrintf("devBiF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
         return -1;
     }
@@ -104,7 +104,7 @@ static long read_bi(biRecord *precord)
 
     F3RP61_DPVT  *dpvt = precord->dpvt;
     const int8_t  device = dpvt->device;
-    //const int8_t  option = dpvt->option;
+    //const int8_t  conv   = dpvt->conv;
     //const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
     //const int32_t count  = dpvt->count;
 
@@ -133,9 +133,9 @@ static long read_bi(biRecord *precord)
 
     } else if (device == 'X') { // Input relays on I/O modules
         M3IO_ACCESS_RELAY_POINT inrlyp = {
-            .unitno   = getunit(dpvt->addr),
-            .slotno   = getslot(dpvt->addr),
-            .position = getaddr(dpvt->addr),
+            .unitno   = dpvt->unit,
+            .slotno   = dpvt->slot,
+            .position = dpvt->addr,
         };
         if (ioctl(f3rp61_fd, M3IO_READ_INRELAY_POINT, &inrlyp) < 0) {
             errlogPrintf("devBiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
@@ -143,12 +143,12 @@ static long read_bi(biRecord *precord)
         }
         precord->rval = inrlyp.data;
     } else if (device == 'Y') { // Output relay on I/O modules
-        const int32_t addr  = getaddr(dpvt->addr);
+        const int32_t addr  = dpvt->addr;
         const int32_t start = ((addr - 1) / 16) * 16 + 1;
         const int32_t shift = ((addr - 1) % 16);
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
             .start  = start,
             .count  = 1,
         };

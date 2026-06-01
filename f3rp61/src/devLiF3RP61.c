@@ -75,14 +75,15 @@ static long init_record(longinRecord *precord)
         return -1;
     }
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
-    } else if (option == 'B') { // Binary Coded Decimal format
-    } else if (option == 'U') { // Unsigned integer
-    } else if (option == 'L') { // Long word
-    } else {                    // Option not recognized
-        errlogPrintf("devLiF3RP61: %s : unsupported option \'%c\'\n", precord->name, option);
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
+    } else if (conv == 'B') { // Binary Coded Decimal format
+    } else if (conv == 'U') { // Unsigned integer
+    } else if (conv == 'L') { // Long word
+//  } else if (conv == 'X') { // Long word access for XP01/XP02 modules (might be supported in the future)
+    } else {
+        errlogPrintf("devLiF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
         return -1;
     }
@@ -95,22 +96,21 @@ static long init_record(longinRecord *precord)
                device == 'r') {                  // Shared memory
     } else if (device == 'X' || device == 'Y') { // Input and output relays on I/O modules
     } else if (device == 'M') {                  // Mode registers on I/O modules
-        if (dpvt->option == 'B') {
-            errlogPrintf("devLiF3RP61: %s : unsupported option \'%c\'\n", precord->name, option);
+        if (dpvt->conv == 'B') {
+            errlogPrintf("devLiF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
             precord->pact = 1;
             return -1;
         }
 #if defined(__powerpc__)
         // On F3RP61 start and count are fixed to 1 and 3 in ioctl() request,
         // and only the 1st element is valid in the data read out.
-        if (dpvt->option == 'L' ) {
-            errlogPrintf("devLiF3RP61: %s : unsupported option \'%c\'\n", precord->name, option);
+        if (dpvt->conv == 'L' ) {
+            errlogPrintf("devLiF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
             precord->pact = 1;
             return -1;
         }
 #endif
     } else if (device == 'A') {                  // I/O registers on special modules
-        dpvt->count = 1; // we use M3IO_READ_REG_L for 'L' option therefore count must be always 1
     } else {
         errlogPrintf("devLiF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
         precord->pact = 1;
@@ -134,15 +134,15 @@ static long read_longin(longinRecord *precord)
 
     F3RP61_DPVT  *dpvt = precord->dpvt;
     const int8_t  device = dpvt->device;
-    const int8_t  option = dpvt->option;
+    const int8_t  conv   = dpvt->conv;
     const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
     const int32_t count  = dpvt->count;
 
     // debug
     //if (dpvt->irq) {
-    //    const int unitno = getunit(dpvt->addr);
-    //    const int slotno = getslot(dpvt->addr);
-    //    const int start  = getaddr(dpvt->addr);
+    //    const int unitno = dpvt->unit;
+    //    const int slotno = dpvt->slot;
+    //    const int start  = dpvt->addr;
     //    errlogPrintf("%s:%s %s %c%05d[%d] U%d S%d %c%d irq=%05d\n", __FILE__, __func__, precord->name, device, dpvt->addr, count, unitno, slotno, device, start, dpvt->irq);
     //}
 
@@ -203,9 +203,9 @@ static long read_longin(longinRecord *precord)
 
     } else if (device == 'X') { // Input relays on I/O modules
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
-            .start  = getaddr(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
+            .start  = dpvt->addr,
             .count  = count,
         };
         if (ioctl(f3rp61_fd, M3IO_READ_INRELAY, &drly) < 0) {
@@ -213,15 +213,15 @@ static long read_longin(longinRecord *precord)
             return -1;
         }
         wdata[0] = drly.u.inrly[0].data;
-        if (option == 'L') {
+        if (conv == 'L') {
             wdata[1] = drly.u.inrly[1].data;
         }
 
     } else if (device == 'Y') { // Output relays on I/O modules
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
-            .start  = getaddr(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
+            .start  = dpvt->addr,
             .count  = count,
         };
         if (ioctl(f3rp61_fd, M3IO_READ_OUTRELAY, &drly) < 0) {
@@ -230,12 +230,12 @@ static long read_longin(longinRecord *precord)
         }
 #if defined(__powerpc__)
         wdata[0] = drly.u.inrly[0].data;
-        if (option == 'L') {
+        if (conv == 'L') {
             wdata[1] = drly.u.inrly[1].data;
         }
 #else
         wdata[0] = drly.u.outrly[0].data;
-        if (option == 'L') {
+        if (conv == 'L') {
             wdata[1] = drly.u.outrly[1].data;
         }
 #endif
@@ -245,8 +245,8 @@ static long read_longin(longinRecord *precord)
         // On F3RP61 start and count are fixed to 1 and 3 in ioctl() request,
         // and only the 1st element is valid in the data read out.
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
             .start  = 1,
             .count  = 3,
         };
@@ -256,9 +256,9 @@ static long read_longin(longinRecord *precord)
         }
         wdata[0] = drly.u.wdata[0];
 #else
-        const int32_t unit   = getunit(dpvt->addr);
-        const int32_t slot   = getslot(dpvt->addr);
-        const int32_t addr   = getaddr(dpvt->addr);
+        const int32_t unit = dpvt->unit;
+        const int32_t slot = dpvt->slot;
+        const int32_t addr = dpvt->addr;
         if (readM3IoModeRegister(unit, slot, addr, count, wdata) < 0) {
             errlogPrintf("devLiF3RP61: %s : readM3IoModeRegister failed [%d]\n", precord->name, errno);
             return -1;
@@ -267,12 +267,12 @@ static long read_longin(longinRecord *precord)
 
     } else {//(device == 'A') // I/O registers on special modules
         M3IO_ACCESS_REG drly = {
-            .unitno = getunit(dpvt->addr),
-            .slotno = getslot(dpvt->addr),
-            .start  = getaddr(dpvt->addr),
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
+            .start  = dpvt->addr,
             .count  = count,
         };
-        if (option == 'L') {
+        if (conv == 'X') { // long word access for XP01/XP02 modules (might be supported in the future)
             drly.u.pldata = ldata;
             if (ioctl(f3rp61_fd, M3IO_READ_REG_L, &drly) < 0) {
                 errlogPrintf("devLiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
@@ -291,15 +291,13 @@ static long read_longin(longinRecord *precord)
     precord->udf = FALSE;
 
     // fill VAL field
-    if (option == 'B') {
+    if (conv == 'B') {
         precord->val = devF3RP61bcd2int(wdata[0], precord);
-    } else if (option == 'L') {
-        if (device == 'A') {
-            precord->val = ldata[0];
-        } else {
-            precord->val = (wdata[1]<<16) | wdata[0];
-        }
-    } else if (option == 'U') {
+    } else if (conv == 'X') { // long word access for XP01/XP02 modules (might be supported in the future)
+        precord->val = ldata[0];
+    } else if (conv == 'L') {
+        precord->val = (wdata[1]<<16) | wdata[0];
+    } else if (conv == 'U') {
         precord->val = (uint16_t)wdata[0];
     } else {
         precord->val = (int16_t)wdata[0];

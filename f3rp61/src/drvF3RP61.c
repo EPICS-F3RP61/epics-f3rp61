@@ -294,7 +294,7 @@ static void read_thread(void *arg)
             }
 
             // debug
-            fprintf(stderr, "%s:%s U%d,S%d,X%02d %p %d\n", __FILE__, __func__, unit, slot, channel, pvt, enabled);
+            //fprintf(stderr, "%s:%s U%d,S%d,X%02d %p %d\n", __FILE__, __func__, unit, slot, channel, pvt, enabled);
 
             if (! pvt) {
                 // this may not happen, as previously enabled I/O interrupt must has been cleared.
@@ -448,7 +448,7 @@ static
 int f3rp61RegisterIoInterrupt(const dbCommon *prec, int unit, int slot, int channel)
 {
     // debug
-    printf("%s:%s %s <= U%d,S%d,X%02d\n", __FILE__, __func__, prec->name, unit, slot, channel);
+    //printf("%s:%s %s <= U%d,S%d,X%02d\n", __FILE__, __func__, prec->name, unit, slot, channel);
 
     //
     if (channel >= NUM_IRQ_CH) {
@@ -479,7 +479,7 @@ int f3rp61EnableIoInterrupt(void)
     static int init_flag = 0;
 
     //debug
-    printf("%s:%s %d\n", __FILE__, __func__, init_flag);
+    //printf("%s:%s %d\n", __FILE__, __func__, init_flag);
 
     //
     if (init_flag) {
@@ -544,10 +544,10 @@ int f3rp61EnableIoInterrupt(void)
                     // ioctl() will fail if this module does not support I/O interrupt. Just ignore ther error for now.
 
                     // debug
-                    char name[5];
-                    memcpy(name, module_info.name, 4);
-                    name[4] = '\0';
-                    errlogPrintf("drvF3RP61: failed to clear previously enable I/O interrupt. U%d,S%d %s [%d]\n", unit, slot, name, errno);
+                    //char name[5];
+                    //memcpy(name, module_info.name, 4);
+                    //name[4] = '\0';
+                    //errlogPrintf("drvF3RP61: failed to clear previously enable I/O interrupt. U%d,S%d %s [%d]\n", unit, slot, name, errno);
                 }
             }
 
@@ -570,7 +570,7 @@ int f3rp61EnableIoInterrupt(void)
                 irq_requested = 1;
 
                 // debug
-                printf("%s:%s U%d,S%d mask: 0x%04x%04x%04x%04x\n", __FILE__, __func__, unit, slot, mask[3], mask[2], mask[1], mask[0]);
+                //printf("%s:%s U%d,S%d mask: 0x%04x%04x%04x%04x\n", __FILE__, __func__, unit, slot, mask[3], mask[2], mask[1], mask[0]);
 
                 M3IO_INTER_DEFINE arg = {
                     .unitno = unit,

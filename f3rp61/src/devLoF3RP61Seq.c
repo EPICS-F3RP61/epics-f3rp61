@@ -70,14 +70,14 @@ static long init_record(longoutRecord *precord)
         return -1;
     }
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
-    } else if (option == 'B') { // Binary Coded Decimal format
-    } else if (option == 'U') { // Unsigned integer
-    } else if (option == 'L') { // Long word
-    } else {                    // Option not recognized
-        errlogPrintf("devLoF3RP61Seq: %s : unsupported option \'%c\'\n", precord->name, option);
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
+    } else if (conv == 'B') { // Binary Coded Decimal format
+    } else if (conv == 'U') { // Unsigned integer
+    } else if (conv == 'L') { // Long word
+    } else {
+        errlogPrintf("devLoF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
         return -1;
     }
@@ -120,15 +120,15 @@ static long write_longout(longoutRecord *precord)
         uint16_t *wdata = pM3WriteSeqdev->dataBuff.wData;
 
         //
-        const char option = dpvt->option;
-        if (option == 'B') {
+        const char conv = dpvt->conv;
+        if (conv == 'B') {
             wdata[0] = devF3RP61int2bcd(precord->val, precord);
 
-        } else if (option == 'L') {
+        } else if (conv == 'L') {
             wdata[0] = (uint16_t)(precord->val>> 0);
             wdata[1] = (uint16_t)(precord->val>>16);
 
-        } else if (option == 'U') {
+        } else if (conv == 'U') {
             wdata[0] = (uint16_t)precord->val;
 
         } else {

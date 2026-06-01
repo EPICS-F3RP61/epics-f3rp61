@@ -72,15 +72,15 @@ static long init_record(aoRecord *precord)
     }
 
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
-    } else if (option == 'U') { // Unsigned integer, perhaps we'd better disable this
-    } else if (option == 'L') { // Long word
-    } else if (option == 'F') { // Single precision floating point
-    } else if (option == 'D') { // Double precision floating point
-    } else {                    // Option not recognized
-        errlogPrintf("devAoF3RP61Seq: %s : unsupported option \'%c\'\n", precord->name, option);
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
+    } else if (conv == 'U') { // Unsigned integer, perhaps we'd better disable this
+    } else if (conv == 'L') { // Long word
+    } else if (conv == 'F') { // Single precision floating point
+    } else if (conv == 'D') { // Double precision floating point
+    } else {
+        errlogPrintf("devAoF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
         return -1;
     }
@@ -124,8 +124,8 @@ static long write_ao(aoRecord *precord)
         uint16_t *wdata = pM3WriteSeqdev->dataBuff.wData;
 
         //
-        const char option = dpvt->option;
-        if (option == 'D') {
+        const char conv = dpvt->conv;
+        if (conv == 'D') {
             double val = precord->val;
             // todo : consider ASLO and AOFF field
 
@@ -140,7 +140,7 @@ static long write_ao(aoRecord *precord)
             // it seems that returning 2 (=no conversion) is meaningless
             //retval = 2; // no conversion
 
-        } else if (option == 'F') {
+        } else if (conv == 'F') {
             float val = precord->val;
             // todo : consider ASLO and AOFF field
 
@@ -153,11 +153,11 @@ static long write_ao(aoRecord *precord)
             // it seems that returning 2 (=no conversion) is meaningless
             //retval = 2; // no conversion
 
-        } else if (option == 'L') {
+        } else if (conv == 'L') {
             wdata[0] = (uint16_t)(precord->rval>> 0);
             wdata[1] = (uint16_t)(precord->rval>>16);
 
-        } else if (option == 'U') {
+        } else if (conv == 'U') {
             wdata[0] = (uint16_t)precord->rval;
 
         } else {

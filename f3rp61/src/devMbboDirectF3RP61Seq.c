@@ -67,22 +67,22 @@ static long init_record(mbboDirectRecord *precord)
         return -1;
     }
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
         precord->nobt = 16;
         precord->mask = 0xffff;
         precord->shft = 0;
-    } else if (option == 'U') { // Unsigned integer
+    } else if (conv == 'U') { // Unsigned integer
         precord->nobt = 16;
         precord->mask = 0xffff;
         precord->shft = 0;
-    } else if (option == 'L') { // Long word
+    } else if (conv == 'L') { // Long word
         precord->nobt = 32;
         precord->mask = 0xffffffff;
         precord->shft = 0;
-    } else {                    // Option not recognized
-        errlogPrintf("devMbboDirectF3RP61Seq: %s : unsupported option \'%c\'\n", precord->name, option);
+    } else {
+        errlogPrintf("devMbboDirectF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
         return -1;
     }
@@ -126,12 +126,12 @@ static long write_mbboDirect(mbboDirectRecord *precord)
         uint16_t *wdata = pM3WriteSeqdev->dataBuff.wData;
 
         //
-        const char option = dpvt->option;
-        if (option == 'L') {
+        const char conv = dpvt->conv;
+        if (conv == 'L') {
             wdata[0] = (uint16_t)(precord->rval>> 0);
             wdata[1] = (uint16_t)(precord->rval>>16);
 
-        } else if (option == 'U') {
+        } else if (conv == 'U') {
             wdata[0] = (uint16_t)precord->rval;
 
         } else {

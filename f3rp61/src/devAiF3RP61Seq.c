@@ -71,15 +71,15 @@ static long init_record(aiRecord *precord)
         return -1;
     }
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
-    } else if (option == 'U') { // Unsigned integer
-    } else if (option == 'L') { // Long word
-    } else if (option == 'F') { // Single precision floating point
-    } else if (option == 'D') { // Double precision floating point
-    } else {                    // Option not recognized
-        errlogPrintf("devAiF3RP61Seq: %s : unsupported option \'%c\'\n", precord->name, option);
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
+    } else if (conv == 'U') { // Unsigned integer
+    } else if (conv == 'L') { // Long word
+    } else if (conv == 'F') { // Single precision floating point
+    } else if (conv == 'D') { // Double precision floating point
+    } else {
+        errlogPrintf("devAiF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
             return -1;
     }
@@ -117,8 +117,8 @@ static long read_ai(aiRecord *precord)
         precord->udf = FALSE;
 
         // fill VAL field
-        const char option = dpvt->option;
-        if (option == 'D') {
+        const char conv = dpvt->conv;
+        if (conv == 'D') {
             const uint64_t l0 = wdata[0];
             const uint64_t l1 = wdata[1];
             const uint64_t l2 = wdata[2];
@@ -133,7 +133,7 @@ static long read_ai(aiRecord *precord)
             precord->udf = isnan(val);
             return 2; // no conversion
 
-        } else if (option == 'F') {
+        } else if (conv == 'F') {
             const uint32_t l0 = wdata[0];
             const uint32_t l1 = wdata[1];
             const uint32_t lval = (l1<<16) | l0;
@@ -146,12 +146,12 @@ static long read_ai(aiRecord *precord)
             precord->udf = isnan(val);
             return 2; // no conversion
 
-        } else if (option == 'L') {
+        } else if (conv == 'L') {
             const uint32_t l0 = wdata[0];
             const uint32_t l1 = wdata[1];
             precord->rval = l1<<16 | l0;
 
-        } else if (option == 'U') {
+        } else if (conv == 'U') {
             precord->rval = (uint16_t)wdata[0];
 
         } else {

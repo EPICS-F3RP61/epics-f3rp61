@@ -67,22 +67,22 @@ static long init_record(mbbiRecord *precord)
         return -1;
     }
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
         precord->nobt = 16;
         precord->mask = 0xffff;
         precord->shft = 0;
-    } else if (option == 'U') { // Unsigned integer
+    } else if (conv == 'U') { // Unsigned integer
         precord->nobt = 16;
         precord->mask = 0xffff;
         precord->shft = 0;
-    } else if (option == 'L') { // Long word
+    } else if (conv == 'L') { // Long word
         precord->nobt = 32;
         precord->mask = 0xffffffff;
         precord->shft = 0;
-    } else {                    // Option not recognized
-        errlogPrintf("devMbbiF3RP61Seq: %s : unsupported option \'%c\'\n", precord->name, option);
+    } else {
+        errlogPrintf("devMbbiF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
         return -1;
     }
@@ -120,11 +120,11 @@ static long read_mbbi(mbbiRecord *precord)
         precord->udf = FALSE;
 
         // fill VAL field
-        const char option = dpvt->option;
-        if (option == 'L') {
+        const char conv = dpvt->conv;
+        if (conv == 'L') {
             precord->rval = wdata[1]<<16 | wdata[0];
 
-        } else if (option == 'U') {
+        } else if (conv == 'U') {
             precord->rval = (uint16_t)wdata[0];
 
         } else {

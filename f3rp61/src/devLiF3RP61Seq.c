@@ -70,14 +70,14 @@ static long init_record(longinRecord *precord)
         return -1;
     }
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
-    } else if (option == 'B') { // Binary Coded Decimal format
-    } else if (option == 'U') { // Unsigned integer
-    } else if (option == 'L') { // Long word
-    } else {                    // Option not recognized
-        errlogPrintf("devLiF3RP61Seq: %s : unsupported option \'%c\'\n", precord->name, option);
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
+    } else if (conv == 'B') { // Binary Coded Decimal format
+    } else if (conv == 'U') { // Unsigned integer
+    } else if (conv == 'L') { // Long word
+    } else {
+        errlogPrintf("devLiF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
         return -1;
     }
@@ -115,14 +115,14 @@ static long read_longin(longinRecord *precord)
         precord->udf = FALSE;
 
         // fill VAL field
-        const char option = dpvt->option;
-        if (option == 'B') {
+        const char conv = dpvt->conv;
+        if (conv == 'B') {
             precord->val = devF3RP61bcd2int(wdata[0], precord);
 
-        } else if (option == 'L') {
+        } else if (conv == 'L') {
             precord->val = wdata[1]<<16 | wdata[0];
 
-        } else if (option == 'U') {
+        } else if (conv == 'U') {
             precord->val = (uint16_t)wdata[0];
 
         } else {

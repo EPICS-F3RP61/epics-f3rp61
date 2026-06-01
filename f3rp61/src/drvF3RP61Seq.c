@@ -115,26 +115,26 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_DPVT *dpvt, F3RP61SEQ
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
-    // Parse option
-    dpvt->option = 'W'; // default option for Word access
+    // Parse conversion specifier
+    dpvt->conv = 'W'; // default for Word access
     char *popt = strchr(buf, '&');
     if (popt) {
         *popt++ = '\0';
-        if (sscanf(popt, "%c", &dpvt->option) < 1) {
-            errlogPrintf("%s: %s : can't get option\n", sup, prec->name);
+        if (sscanf(popt, "%c", &dpvt->conv) < 1) {
+            errlogPrintf("%s: %s : can't get conversion specifier\n", sup, prec->name);
             return -1;
         }
     }
 
-    // Data width
+    // Consider I/O data length
     int num = 1;
     int width = 2; // We don't use long-word access, so width is fixed to 2
     if (type == kBit) {
         //
     } else { // kWord
-        if (dpvt->option == 'D') {
+        if (dpvt->conv == 'D') {
             num = 4;
-        } else if (dpvt->option == 'F' || dpvt->option == 'L') {
+        } else if (dpvt->conv == 'F' || dpvt->conv == 'L') {
             num = 2;
         }
     }

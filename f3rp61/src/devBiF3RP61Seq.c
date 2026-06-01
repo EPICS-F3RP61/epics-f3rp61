@@ -66,11 +66,11 @@ static long init_record(biRecord *precord)
         return -1;
     }
 
-    // Check conversion Option
-    const int8_t option = dpvt->option;
-    if (option == 'W') {        // Dummy option for Word access
-    } else {                    // Option not recognized
-        errlogPrintf("devLiF3RP61Seq: %s : unsupported option \'%c\'\n", precord->name, option);
+    // Check conversion specifier
+    const int8_t conv = dpvt->conv;
+    if (conv == 'W') {        // Dummy for Word access
+    } else {
+        errlogPrintf("devLiF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
         precord->pact = 1;
         return -1;
     }

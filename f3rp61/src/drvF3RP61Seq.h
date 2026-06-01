@@ -73,7 +73,7 @@ typedef struct {
     dbCommon    *prec;
     CALLBACK     callback;
     int          ret;
-    int8_t       option;
+    int8_t       conv;
 } F3RP61SEQ_DPVT;
 
 //

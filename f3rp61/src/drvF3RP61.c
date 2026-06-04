@@ -74,13 +74,13 @@ static int f3rp61EnableIoInterrupt(void);
 //
 static M3LINKDATACONFIG link_data_config;
 static void linkDeviceConfigureCallFunc(const iocshArgBuf *);
-static void linkDeviceConfigure(int, int, int);
+static int  linkDeviceConfigure(int, int, int);
 
 //
 static M3COMDATACONFIG com_data_config;
 static M3COMDATACONFIG ext_com_data_config;
 static void comDeviceConfigureCallFunc(const iocshArgBuf *);
-static void comDeviceConfigure(int, int, int, int, int);
+static int  comDeviceConfigure(int, int, int, int, int);
 
 //
 static void getModuleInfoCallFunc(const iocshArgBuf *);
@@ -117,12 +117,13 @@ static long init()
         return -1;
     }
 
+    // Set shared device assignment
     for (int i = 0; i < M3IO_NUM_CPUS; i++) {
         if (com_data_config.wNumberOfRelay[i] || com_data_config.wNumberOfRegister[i] ||
             ext_com_data_config.wNumberOfRelay[i] || ext_com_data_config.wNumberOfRegister[i]) {
-
             if (setM3ComDataConfig(&com_data_config, &ext_com_data_config) < 0) {
                 errlogPrintf("drvF3RP61: setM3ComDataConfig failed [%d]\n", errno);
+                // 414 (invalid number)  : invalid parameter was specified (F3RP7x/61)
                 return -1;
             }
 
@@ -130,6 +131,7 @@ static long init()
         }
     }
 
+    // Set link device assignment
     for (int i = 0; i < M3IO_NUM_LINKS; i++) {
         if (link_data_config.wNumberOfRelay[i] || link_data_config.wNumberOfRegister[i]) {
 
@@ -140,10 +142,10 @@ static long init()
 
             if (setM3FlnSysNo(0, NULL) < 0) {
                 errlogPrintf("drvF3RP61: setM3FlnSysNo failed [%d]\n", errno);
-                // 414 (invalid number)  : invalid parameter was specified (F3RP71/61)
-                // 415 (device mismatch) : specified modules is not FL-net (F3RP71)
-                // 416 (number over)     : an excessive number of system is specified (F3RP71)
-                // 417 (entry error)     : unable to access module or I/O bus error (F3RP71)
+                // 414 (invalid number)  : invalid parameter was specified (F3RP7x/61)
+                // 415 (device mismatch) : specified modules is not FL-net (F3RP7x)
+                // 416 (number over)     : an excessive number of system is specified (F3RP7x)
+                // 417 (entry error)     : unable to access module or I/O bus error (F3RP7x)
                 // 397 (internal error)  : (F3RP61)
                 // 394                   : Not documented in the manual; setM3FlnSysNo() was called after m3rfrsTsk(). We'd better to reset the CPU.
                 return -1;
@@ -656,35 +658,43 @@ static const iocshArg *linkDeviceConfigureArgs[] = {
     &linkDeviceConfigureArg1,
     &linkDeviceConfigureArg2
 };
-
-static const iocshFuncDef linkDeviceConfigureFuncDef = {
-    "f3rp61LinkDeviceConfigure",
-    3,
-    linkDeviceConfigureArgs
+static const iocshFuncDef linkDeviceConfigureFuncDef = { "f3rp61LinkDeviceConfigure", 3, linkDeviceConfigureArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Configure link device assignment.\n"
+    "Calling f3rp61LinkDeviceConfigure after iocInit has no effect.\n"
+#endif
+#endif
 };
 
 static void linkDeviceConfigureCallFunc(const iocshArgBuf *args)
 {
-    linkDeviceConfigure(args[0].ival, args[1].ival, args[2].ival);
+    if (! linkDeviceConfigure(args[0].ival, args[1].ival, args[2].ival)) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
 }
 
-static void linkDeviceConfigure(int sysno, int nrlys, int nregs)
+static int linkDeviceConfigure(int sysno, int nrlys, int nregs)
 {
     if (sysno <0 || sysno > (M3IO_NUM_LINKS-1) ) {
         errlogPrintf("f3rp61LinkDeviceConfigure: number of FL-net interface out of range\n");
-        return;
+        return -1;
     }
     if (nrlys < 1 || nrlys > 8192) {
         errlogPrintf("f3rp61LinkDeviceConfigure: number of Link relay out of range\n");
-        return;
+        return -1;
     }
     if (nregs < 1 || nregs > 8192) {
         errlogPrintf("f3rp61LinkDeviceConfigure: number of Link register out of range\n");
-        return;
+        return -1;
     }
 
     link_data_config.wNumberOfRelay[sysno] = nrlys;
     link_data_config.wNumberOfRegister[sysno] = nregs;
+
+    return 0; // Success
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -693,8 +703,8 @@ static void linkDeviceConfigure(int sysno, int nrlys, int nregs)
 //
 static const iocshArg comDeviceConfigureArg0 = { "cpuNo",     iocshArgInt};
 static const iocshArg comDeviceConfigureArg1 = { "nRlys",     iocshArgInt};
-static const iocshArg comDeviceConfigureArg2 = { "ext_nRlys", iocshArgInt};
-static const iocshArg comDeviceConfigureArg3 = { "nRegs",     iocshArgInt};
+static const iocshArg comDeviceConfigureArg2 = { "nRegs",     iocshArgInt};
+static const iocshArg comDeviceConfigureArg3 = { "ext_nRlys", iocshArgInt};
 static const iocshArg comDeviceConfigureArg4 = { "ext_nRegs", iocshArgInt};
 static const iocshArg *comDeviceConfigureArgs[] = {
     &comDeviceConfigureArg0,
@@ -704,30 +714,37 @@ static const iocshArg *comDeviceConfigureArgs[] = {
     &comDeviceConfigureArg4
 };
 
-static const iocshFuncDef comDeviceConfigureFuncDef = {
-    "f3rp61ComDeviceConfigure",
-    5,
-    comDeviceConfigureArgs
+static const iocshFuncDef comDeviceConfigureFuncDef = { "f3rp61ComDeviceConfigure", 5, comDeviceConfigureArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Configure shared device assignment for given CPU.\n"
+    "Calling f3rp61ComDeviceConfigure after iocInit has no effect.\n"
+#endif
 };
 
 static void comDeviceConfigureCallFunc(const iocshArgBuf *args)
 {
-    comDeviceConfigure(args[0].ival, args[1].ival, args[2].ival, args[3].ival, args[4].ival);
+    if (! comDeviceConfigure(args[0].ival, args[1].ival, args[2].ival, args[3].ival, args[4].ival)) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
 }
 
-static void comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, int ext_nregs)
+static int comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, int ext_nregs)
 {
     if (cpuno < 0 || cpuno > 3 ||
         nrlys < 0 || nrlys >  2048 || nregs < 0 || nregs > 1024 ||
         ext_nrlys < 0 || ext_nrlys >  2048 || ext_nregs < 0 || ext_nregs > 3072) {
         errlogPrintf("drvF3RP61: comDeviceConfigure: parameter out of range\n");
-        return;
+        return -1;
     }
 
     com_data_config.wNumberOfRelay[cpuno] = nrlys;
     com_data_config.wNumberOfRegister[cpuno] = nregs;
     ext_com_data_config.wNumberOfRelay[cpuno] = ext_nrlys;
     ext_com_data_config.wNumberOfRegister[cpuno] = ext_nregs;
+
+    return 0; // Success
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -795,6 +812,10 @@ static void getModuleInfo(int verbosity)
     }
 }
 
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh commands
+//
 static void drvF3RP61RegisterCommands(void)
 {
     static int init_flag = 0;

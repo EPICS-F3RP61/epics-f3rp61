@@ -394,12 +394,12 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, const dbCommon 
     }
 
     // Parse slot, device and register number
-    int8_t device = 0;
-    int32_t unit = 0, slot = 0, addr = 0;
-    uint8_t cpuno = 0; // for Shared memory (or 'Old interface' for shared registers/relays)
+    uint8_t device = 0;
+    uint32_t unit = 0, slot = 0, addr = 0;
+    uint32_t cpuno = 0; // for Shared memory (or 'Old interface' for shared registers/relays)
     if (0) {
         //
-    } else if (sscanf(buf, "CPU%c,R%d", &cpuno, &addr) == 2) {
+    } else if (sscanf(buf, "CPU%d,R%d", &cpuno, &addr) == 2) {
         device = 'r'; // Shared memory (or 'Old interface' for shared registers/relays)
     } else if (sscanf(buf, "U%d,S%d,%c%d", &unit, &slot, &device, &addr) == 4) {
         //

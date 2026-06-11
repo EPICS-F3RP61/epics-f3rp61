@@ -71,21 +71,32 @@ static void read_thread(void *);
 static int f3rp61RegisterIoInterrupt(const dbCommon *, int, int, int);
 static int f3rp61EnableIoInterrupt(void);
 
+// iocsh commands
+
 //
-static M3LINKDATACONFIG link_data_config;
-static void linkDeviceConfigureCallFunc(const iocshArgBuf *);
-static int  linkDeviceConfigure(int, int, int);
+static void getModuleInfoCallFunc(const iocshArgBuf *);
+static int  getModuleInfo(int);
+
+//
+static void getSharedDeviceConfigCallFunc(const iocshArgBuf *);
+static int  getSharedDeviceConfig(void);
 
 //
 static M3COMDATACONFIG com_data_config;
 static M3COMDATACONFIG ext_com_data_config;
-static void comDeviceConfigureCallFunc(const iocshArgBuf *);
-static int  comDeviceConfigure(int, int, int, int, int);
+static void setSharedDeviceConfigCallFunc(const iocshArgBuf *);
+static int  setSharedDeviceConfig(int, int, int, int, int);
 
 //
-static void getModuleInfoCallFunc(const iocshArgBuf *);
-static void getModuleInfo(int);
+static void getLinkDeviceConfigCallFunc(const iocshArgBuf *);
+static int  getLinkDeviceConfig(void);
 
+//
+static M3LINKDATACONFIG link_data_config;
+static void setLinkDeviceConfigCallFunc(const iocshArgBuf *);
+static int  setLinkDeviceConfig(int, int, int);
+
+//
 static void drvF3RP61RegisterCommands(void);
 
 //////////////////////////////////////////////////////////////////////////
@@ -648,107 +659,6 @@ long f3rp61GetIoIntInfo(int cmd, dbCommon *prec, IOSCANPVT *ppvt)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Register iocsh command 'f3rp61LinkDeviceConfigure'
-//
-static const iocshArg linkDeviceConfigureArg0 = { "sysNo",iocshArgInt};
-static const iocshArg linkDeviceConfigureArg1 = { "nRlys",iocshArgInt};
-static const iocshArg linkDeviceConfigureArg2 = { "nRegs",iocshArgInt};
-static const iocshArg *linkDeviceConfigureArgs[] = {
-    &linkDeviceConfigureArg0,
-    &linkDeviceConfigureArg1,
-    &linkDeviceConfigureArg2
-};
-static const iocshFuncDef linkDeviceConfigureFuncDef = { "f3rp61LinkDeviceConfigure", 3, linkDeviceConfigureArgs,
-#ifdef IOCSHFUNCDEF_HAS_USAGE
-#ifdef IOCSHFUNCDEF_HAS_USAGE
-    "Configure link device assignment.\n"
-    "Calling f3rp61LinkDeviceConfigure after iocInit has no effect.\n"
-#endif
-#endif
-};
-
-static void linkDeviceConfigureCallFunc(const iocshArgBuf *args)
-{
-    if (! linkDeviceConfigure(args[0].ival, args[1].ival, args[2].ival)) {
-#ifdef IOCSHFUNCDEF_HAS_USAGE
-        iocshSetError(-1);
-#endif
-    }
-}
-
-static int linkDeviceConfigure(int sysno, int nrlys, int nregs)
-{
-    if (sysno <0 || sysno > (M3IO_NUM_LINKS-1) ) {
-        errlogPrintf("f3rp61LinkDeviceConfigure: number of FL-net interface out of range\n");
-        return -1;
-    }
-    if (nrlys < 1 || nrlys > 8192) {
-        errlogPrintf("f3rp61LinkDeviceConfigure: number of Link relay out of range\n");
-        return -1;
-    }
-    if (nregs < 1 || nregs > 8192) {
-        errlogPrintf("f3rp61LinkDeviceConfigure: number of Link register out of range\n");
-        return -1;
-    }
-
-    link_data_config.wNumberOfRelay[sysno] = nrlys;
-    link_data_config.wNumberOfRegister[sysno] = nregs;
-
-    return 0; // Success
-}
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Register iocsh command 'f3rp61ComDeviceConfigure'
-//
-static const iocshArg comDeviceConfigureArg0 = { "cpuNo",     iocshArgInt};
-static const iocshArg comDeviceConfigureArg1 = { "nRlys",     iocshArgInt};
-static const iocshArg comDeviceConfigureArg2 = { "nRegs",     iocshArgInt};
-static const iocshArg comDeviceConfigureArg3 = { "ext_nRlys", iocshArgInt};
-static const iocshArg comDeviceConfigureArg4 = { "ext_nRegs", iocshArgInt};
-static const iocshArg *comDeviceConfigureArgs[] = {
-    &comDeviceConfigureArg0,
-    &comDeviceConfigureArg1,
-    &comDeviceConfigureArg2,
-    &comDeviceConfigureArg3,
-    &comDeviceConfigureArg4
-};
-
-static const iocshFuncDef comDeviceConfigureFuncDef = { "f3rp61ComDeviceConfigure", 5, comDeviceConfigureArgs,
-#ifdef IOCSHFUNCDEF_HAS_USAGE
-    "Configure shared device assignment for given CPU.\n"
-    "Calling f3rp61ComDeviceConfigure after iocInit has no effect.\n"
-#endif
-};
-
-static void comDeviceConfigureCallFunc(const iocshArgBuf *args)
-{
-    if (! comDeviceConfigure(args[0].ival, args[1].ival, args[2].ival, args[3].ival, args[4].ival)) {
-#ifdef IOCSHFUNCDEF_HAS_USAGE
-        iocshSetError(-1);
-#endif
-    }
-}
-
-static int comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, int ext_nregs)
-{
-    if (cpuno < 0 || cpuno > 3 ||
-        nrlys < 0 || nrlys >  2048 || nregs < 0 || nregs > 1024 ||
-        ext_nrlys < 0 || ext_nrlys >  2048 || ext_nregs < 0 || ext_nregs > 3072) {
-        errlogPrintf("drvF3RP61: comDeviceConfigure: parameter out of range\n");
-        return -1;
-    }
-
-    com_data_config.wNumberOfRelay[cpuno] = nrlys;
-    com_data_config.wNumberOfRegister[cpuno] = nregs;
-    ext_com_data_config.wNumberOfRelay[cpuno] = ext_nrlys;
-    ext_com_data_config.wNumberOfRegister[cpuno] = ext_nregs;
-
-    return 0; // Success
-}
-
-//////////////////////////////////////////////////////////////////////////
-//
 // Register iocsh command 'f3rp61GetModuleInfo'
 //
 // usage: f3rp61GetModuleInfo [arg]
@@ -756,24 +666,25 @@ static int comDeviceConfigure(int cpuno, int nrlys, int nregs, int ext_nrlys, in
 // List FA-M3/e-RT3 modules installed on the system.
 // Empty slots are shown if whatever argument is given.
 //
-static const iocshArg      getModuleInfoArg0    = { "dummy",     iocshArgString};
-static const iocshArg     *getModuleInfoArgs[]  = { &getModuleInfoArg0, };
-static const iocshFuncDef  getModuleInfoFuncDef = {
-    "f3rp61GetModuleInfo",
-    1,
-    getModuleInfoArgs
+static const iocshArg      getModuleInfoArg0    = { "[verbose]",  iocshArgString };
+static const iocshArg     *getModuleInfoArgs[]  = { &getModuleInfoArg0 };
+static const iocshFuncDef  getModuleInfoFuncDef = { "f3rp61GetModuleInfo", 1, getModuleInfoArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Obtain information on all installed modules.\n"
+#endif
 };
 
 static void getModuleInfoCallFunc(const iocshArgBuf *args)
 {
-    if (args[0].sval) {
-        getModuleInfo(1);
-    } else {
-        getModuleInfo(0);
+    int verbosity = args[0].sval ? 1 : 0 ; // non-NULL if an argument is passed
+    if (! getModuleInfo(verbosity)) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
     }
 }
 
-static void getModuleInfo(int verbosity)
+static int getModuleInfo(int verbosity)
 {
     printf("%4s %4s %4s %5s %4s %4s %4s\n",
            "Unit", "Slot", "Name", "MSize", "Xreg", "Yreg", "Dreg");
@@ -785,7 +696,11 @@ static void getModuleInfo(int verbosity)
                 .slotno = slot,
             };
 
-            ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info);
+            if (ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info)<0) {
+                // ioctl() fails if no module is plugged in the specified slot, so the error should be ignored.
+                //errlogPrintf("drvF3RP61: ioctl M3IO_GET_MODULE_INFO failed [%d]\n", errno);
+                //return -1;
+            }
 
             if (!module_info.enable) {
                 if (!verbosity) {
@@ -810,7 +725,205 @@ static void getModuleInfo(int verbosity)
                    module_info.num_dreg);
         }
     }
+
+    return 0; // Success
 }
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61GetSharedDeviceConfig'
+//
+static const iocshFuncDef  getSharedDeviceConfigFuncDef = { "f3rp61GetSharedDeviceConfig", 0, 0,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Get shared device assignment information.\n"
+#endif
+};
+
+static void getSharedDeviceConfigCallFunc(const iocshArgBuf *args)
+{
+    if (! getSharedDeviceConfig()) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
+}
+
+static int getSharedDeviceConfig(void)
+{
+    M3COMDATACONFIG com;
+    M3COMDATACONFIG ext;
+    if (referM3ComDataConfig(&com, &ext)<0) {
+        errlogPrintf("drvF3RP61: referM3ComDataConfig failed [%d]\n", errno);
+        return EXIT_FAILURE;
+    }
+
+    printf("%3s %4s %4s %4s %4s\n", "CPU", "rly", "reg",  "erly", "ereg");
+    for (int i=0; i<4; i++) {
+        printf("%3d %4d %4d %4d %4d\n", i, com.wNumberOfRelay[i], com.wNumberOfRegister[i], ext.wNumberOfRelay[i], ext.wNumberOfRegister[i]);
+    }
+
+    return 0; // Success
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61SetSharedDeviceConfig'
+//
+static const iocshArg      setSharedDeviceConfigArg0    = { "cpuNo",     iocshArgInt };
+static const iocshArg      setSharedDeviceConfigArg1    = { "nRlys",     iocshArgInt };
+static const iocshArg      setSharedDeviceConfigArg2    = { "nRegs",     iocshArgInt };
+static const iocshArg      setSharedDeviceConfigArg3    = { "ext_nRlys", iocshArgInt };
+static const iocshArg      setSharedDeviceConfigArg4    = { "ext_nRegs", iocshArgInt };
+static const iocshArg     *setSharedDeviceConfigArgs[]  = {
+    &setSharedDeviceConfigArg0,
+    &setSharedDeviceConfigArg1,
+    &setSharedDeviceConfigArg2,
+    &setSharedDeviceConfigArg3,
+    &setSharedDeviceConfigArg4
+};
+static const iocshFuncDef  setSharedDeviceConfigFuncDef = { "f3rp61SetSharedDeviceConfig", 5, setSharedDeviceConfigArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Configure shared device assignment for given CPU.\n"
+    "Calling f3rp61SetSharedDeviceConfig after iocInit has no effect.\n"
+#endif
+};
+
+static void setSharedDeviceConfigCallFunc(const iocshArgBuf *args)
+{
+    if (! setSharedDeviceConfig(args[0].ival, args[1].ival, args[2].ival, args[3].ival, args[4].ival)) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
+}
+
+static int setSharedDeviceConfig(int cpuno, int nrlys, int nregs, int ext_nrlys, int ext_nregs)
+{
+    if (cpuno < 0 || cpuno > 3) {
+        errlogPrintf("f3rp61SetSharedDeviceConfig: CPU number out of range\n");
+        return -1;
+    }
+    if (nrlys < 0 || nrlys >  2048) {
+        errlogPrintf("f3rp61SetSharedDeviceConfig: Number of shared relays out of range\n");
+        return -1;
+    }
+    if (nregs < 0 || nregs > 1024) {
+        errlogPrintf("f3rp61SetSharedDeviceConfig: Number of shared registers out of range\n");
+        return -1;
+    }
+    if (ext_nrlys < 0 || ext_nrlys >  2048) {
+        errlogPrintf("f3rp61SetSharedDeviceConfig: Number of extended shared relays out of range\n");
+        return -1;
+    }
+    if (ext_nregs < 0 || ext_nregs > 3072) {
+        errlogPrintf("f3rp61SetSharedDeviceConfig: Number of extended shared registers out of range\n");
+        return -1;
+    }
+
+    com_data_config.wNumberOfRelay[cpuno] = nrlys;
+    com_data_config.wNumberOfRegister[cpuno] = nregs;
+    ext_com_data_config.wNumberOfRelay[cpuno] = ext_nrlys;
+    ext_com_data_config.wNumberOfRegister[cpuno] = ext_nregs;
+
+    return 0; // Success
+}
+
+static const iocshFuncDef  comDeviceConfigureFuncDef = { "f3rp61ComDeviceConfigure", 5, setSharedDeviceConfigArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Old name for f3rp61SetSharedDeviceConfig, retained for backward compatibility.\n"
+#endif
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61GetLinkDeviceConfig'
+//
+static const iocshFuncDef  getLinkDeviceConfigFuncDef = { "f3rp61GetLinkDeviceConfig", 0, 0,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Get shared device assignment information.\n"
+#endif
+};
+
+static void getLinkDeviceConfigCallFunc(const iocshArgBuf *args)
+{
+    if (! getLinkDeviceConfig()) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
+}
+
+static int getLinkDeviceConfig(void)
+{
+    M3LINKDATACONFIG link;
+    if (referM3LinkDeviceConfig(&link)<0) {
+        errlogPrintf("drvF3RP61: referM3LinkDeviceConfig failed [%d]\n", errno);
+        return EXIT_FAILURE;
+    }
+
+    printf("%3s %4s %4s\n", "Sys", "rly", "reg");
+    for (int i=0; i<8; i++) {
+        printf("%3d %4d %4d\n", i, link.wNumberOfRelay[i], link.wNumberOfRegister[i]);
+    }
+
+    return 0; // Success
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61SetLinkDeviceConfig'
+//
+static const iocshArg      setLinkDeviceConfigArg0    = { "sysNo", iocshArgInt };
+static const iocshArg      setLinkDeviceConfigArg1    = { "nRlys", iocshArgInt };
+static const iocshArg      setLinkDeviceConfigArg2    = { "nRegs", iocshArgInt };
+static const iocshArg     *setLinkDeviceConfigArgs[]  = {
+    &setLinkDeviceConfigArg0,
+    &setLinkDeviceConfigArg1,
+    &setLinkDeviceConfigArg2
+};
+static const iocshFuncDef  setLinkDeviceConfigFuncDef = { "f3rp61SetLinkDeviceConfig", 3, setLinkDeviceConfigArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Configure link device assignment.\n"
+    "Calling f3rp61LinkDeviceConfigure after iocInit has no effect.\n"
+#endif
+};
+
+static void setLinkDeviceConfigCallFunc(const iocshArgBuf *args)
+{
+    if (! setLinkDeviceConfig(args[0].ival, args[1].ival, args[2].ival)) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
+}
+
+static int setLinkDeviceConfig(int sysno, int nrlys, int nregs)
+{
+    if (sysno <0 || sysno > (M3IO_NUM_LINKS-1) ) {
+        errlogPrintf("f3rp61SetLinkDeviceConfig: Number of FL-net interface out of range\n");
+        return -1;
+    }
+    if (nrlys < 1 || nrlys > 8192) {
+        errlogPrintf("f3rp61SetLinkDeviceConfig: Number of link relays out of range\n");
+        return -1;
+    }
+    if (nregs < 1 || nregs > 8192) {
+        errlogPrintf("f3rp61SetLinkDeviceConfig: Number of link registers out of range\n");
+        return -1;
+    }
+
+    link_data_config.wNumberOfRelay[sysno] = nrlys;
+    link_data_config.wNumberOfRegister[sysno] = nregs;
+
+    return 0; // Success
+}
+
+static const iocshFuncDef  linkDeviceConfigureFuncDef = { "f3rp61LinkDeviceConfigure", 5, setLinkDeviceConfigArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Old name for f3rp61SetLinkDeviceConfig, retained for backward compatibility.\n"
+#endif
+};
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -821,9 +934,13 @@ static void drvF3RP61RegisterCommands(void)
     static int init_flag = 0;
     if (!init_flag) {
         init_flag = 1;
-        iocshRegister(&getModuleInfoFuncDef, getModuleInfoCallFunc);
-        iocshRegister(&comDeviceConfigureFuncDef, comDeviceConfigureCallFunc);
-        iocshRegister(&linkDeviceConfigureFuncDef, linkDeviceConfigureCallFunc);
+        iocshRegister(&getModuleInfoFuncDef,         getModuleInfoCallFunc);
+        iocshRegister(&getSharedDeviceConfigFuncDef, getSharedDeviceConfigCallFunc);
+        iocshRegister(&setSharedDeviceConfigFuncDef, setSharedDeviceConfigCallFunc);
+        iocshRegister(&comDeviceConfigureFuncDef,    setSharedDeviceConfigCallFunc); // for backward compatibility
+        iocshRegister(&getLinkDeviceConfigFuncDef,   getLinkDeviceConfigCallFunc);
+        iocshRegister(&setLinkDeviceConfigFuncDef,   setLinkDeviceConfigCallFunc);
+        iocshRegister(&linkDeviceConfigureFuncDef,   setLinkDeviceConfigCallFunc); // for backward compatibility
     }
 }
 

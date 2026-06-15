@@ -5,21 +5,21 @@
 * and higher are distributed subject to a Software License Agreement found
 * in file LICENSE that is included with this distribution.
 **************************************************************************
-* devWfF3RP61.c - Device Support Routines for F3RP61 Waveform
+* devAaiF3RP61.c - Device Support Routines for F3RP61 Array Analog Input
 *
-*      Author: Jun-ichi Odagiri
-*      Date: 6-30-08
+*      Author: Shuei YAMADA
+*      Date: 2026-06-02
 */
 
 //
-#include <waveformRecord.h>
+#include <aaiRecord.h>
 
 //
 #include <drvF3RP61.h>
 
 // Create the dset for devWfF3RP61
 static long init_record();
-static long read_wf();
+static long read_aai();
 
 struct {
     long       number;
@@ -27,24 +27,24 @@ struct {
     DEVSUPFUN  init;
     DEVSUPFUN  init_record;
     DEVSUPFUN  get_ioint_info;
-    DEVSUPFUN  read_wf;
+    DEVSUPFUN  read_aai;
     DEVSUPFUN  special_linconv;
-} devWfF3RP61 = {
+} devAaiF3RP61 = {
     6,
     NULL,
     f3rp61Init,
     init_record,
     f3rp61GetIoIntInfo,
-    read_wf,
+    read_aai,
     NULL
 };
 
-epicsExportAddress(dset, devWfF3RP61);
+epicsExportAddress(dset, devAaiF3RP61);
 
 // init_record() initializes record - parses INP/OUT field string,
 // allocates private data storage area and sets initial configuration
 // values.
-static long init_record(waveformRecord *prec)
+static long init_record(aaiRecord *prec)
 {
     //
     struct link *plink = &prec->inp;
@@ -52,7 +52,7 @@ static long init_record(waveformRecord *prec)
     // Link type must be INST_IO
     if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, prec,
-                          "devWfF3RP61 (init_record) Illegal INP field");
+                          "devAaiF3RP61 (init_record) Illegal INP field");
         prec->pact = 1;
         return S_db_badField;
     }
@@ -64,15 +64,14 @@ static long init_record(waveformRecord *prec)
     const char *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
 
     //
-    const int ret = f3rp61ParseLink(plink, dpvt, (dbCommon *)prec, "devWfF3RP61");
+    const int ret = f3rp61ParseLink(plink, dpvt, (dbCommon *)prec, "devAaiF3RP61");
     if (ret < 0) {
-        //errlogPrintf("devWfF3RP61: %s : syntax error in INP field\n", prec->name);
+        //errlogPrintf("devAaiF3RP61: %s : syntax error in INP field\n", prec->name);
         prec->pact = 1;
         return -1;
     }
 
-    void *wdata = callocMustSucceed(nelm, sizeof(uint16_t)*dpvt->count, "calloc failed");
-    dpvt->wdata = wdata;
+    dpvt->wdata = callocMustSucceed(nelm, sizeof(uint16_t)*dpvt->count, "calloc failed");
 
     // Check conversion specifier
     const int8_t conv = dpvt->conv;
@@ -84,7 +83,7 @@ static long init_record(waveformRecord *prec)
         } else if (conv == 'F') { // Single precision floating point
         } else if (conv == 'D') { // Double precision floating point
         } else {
-            errlogPrintf("devWfF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
+            errlogPrintf("devAaiF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
             prec->pact = 1;
             return -1;
         }
@@ -95,7 +94,7 @@ static long init_record(waveformRecord *prec)
         } else if (conv == 'F') { // Single precision floating point
         //} else if (conv == 'D') { // Double precision floating point
         } else {
-            errlogPrintf("devWfF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
+            errlogPrintf("devAaiF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
             prec->pact = 1;
             return -1;
         }
@@ -106,7 +105,7 @@ static long init_record(waveformRecord *prec)
         //} else if (conv == 'F') { // Single precision floating point
         //} else if (conv == 'D') { // Double precision floating point
         } else {
-            errlogPrintf("devWfF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
+            errlogPrintf("devAaiF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
             prec->pact = 1;
             return -1;
         }
@@ -117,12 +116,12 @@ static long init_record(waveformRecord *prec)
         //} else if (conv == 'F') { // Single precision floating point
         //} else if (conv == 'D') { // Double precision floating point
         } else {
-            errlogPrintf("devWfF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
+            errlogPrintf("devAaiF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
             prec->pact = 1;
             return -1;
         }
     } else {
-        errlogPrintf("devWfF3RP61: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
+        errlogPrintf("devAaiF3RP61: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
         prec->pact = 1;
         return -1;
     }
@@ -136,7 +135,7 @@ static long init_record(waveformRecord *prec)
     } else if (device == 'X' || device == 'Y') { // Input and output relays on I/O modules
     } else if (device == 'A') {                  // I/O registers on special modules
     } else {
-        errlogPrintf("devWfF3RP61: %s : unsupported device \'%c\'\n", prec->name, device);
+        errlogPrintf("devAaiF3RP61: %s : unsupported device \'%c\'\n", prec->name, device);
         prec->pact = 1;
         return -1;
     }
@@ -146,10 +145,10 @@ static long init_record(waveformRecord *prec)
     return 0;
 }
 
-// read_wf() is called when there was a request to process a record.
+// read_aai() is called when there was a request to process a record.
 // When called, it reads the value from the driver and stores to the
 // VAL field.
-static long read_wf(waveformRecord *prec)
+static long read_aai(aaiRecord *prec)
 {
     //
     const uint32_t nelm = prec->nelm;
@@ -163,7 +162,7 @@ static long read_wf(waveformRecord *prec)
     int32_t        count  = dpvt->count * nelm;
 
     // debug
-    //errlogPrintf("devWfF3RP61: %s : count=%d (%d*%d) SCAN%s\n", prec->name, count, dpvt->count, nelm, (prec->scan)==SCAN_IO_EVENT?" by I/O intr":"");
+    //errlogPrintf("devAaiF3RP61: %s : count=%d (%d*%d) SCAN%s\n", prec->name, count, dpvt->count, nelm, (prec->scan)==SCAN_IO_EVENT?" by I/O intr":"");
 
     // Buffers for data read
     uint16_t *wdata = dpvt->wdata;
@@ -174,28 +173,28 @@ static long read_wf(waveformRecord *prec)
     } else if (device == 'R') { // Shared registers
         const int32_t addr = dpvt->addr;
         if (readM3ComRegister(addr, count, wdata) < 0) {
-            errlogPrintf("devWfF3RP61: %s : readM3ComRegister failed [%d]\n", prec->name, errno);
+            errlogPrintf("devAaiF3RP61: %s : readM3ComRegister failed [%d]\n", prec->name, errno);
             return -1;
         }
 
     } else if (device == 'W') { // Link registers
         const int32_t addr = dpvt->addr;
         if (readM3LinkRegister(addr, count, wdata) < 0) {
-            errlogPrintf("devWfF3RP61: %s : readM3LinkRegister failed [%d]\n", prec->name, errno);
+            errlogPrintf("devAaiF3RP61: %s : readM3LinkRegister failed [%d]\n", prec->name, errno);
             return -1;
         }
 
     } else if (device == 'E') { // Shared relays
         const int32_t addr = dpvt->addr;
         if (readM3ComRelay(addr, count, wdata) < 0) {
-            errlogPrintf("devWfF3RP61: %s : readM3ComRelay failed [%d]\n", prec->name, errno);
+            errlogPrintf("devAaiF3RP61: %s : readM3ComRelay failed [%d]\n", prec->name, errno);
             return -1;
         }
 
     } else if (device == 'L') { // Link relays
         const int32_t addr = dpvt->addr;
         if (readM3LinkRelay(addr, count, wdata) < 0) {
-            errlogPrintf("devWfF3RP61: %s : readM3LinkRelay failed [%d]\n", prec->name, errno);
+            errlogPrintf("devAaiF3RP61: %s : readM3LinkRelay failed [%d]\n", prec->name, errno);
             return -1;
         }
 
@@ -208,13 +207,13 @@ static long read_wf(waveformRecord *prec)
             .pdata = wdata,
         };
         if (ioctl(f3rp61_fd, M3IO_READ_COM, &acom) < 0) {
-            errlogPrintf("devWfF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
+            errlogPrintf("devAaiF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
             return -1;
         }
 #else
         const int32_t addr = dpvt->addr;
         if (readM3CpuMemory(cpuno, addr, count, wdata) < 0) {
-            errlogPrintf("devWfF3RP61: %s : readM3CpuMemory failed [%d]\n", prec->name, errno);
+            errlogPrintf("devAaiF3RP61: %s : readM3CpuMemory failed [%d]\n", prec->name, errno);
             return -1;
         }
 #endif
@@ -230,7 +229,7 @@ static long read_wf(waveformRecord *prec)
             .count  = count,
         };
         if (ioctl(f3rp61_fd, M3IO_READ_INRELAY, &drly) < 0) {
-            errlogPrintf("devWfF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
+            errlogPrintf("devAaiF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
             return -1;
         }
         for (int32_t i=0; i<count; i++) { // =1*nelm, =2*nelm(&F, &L), =4*nelm(&D)
@@ -248,7 +247,7 @@ static long read_wf(waveformRecord *prec)
             .count  = count,
         };
         if (ioctl(f3rp61_fd, M3IO_READ_OUTRELAY, &drly) < 0) {
-            errlogPrintf("devWfF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
+            errlogPrintf("devAaiF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
             return -1;
         }
 #if defined(__powerpc__)
@@ -270,13 +269,13 @@ static long read_wf(waveformRecord *prec)
         };
         drly.u.pwdata = wdata;
         if (ioctl(f3rp61_fd, M3IO_READ_REG, &drly) < 0) {
-            errlogPrintf("devWfF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
+            errlogPrintf("devAaiF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
             return -1;
         }
     }
 
     //debug
-    //errlogPrintf("devWfF3RP61: %s : I/O API finished\n", prec->name);
+    //errlogPrintf("devAaiF3RP61: %s : I/O API finished\n", prec->name);
 
     //
     prec->udf = FALSE;

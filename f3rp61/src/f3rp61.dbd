@@ -1,3 +1,5 @@
+device(aai, INST_IO, devAaiF3RP61, "F3RP61")
+device(aao, INST_IO, devAaoF3RP61, "F3RP61")
 device(ai, INST_IO, devAiF3RP61, "F3RP61")
 device(ao, INST_IO, devAoF3RP61, "F3RP61")
 device(bi, INST_IO, devBiF3RP61, "F3RP61")

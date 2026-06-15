@@ -34,6 +34,8 @@ DBD += f3rp61.dbd
 INC += drvF3RP61.h
 
 # The following are compiled and added to the Support library
+f3rp61_SRCS += devAaiF3RP61.c
+f3rp61_SRCS += devAaoF3RP61.c
 f3rp61_SRCS += devAiF3RP61.c
 f3rp61_SRCS += devAoF3RP61.c
 f3rp61_SRCS += devBiF3RP61.c

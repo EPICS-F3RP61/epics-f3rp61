@@ -14,6 +14,12 @@
 //
 #include <drvF3RP61.h>
 
+#if defined(__powerpc__)
+#define S_m3dev_INVALID_NUMBER     S_m3data_INVALID_NUMBER      // 392
+#define S_m3dev_DEVICE_NOT_FOUND   S_m3data_DEVICE_NOT_FOUND    // 393
+#define S_m3dev_DEVICE_ENTRY_ERROR S_m3data_DEVICE_ENTRY_ERROR  // 394
+#endif
+
 //
 #define M3IO_NUM_CPUS   4
 
@@ -78,6 +84,16 @@ static void getModuleInfoCallFunc(const iocshArgBuf *);
 static int  getModuleInfo(int);
 
 //
+static void getInternalDeviceConfigCallFunc(const iocshArgBuf *);
+static int  getInternalDeviceConfig(void);
+
+static int rly_size;
+static int reg_size;
+static int local_loc;
+static void setInternalDeviceConfigCallFunc(const iocshArgBuf *);
+static int  setInternalDeviceConfig(int, int, int);
+
+//
 static void getSharedDeviceConfigCallFunc(const iocshArgBuf *);
 static int  getSharedDeviceConfig(void);
 
@@ -126,6 +142,12 @@ static long init()
     if (f3rp61_fd < 0) {
         errlogPrintf("drvF3RP61: can't open /dev/m3io [%d] : %s\n", errno, strerror(errno));
         return -1;
+    }
+
+    // Set internal device (local device) assingment
+    {
+        // Shall we put setM3InternalDataTable() here?
+        //setM3InternalDataTable(loc, nrly, nreg);
     }
 
     // Set shared device assignment
@@ -666,7 +688,7 @@ long f3rp61GetIoIntInfo(int cmd, dbCommon *prec, IOSCANPVT *ppvt)
 // List FA-M3/e-RT3 modules installed on the system.
 // Empty slots are shown if whatever argument is given.
 //
-static const iocshArg      getModuleInfoArg0    = { "[verbose]",  iocshArgString };
+static const iocshArg      getModuleInfoArg0    = { "[verbose]", iocshArgString };
 static const iocshArg     *getModuleInfoArgs[]  = { &getModuleInfoArg0 };
 static const iocshFuncDef  getModuleInfoFuncDef = { "f3rp61GetModuleInfo", 1, getModuleInfoArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
@@ -731,6 +753,137 @@ static int getModuleInfo(int verbosity)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Register iocsh command 'f3rp61GetInternalDeviceConfig'
+//
+static const iocshFuncDef  getInternalDeviceConfigFuncDef = { "f3rp61GetInternalDeviceConfig", 0, 0,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Get local device assignment information.\n"
+#endif
+};
+
+static void getInternalDeviceConfigCallFunc(const iocshArgBuf *args)
+{
+    if (! getInternalDeviceConfig()) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
+}
+
+static int getInternalDeviceConfig(void)
+{
+    unsigned int nrly;
+    unsigned int nreg;
+    if (referM3InternalDataTable(&nrly, &nreg)<0) {
+        errlogPrintf("drvF3RP61: referM3InternalDataTable failed [%d]\n", errno);
+        return -1;
+    }
+
+    printf("%7s %7s\n","rly", "reg");
+    printf("%7d %7d\n", nrly, nreg);
+
+    return 0; // Success
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61SetInternalDeviceConfig'
+//
+static const iocshArg     setInternalDeviceConfigArg0     = { "nRlys", iocshArgInt };
+static const iocshArg     setInternalDeviceConfigArg1     = { "nRegs", iocshArgInt };
+static const iocshArg     setInternalDeviceConfigArg2     = { "[loc]", iocshArgInt };
+static const iocshArg     *setInternalDeviceConfigArgs[]  = {
+    &setInternalDeviceConfigArg0,
+    &setInternalDeviceConfigArg1,
+    &setInternalDeviceConfigArg2,
+};
+static const iocshFuncDef  setInternalDeviceConfigFuncDef = { "f3rp61SetInternalDeviceConfig", 3, setInternalDeviceConfigArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Configure local device assignment.\n"
+    "nRlys : Number of relays (0, 32, 64, ...)\n"
+    "nRegs : Number of data registers (0, 2, 4, ...)\n"
+    "loc   : Location of local device\n"
+    "        0:SDRAM\n"
+#  if defined(__powerpc__)
+    "        1:Sytem SRAM on F3RP6x\n" // 256kB
+#  endif
+    "        2:User SRAM on F3RPxx-2L\n" // F3RP61-2L supports up to 4MB, while not sure for F3RP7x-2L
+//    "Calling f3rp61SetInternalDeviceConfig after iocInit has no effect.\n"
+#endif
+};
+
+static void setInternalDeviceConfigCallFunc(const iocshArgBuf *args)
+{
+    if (! setInternalDeviceConfig(args[0].ival, args[1].ival, args[2].ival)) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
+}
+
+static int setInternalDeviceConfig(int nrly, int nreg, int loc)
+{
+    static char *locname[] = { "SDRAM", "System-SRAM", "User-SRAM" };
+
+    if (nrly < 0) {
+        errlogPrintf("setInternalDeviceConfig: number of internal relays out of range\n");
+        return -1;
+    }
+    if (nreg < 0) {
+        errlogPrintf("setInternalDeviceConfig: number of internal registers out of range\n");
+        return -1;
+    }
+    if (loc != 0 && loc != 2) {
+        errlogPrintf("setInternalDeviceConfig: parameter for internal device out of range\n");
+        return -1;
+    }
+
+    rly_size  = nrly;
+    reg_size  = nreg;
+    local_loc = loc;
+
+    unsigned int cur_nrly;
+    unsigned int cur_nreg;
+    if (referM3InternalDataTable(&cur_nrly, &cur_nreg)<0) {
+        errlogPrintf("drvF3RP61: referM3InternalDataTable failed [%d]\n", errno);
+        return -1;
+    }
+
+    if (cur_nrly == nrly && cur_nreg == nreg) {
+        // do nothing
+        return 0;
+    }
+
+    if (setM3InternalDataTable(loc, nrly, nreg)<0) {
+        switch (errno) {
+        case S_m3dev_INVALID_NUMBER: // 392
+            fprintf(stderr, "error : Parameter out of range\n");
+            break;
+        case S_m3dev_DEVICE_NOT_FOUND: //393
+            fprintf(stderr, "error : Specified device not found : %s\n", locname[loc]);
+            break;
+        case S_m3dev_DEVICE_ENTRY_ERROR: //394; F3RP6x only
+            //fprintf(stderr, "%s failed.\n", cmdname);
+            fprintf(stderr, "Local device appears to be already configured.\n");
+            fprintf(stderr, "System reboot is required to alter the configuration.\n");
+            break;
+        default:
+            fprintf(stderr, "error : %s\n", strerror(errno));
+        }
+        return -1;
+    }
+
+    return 0; // Success
+}
+
+static const iocshFuncDef locDeviceConfigureFuncDef = { "f3rp61LocDeviceConfigure", 3, setInternalDeviceConfigArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Alias for f3rp61SetInternalDeviceConfig, for debugging. Subject for removal.\n"
+#endif
+};
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Register iocsh command 'f3rp61GetSharedDeviceConfig'
 //
 static const iocshFuncDef  getSharedDeviceConfigFuncDef = { "f3rp61GetSharedDeviceConfig", 0, 0,
@@ -754,7 +907,7 @@ static int getSharedDeviceConfig(void)
     M3COMDATACONFIG ext;
     if (referM3ComDataConfig(&com, &ext)<0) {
         errlogPrintf("drvF3RP61: referM3ComDataConfig failed [%d]\n", errno);
-        return EXIT_FAILURE;
+        return -1;
     }
 
     printf("%3s %4s %4s %4s %4s\n", "CPU", "rly", "reg",  "erly", "ereg");
@@ -828,12 +981,11 @@ static int setSharedDeviceConfig(int cpuno, int nrlys, int nregs, int ext_nrlys,
     return 0; // Success
 }
 
-static const iocshFuncDef  comDeviceConfigureFuncDef = { "f3rp61ComDeviceConfigure", 5, setSharedDeviceConfigArgs,
+static const iocshFuncDef comDeviceConfigureFuncDef = { "f3rp61ComDeviceConfigure", 5, setSharedDeviceConfigArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Old name for f3rp61SetSharedDeviceConfig, retained for backward compatibility.\n"
 #endif
 };
-
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -859,7 +1011,7 @@ static int getLinkDeviceConfig(void)
     M3LINKDATACONFIG link;
     if (referM3LinkDeviceConfig(&link)<0) {
         errlogPrintf("drvF3RP61: referM3LinkDeviceConfig failed [%d]\n", errno);
-        return EXIT_FAILURE;
+        return -1;
     }
 
     printf("%3s %4s %4s\n", "Sys", "rly", "reg");
@@ -885,7 +1037,7 @@ static const iocshArg     *setLinkDeviceConfigArgs[]  = {
 static const iocshFuncDef  setLinkDeviceConfigFuncDef = { "f3rp61SetLinkDeviceConfig", 3, setLinkDeviceConfigArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Configure link device assignment.\n"
-    "Calling f3rp61LinkDeviceConfigure after iocInit has no effect.\n"
+    "Calling f3rp61SetLinkDeviceConfig after iocInit has no effect.\n"
 #endif
 };
 
@@ -919,7 +1071,7 @@ static int setLinkDeviceConfig(int sysno, int nrlys, int nregs)
     return 0; // Success
 }
 
-static const iocshFuncDef  linkDeviceConfigureFuncDef = { "f3rp61LinkDeviceConfigure", 5, setLinkDeviceConfigArgs,
+static const iocshFuncDef linkDeviceConfigreFuncDef = { "f3rp61LinkDeviceConfig", 5, setLinkDeviceConfigArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Old name for f3rp61SetLinkDeviceConfig, retained for backward compatibility.\n"
 #endif
@@ -934,13 +1086,16 @@ static void drvF3RP61RegisterCommands(void)
     static int init_flag = 0;
     if (!init_flag) {
         init_flag = 1;
-        iocshRegister(&getModuleInfoFuncDef,         getModuleInfoCallFunc);
-        iocshRegister(&getSharedDeviceConfigFuncDef, getSharedDeviceConfigCallFunc);
-        iocshRegister(&setSharedDeviceConfigFuncDef, setSharedDeviceConfigCallFunc);
-        iocshRegister(&comDeviceConfigureFuncDef,    setSharedDeviceConfigCallFunc); // for backward compatibility
-        iocshRegister(&getLinkDeviceConfigFuncDef,   getLinkDeviceConfigCallFunc);
-        iocshRegister(&setLinkDeviceConfigFuncDef,   setLinkDeviceConfigCallFunc);
-        iocshRegister(&linkDeviceConfigureFuncDef,   setLinkDeviceConfigCallFunc); // for backward compatibility
+        iocshRegister(&getModuleInfoFuncDef,           getModuleInfoCallFunc);
+        iocshRegister(&getInternalDeviceConfigFuncDef, getInternalDeviceConfigCallFunc);
+        iocshRegister(&setInternalDeviceConfigFuncDef, setInternalDeviceConfigCallFunc);
+        iocshRegister(&locDeviceConfigureFuncDef,      setInternalDeviceConfigCallFunc); // for debug
+        iocshRegister(&getSharedDeviceConfigFuncDef,   getSharedDeviceConfigCallFunc);
+        iocshRegister(&setSharedDeviceConfigFuncDef,   setSharedDeviceConfigCallFunc);
+        iocshRegister(&comDeviceConfigureFuncDef,      setSharedDeviceConfigCallFunc);   // for backward compatibility
+        iocshRegister(&getLinkDeviceConfigFuncDef,     getLinkDeviceConfigCallFunc);
+        iocshRegister(&setLinkDeviceConfigFuncDef,     setLinkDeviceConfigCallFunc);
+        iocshRegister(&linkDeviceConfigreFuncDef,      setLinkDeviceConfigCallFunc);     // for backward compatibility
     }
 }
 

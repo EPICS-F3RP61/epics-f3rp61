@@ -91,6 +91,7 @@ static long init_record(aiRecord *precord)
     const int8_t device = dpvt->device;
     if (0) {                                     // dummy
     } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
+               device == 'E' || device == 'L' || // Shared relays and Link relays
                device == 'r') {                  // Shared memory
     } else if (device == 'X' || device == 'Y') { // Input and output relays on I/O modules
     } else if (device == 'A') {                  // I/O registers on special modules
@@ -125,7 +126,7 @@ static long read_ai(aiRecord *precord)
     const int8_t  device = dpvt->device;
     const int8_t  conv   = dpvt->conv;
     const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
-    const int32_t count  = dpvt->count;
+    const int32_t count  = dpvt->count; // =1, =2(&F, &L), =4(&D)
 
     // Buffers for data read
     uint16_t wdata[4] = {0};
@@ -144,6 +145,20 @@ static long read_ai(aiRecord *precord)
         const int32_t addr = dpvt->addr;
         if (readM3LinkRegister(addr, count, wdata) < 0) {
             errlogPrintf("devAiF3RP61: %s : readM3LinkRegister failed [%d]\n", precord->name, errno);
+            return -1;
+        }
+
+    } else if (device == 'E') { // Shared relays
+        const int32_t addr = dpvt->addr;
+        if (readM3ComRelay(addr, count, wdata) < 0) {
+            errlogPrintf("devAiF3RP61: %s : readM3ComRelay failed [%d]\n", precord->name, errno);
+            return -1;
+        }
+
+    } else if (device == 'L') { // Link relays
+        const int32_t addr = dpvt->addr;
+        if (readM3LinkRelay(addr, count, wdata) < 0) {
+            errlogPrintf("devAiF3RP61: %s : readM3LinkRelay failed [%d]\n", precord->name, errno);
             return -1;
         }
 
@@ -178,14 +193,8 @@ static long read_ai(aiRecord *precord)
             errlogPrintf("devAiF3RP61: %s : ioctl failed [%d]n", precord->name, errno);
             return -1;
         }
-        wdata[0] = drly.u.inrly[0].data;
-        if (conv == 'L' || conv == 'F') { // count == 2
-            wdata[1] = drly.u.inrly[1].data;
-        }
-        if (conv == 'D') { // count == 4
-            wdata[1] = drly.u.inrly[1].data;
-            wdata[2] = drly.u.inrly[2].data;
-            wdata[3] = drly.u.inrly[3].data;
+        for (int32_t i=0; i<count; i++) { // =1, =2(&F, &L), =4(&D)
+            wdata[i] = drly.u.inrly[i].data;
         }
 
     } else if (device == 'Y') { // Output relays on I/O modules
@@ -200,24 +209,12 @@ static long read_ai(aiRecord *precord)
             return -1;
         }
 #if defined(__powerpc__)
-        wdata[0] = drly.u.inrly[0].data;
-        if (conv == 'L' || conv == 'F') { // count == 2
-            wdata[1] = drly.u.inrly[1].data;
-        }
-        if (conv == 'D') { // count == 4
-            wdata[1] = drly.u.inrly[1].data;
-            wdata[2] = drly.u.inrly[2].data;
-            wdata[3] = drly.u.inrly[3].data;
+        for (int32_t i=0; i<count; i++) { // =1, =2(&F, &L), =4(&D)
+            wdata[i] = drly.u.inrly[i].data;
         }
 #else
-        wdata[0] = drly.u.outrly[0].data;
-        if (conv == 'L' || conv == 'F') { // count == 2
-            wdata[1] = drly.u.outrly[1].data;
-        }
-        if (conv == 'D') { // count == 4
-            wdata[1] = drly.u.outrly[1].data;
-            wdata[2] = drly.u.outrly[2].data;
-            wdata[3] = drly.u.outrly[3].data;
+        for (int32_t i=0; i<count; i++) { // =1, =2(&F, &L), =4(&D)
+            wdata[i] = drly.u.outrly[i].data;
         }
 #endif
 

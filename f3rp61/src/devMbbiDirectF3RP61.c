@@ -94,7 +94,7 @@ static long init_record(mbbiDirectRecord *precord)
     if (0) {                                     // dummy
     } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
                device == 'E' || device == 'L' || // Shared relays and Link relays
-               device == 'r') {                  // Shared meory
+               device == 'r') {                  // Shared memory
     } else if (device == 'X' || device == 'Y' || // Input and output relays on I/O modules
                device == 'M') {                  // Mode registers on I/O modules
     } else if (device == 'A') {                  // I/O registers on special modules

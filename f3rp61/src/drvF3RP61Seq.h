@@ -38,6 +38,7 @@
 #  define DEVFILE "/dev/m3cpu"
 #elif defined(__powerpc__)
 #  include <asm/fam3rtos/m3iodrv.h>
+#  include <asm/fam3rtos/m3lib.h>
 #  include <asm/fam3rtos/m3mcmd.h>
 #  define DEVFILE "/dev/m3mcmd"
 #else

@@ -196,10 +196,26 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_DPVT *dpvt, F3RP61SEQ
         errlogPrintf("%s: %s : ioctl failed [%d]\n", sup, prec->name, errno);
         return -1;
     }
-    // We'd better to avoid CPU module access for myself, perhaps
-    //if (descSlot == srcSlot) {
-    //    ...;
-    //}
+
+    //debug
+    //fprintf(stderr, "%s : %s : srcSlot=%d destSlot=%d device=%c pos=%d\n", sup, prec->name, srcSlot, destSlot, device, top);
+
+    if (destSlot == srcSlot) {
+        // Its better to use local device access API rather than sequence CPU device API (when local device access is supported by the device support)
+        //errlogPrintf("%s: %s : Its recommended using \"F3RP61\" device type rather than \"F3RP61Seq\"\n", sup, prec->name);
+
+        // In order to access the local device on the F3RP61 itself as
+        // a sequence CPU device, the command processing server must
+        // be running. On F3RP7x, the command processing server should
+        // already running, but just to be sure.
+        static int mcmd_done = 0;
+        if (! mcmd_done) {
+            //debug
+            //fprintf(stderr, "starting mcmdsrvmain\n");
+            mcmdsrvmain(10);
+            mcmd_done = 1;
+        }
+    }
 
     // Compose data structure for I/O request to CPU module
     MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;

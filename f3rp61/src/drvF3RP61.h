@@ -46,20 +46,20 @@
 
 //
 typedef struct {
-    int8_t   conv;    // conversion specifier
+    uint8_t   conv;    // conversion specifier
     // Device for I/O
-    int8_t   device;  // device type
-    int8_t   unit;    // unit number     (0, 1, ..., 7)
-    int8_t   slot;    // slot number     (1, 2, ..., 16)
-    int32_t  addr;    // position number (0, ....)
-    int8_t   count;   // data width      (1, 2, or 4)
-    int8_t   cpuno;   // for Shared memory (or 'Old interface' for shared registers/relays)
+    uint8_t   device;  // device type
+    uint8_t   unit;    // unit number     (0, 1, ..., 7)
+    uint8_t   slot;    // slot number     (1, 2, ..., 16)
+    uint32_t  addr;    // position number (0, ....)
+    uint8_t   count;   // data width      (1, 2, or 4)
+    uint8_t   cpuno;   // for Shared memory (or 'Old interface' for shared registers/relays)
     // Source of I/O interrupt
-    int8_t   irqunit; // unit number     (0, 1, ..., 7)
-    int8_t   irqslot; // slot number     (1, 2, ..., 16)
-    int8_t   irqaddr; // position number (1, 2, ..., 32)
+    uint8_t   irqunit; // unit number     (0, 1, ..., 7)
+    uint8_t   irqslot; // slot number     (1, 2, ..., 16)
+    uint8_t   irqaddr; // position number (1, 2, ..., 32)
     //
-    void    *pdata;  // buffer for waveform recordt8_t   device;
+    uint16_t *wdata;   // buffer for waveform record
 } F3RP61_DPVT;
 
 //

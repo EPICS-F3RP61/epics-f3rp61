@@ -86,31 +86,35 @@ static int  getModuleInfo(int);
 //
 static void getInternalDeviceConfigCallFunc(const iocshArgBuf *);
 static int  getInternalDeviceConfig(void);
-
-static int rly_size;
-static int reg_size;
-static int local_loc;
 static void setInternalDeviceConfigCallFunc(const iocshArgBuf *);
 static int  setInternalDeviceConfig(int, int, int);
+//static int rly_size;
+//static int reg_size;
+//static int local_loc;
 
 //
 static void getSharedDeviceConfigCallFunc(const iocshArgBuf *);
 static int  getSharedDeviceConfig(void);
-
-//
-static M3COMDATACONFIG com_data_config;
-static M3COMDATACONFIG ext_com_data_config;
 static void setSharedDeviceConfigCallFunc(const iocshArgBuf *);
 static int  setSharedDeviceConfig(int, int, int, int, int);
+static M3COMDATACONFIG com_data_config;
+static M3COMDATACONFIG ext_com_data_config;
 
 //
 static void getLinkDeviceConfigCallFunc(const iocshArgBuf *);
 static int  getLinkDeviceConfig(void);
-
-//
-static M3LINKDATACONFIG link_data_config;
 static void setLinkDeviceConfigCallFunc(const iocshArgBuf *);
 static int  setLinkDeviceConfig(int, int, int);
+static M3LINKDATACONFIG link_data_config;
+
+//
+static void getInterruptEdgeCallFunc(const iocshArgBuf *);
+static int  getInterruptEdge(int, int);
+static void setInterruptEdgeCallFunc(const iocshArgBuf *);
+static int  setInterruptEdge(int, int, int, int);
+
+//static void setInputSamplng();
+//static void setInputFilter();
 
 //
 static void drvF3RP61RegisterCommands(void);
@@ -265,7 +269,7 @@ static void msgrcv_thread(void *arg)
         IOSCANPVT pvt = ioscanpvt[unit][slot-1][channel-1];
 
         // debug
-        //printf("%s:%s U%d,S%d,X%02d %p\n", __FILE__, __func__, unit, slot, channel, pvt);
+        //fprintf(stderr, "%s:%s U%d,S%d,X%02d %p\n", __FILE__, __func__, unit, slot, channel, pvt);
 
         if (! pvt) {
             // this may not happen, as previously enabled I/O interrupt must has been cleared.
@@ -514,7 +518,7 @@ int f3rp61EnableIoInterrupt(void)
     static int init_flag = 0;
 
     //debug
-    //printf("%s:%s %d\n", __FILE__, __func__, init_flag);
+    //fprintf(stderr, "%s:%s %d\n", __FILE__, __func__, init_flag);
 
     //
     if (init_flag) {
@@ -605,7 +609,7 @@ int f3rp61EnableIoInterrupt(void)
                 irq_requested = 1;
 
                 // debug
-                //printf("%s:%s U%d,S%d mask: 0x%04x%04x%04x%04x\n", __FILE__, __func__, unit, slot, mask[3], mask[2], mask[1], mask[0]);
+                //fprintf(stderr, "%s:%s U%d,S%d mask: 0x%04x%04x%04x%04x\n", __FILE__, __func__, unit, slot, mask[3], mask[2], mask[1], mask[0]);
 
                 M3IO_INTER_DEFINE arg = {
                     .unitno = unit,
@@ -634,7 +638,8 @@ int f3rp61EnableIoInterrupt(void)
     sprintf(thread_name, "f3rp61_ioirq");
 
     //debug
-    //printf("epicsThreadCreate %s\n", thread_name);
+    //fprintf(stderr, "epicsThreadCreate %s\n", thread_name);
+
     if (irq_requested) {
         if (epicsThreadCreate(thread_name,
                               epicsThreadPriorityHigh,
@@ -838,9 +843,9 @@ static int setInternalDeviceConfig(int nrly, int nreg, int loc)
         return -1;
     }
 
-    rly_size  = nrly;
-    reg_size  = nreg;
-    local_loc = loc;
+    //rly_size  = nrly;
+    //reg_size  = nreg;
+    //local_loc = loc;
 
     unsigned int cur_nrly;
     unsigned int cur_nreg;
@@ -1079,6 +1084,264 @@ static const iocshFuncDef linkDeviceConfigreFuncDef = { "f3rp61LinkDeviceConfig"
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Register iocsh command 'f3rp61GetInterruptEdge'
+//
+static const iocshArg      getInterruptEdgeArg0    = { "[unit]", iocshArgInt };
+static const iocshArg      getInterruptEdgeArg1    = { "slot",   iocshArgInt };
+static const iocshArg      getInterruptEdgeArg2    = { "",       iocshArgArgv };
+static const iocshArg     *getInterruptEdgeArgs[]  = {
+    &getInterruptEdgeArg0,
+    &getInterruptEdgeArg1,
+    &getInterruptEdgeArg2,
+};
+static const iocshFuncDef  getInterruptEdgeFuncDef = { "f3rp61GetInterruptEdge", 3, getInterruptEdgeArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Get interrupt edge or output on failure setting for specified unit and slot.\n"
+    "The unit is optional (treated as 0 if omitted).\n"
+#endif
+};
+
+static void getInterruptEdgeCallFunc(const iocshArgBuf *args)
+{
+    int unit = 0;
+    int slot = 0;
+    int argc = args[2].aval.ac;
+
+    //debug
+    //printf("%d : %d %d\n", argc, args[0].ival, args[1].ival);
+
+    if (argc < 0) {
+        fprintf(stderr, "f3rp61GetInterruptEdge: error : argument is missing\n");
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+        return;
+    } else if (argc == 0) {
+        unit = 0;
+        slot = args[0].ival;
+    } else {
+        unit = args[0].ival;
+        slot = args[1].ival;
+    }
+
+    //
+    if (! getInterruptEdge(unit, slot)) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
+}
+
+static int getInterruptEdge(int unit, int slot)
+{
+    if (unit<0 || unit>=M3IO_NUM_UNIT) {
+        errlogPrintf("getInterruptEdge: unit number out of range\n");
+        return -1;
+    }
+    if (slot<=0 || slot>M3IO_NUM_SLOT) {
+        errlogPrintf("getInterruptEdge: slot number out of range\n");
+        return -1;
+    }
+
+    uint16_t wdata[8]; // 3 would be enough, but readM3IoModeRegister requires 8
+    printf("Unit %d Slot %d\n", unit, slot);
+
+#if defined(__powerpc__)
+    M3IO_ACCESS_REG drly = {
+        .unitno = unit,
+        .slotno = slot,
+        .start  = 1,
+        .count  = 3,
+    };
+    if (ioctl(f3rp61_fd, M3IO_READ_MODE, &drly) < 0) {
+        errlogPrintf("getInterruptEdge: ioctl M3IO_READ_MODE failed [%d]\n", errno);
+        return -1;
+    }
+    wdata[0] = drly.u.wdata[0];
+    wdata[1] = drly.u.wdata[1];
+    wdata[2] = drly.u.wdata[2];
+#else
+    if (readM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
+        errlogPrintf("getInterruptEdge: readM3IoModeRegister failed [%d]\n", errno);
+        return -1;
+    }
+#endif
+
+    //debug
+    //printf("M01 0x%04x\n", wdata[0]);
+    //printf("M02 0x%04x\n", wdata[1]);
+    //printf("M03 0x%04x\n", wdata[2]);
+
+    // Interrup Edge (input modules) or Output Hold (output modules)
+    const char *label0[2] = {"Rising Edge/Hold Output", "Falling Edge/Reset Output"};
+    uint32_t ldata = wdata[0] << 16 | wdata[1];
+    for (int block = 0; block < 8; block++) {
+        uint32_t ch    = (block * 8) + 1;
+        uint32_t shift = (7 - block) * 4;
+        uint32_t val = (ldata>>shift) & 0x0001;
+        printf("%02d-%02d : %d %s\n", ch, ch+7, val, label0[val]);
+    }
+
+    return 0; // Success
+}
+
+static const iocshFuncDef  getOutputHoldFuncDef = { "f3rp61GetOutputHold", 3, getInterruptEdgeArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Alias for f3rp61GetInterruptEdge.\n"
+#endif
+};
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61SetInterruptEdge'
+//
+static const iocshArg      setInterruptEdgeArg0    = { "[unit]", iocshArgInt };
+static const iocshArg      setInterruptEdgeArg1    = { "slot",   iocshArgInt };
+static const iocshArg      setInterruptEdgeArg2    = { "ch",     iocshArgInt };
+static const iocshArg      setInterruptEdgeArg3    = { "val",    iocshArgInt };
+static const iocshArg      setInterruptEdgeArg4    = { "",       iocshArgArgv };
+static const iocshArg     *setInterruptEdgeArgs[]  = {
+    &setInterruptEdgeArg0,
+    &setInterruptEdgeArg1,
+    &setInterruptEdgeArg2,
+    &setInterruptEdgeArg3,
+    &setInterruptEdgeArg4,
+};
+static const iocshFuncDef  setInterruptEdgeFuncDef = { "f3rp61SetInterruptEdge", 5, setInterruptEdgeArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Set interrupt edge or output on failure setting for specified unit and slot.\n"
+    "The unit is optional (treated as 0).\n"
+    "ch  : 1 (channel 1-8), 9 (channel 9-16), ... 57 (channel 57-64)\n"
+    "val : 0 (Rising Edge/Hold Output), 1 (Falling Edge/Reset Output)\n"
+#endif
+};
+
+static void setInterruptEdgeCallFunc(const iocshArgBuf *args)
+{
+    int unit = 0;
+    int slot = 0;
+    int ch   = 0;
+    int val  = 0;
+    int argc = args[4].aval.ac;
+
+    //debug
+    //printf("%d : %d %d %d %d\n", argc, args[0].ival, args[1].ival, args[2].ival, args[3].ival);
+
+    if (argc < 0) {
+        fprintf(stderr, "f3rp61SetInterruptEdge: error : argument is missing\n");
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+        return;
+    } else if (argc == 0) {
+        unit = 0;
+        slot = args[0].ival;
+        ch   = args[1].ival;
+        val  = args[2].ival;
+    } else {
+        unit = args[0].ival;
+        slot = args[1].ival;
+        ch   = args[2].ival;
+        val  = args[3].ival;
+    }
+
+    //
+    if (! setInterruptEdge(unit, slot, ch, val)) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
+}
+
+static int setInterruptEdge(int unit, int slot, int ch, int val)
+{
+    uint16_t wdata[8]; // 3 would be enough, but readM3IoModeRegister requires 8
+
+    if (unit<0 || unit>=M3IO_NUM_UNIT) {
+        errlogPrintf("setInterruptEdge: unit number out of range\n");
+        return -1;
+    }
+    if (slot<=0 || slot>M3IO_NUM_SLOT) {
+        errlogPrintf("setInterruptEdge: slot number out of range\n");
+        return -1;
+    }
+    if (ch<=0 || ch>NUM_IRQ_CH) {
+        errlogPrintf("setInterruptEdge: channel number out of range\n");
+        return -1;
+    }
+
+    // Read mode register to extract curent setting
+#if defined(__powerpc__)
+    M3IO_ACCESS_REG drly = {
+        .unitno = unit,
+        .slotno = slot,
+        .start  = 1,
+        .count  = 3,
+    };
+    if (ioctl(f3rp61_fd, M3IO_READ_MODE, &drly) < 0) {
+        errlogPrintf("setInterruptEdge: ioctl failed [%d]\n", errno);
+        return -1;
+    }
+    wdata[0] = drly.u.wdata[0];
+    wdata[1] = drly.u.wdata[1];
+    wdata[2] = drly.u.wdata[2];
+#else
+    if (readM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
+        errlogPrintf("setInterruptEdge: readM3IoModeRegister failed [%d]\n", errno);
+        return -1;
+    }
+#endif
+    uint32_t ldata = wdata[0] << 16 | wdata[1];
+
+    // Change the setting for the specified channel
+    uint32_t block = (ch - 1) / 8;
+    uint32_t shift = (7 - block) * 4;
+    uint32_t mask  = 1 << shift;
+
+    //debug
+    //printf("Unit %d, Slot %d, Ch %d : Shift %d Mask 0x%08x\n", unit, slot, ch, shift, mask);
+
+    if (val) {
+        ldata |= mask;
+    } else {
+        ldata &= ~mask;
+    }
+
+    //
+    wdata[0] = ldata >> 16;
+    wdata[1] = ldata & 0xffff;
+
+    //debug
+    //printf("M01 0x%04x\n", wdata[0]);
+    //printf("M02 0x%04x\n", wdata[1]);
+    //printf("M03 0x%04x\n", wdata[2]);
+
+#if defined(__powerpc__)
+    drly.u.wdata[0] = wdata[0];
+    drly.u.wdata[1] = wdata[1];
+    drly.u.wdata[2] = wdata[2]; // This element has not been modified
+    if (ioctl(f3rp61_fd, M3IO_WRITE_MODE, &drly) < 0) {
+        errlogPrintf("setInterruptEdge: ioctl M3IO_WRITE_MODE failed [%d]\n", errno);
+        return -1;
+    }
+#else
+    if (writeM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
+        errlogPrintf("setInterruptEdge: writeM3IoModeRegister failed [%d]\n", errno);
+        return -1;
+    }
+#endif
+
+    return 0; // Success
+}
+
+static const iocshFuncDef  setOutputHoldFuncDef = { "f3rp61SetOutputHold", 5, setInterruptEdgeArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Alias for f3rp61SetInterruptEdge.\n"
+#endif
+};
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Register iocsh commands
 //
 static void drvF3RP61RegisterCommands(void)
@@ -1086,16 +1349,30 @@ static void drvF3RP61RegisterCommands(void)
     static int init_flag = 0;
     if (!init_flag) {
         init_flag = 1;
+
+        //
         iocshRegister(&getModuleInfoFuncDef,           getModuleInfoCallFunc);
+
+        //
         iocshRegister(&getInternalDeviceConfigFuncDef, getInternalDeviceConfigCallFunc);
         iocshRegister(&setInternalDeviceConfigFuncDef, setInternalDeviceConfigCallFunc);
         iocshRegister(&locDeviceConfigureFuncDef,      setInternalDeviceConfigCallFunc); // for debug
+
+        //
         iocshRegister(&getSharedDeviceConfigFuncDef,   getSharedDeviceConfigCallFunc);
         iocshRegister(&setSharedDeviceConfigFuncDef,   setSharedDeviceConfigCallFunc);
         iocshRegister(&comDeviceConfigureFuncDef,      setSharedDeviceConfigCallFunc);   // for backward compatibility
+
+        //
         iocshRegister(&getLinkDeviceConfigFuncDef,     getLinkDeviceConfigCallFunc);
         iocshRegister(&setLinkDeviceConfigFuncDef,     setLinkDeviceConfigCallFunc);
         iocshRegister(&linkDeviceConfigreFuncDef,      setLinkDeviceConfigCallFunc);     // for backward compatibility
+
+        //
+        iocshRegister(&getInterruptEdgeFuncDef,        getInterruptEdgeCallFunc);
+        iocshRegister(&setInterruptEdgeFuncDef,        setInterruptEdgeCallFunc);
+        iocshRegister(&getOutputHoldFuncDef,           getInterruptEdgeCallFunc);        // alias
+        iocshRegister(&setOutputHoldFuncDef,           setInterruptEdgeCallFunc);        // alias
     }
 }
 

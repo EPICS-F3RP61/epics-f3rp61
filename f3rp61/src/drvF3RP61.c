@@ -119,7 +119,11 @@ static int  getInputSampling(int, int);
 static void setInputSamplingCallFunc(const iocshArgBuf *);
 static int  setInputSampling(int, int, int, int);
 
-//static void setInputFilter();
+//
+static void getInputFilterCallFunc(const iocshArgBuf *);
+static int  getInputFilter(int, int);
+static void setInputFilterCallFunc(const iocshArgBuf *);
+static int  setInputFilter(int, int, int, int);
 
 //
 static void drvF3RP61RegisterCommands(void);
@@ -1214,7 +1218,7 @@ static const iocshFuncDef  setInterruptEdgeFuncDef = { "f3rp61SetInterruptEdge",
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Set interrupt edge or output on failure setting for specified unit and slot.\n"
     "The unit is optional (treated as 0).\n"
-    "ch  : 1 (channel 1-8), 9 (channel 9-16), ... 57 (channel 57-64)\n"
+    "ch  : 1 (channel 1-8), 9 (channel 9-16), ..., 57 (channel 57-64)\n"
     "val : 0 (Rising Edge/Hold Output), 1 (Falling Edge/Reset Output)\n"
 #endif
 };
@@ -1549,11 +1553,11 @@ static int setInputSampling(int unit, int slot, int ch, int val)
     // Change the setting for the specified channel
     uint32_t block = (ch - 1) / 8;
     uint32_t shift = (7 - block) * 4 + 1;
-    uint32_t mask  = 3 << shift;
+    uint32_t mask  = 0x03 << shift;
 
     //debug
     //printf("Unit %d, Slot %d, Ch %d, val %d(0x%02x) : Shift %d Mask 0x%08x\n", unit, slot, ch, val, val, shift, mask);
-    //printf("0x%08x  0x%08x 0x%08x\n", ldata, (ldata&~mask), (val&3)<<shift);
+    //printf("0x%08x | 0x%08x 0x%08x => \n", ldata, (ldata&~mask), (val&3)<<shift, (ldata & ~mask) | ((val & 0x03) << shift));
 
     // Modify the desired bits
     ldata = (ldata & ~mask) | ((val & 0x03) << shift);
@@ -1575,6 +1579,242 @@ static int setInputSampling(int unit, int slot, int ch, int val)
 #else
     if (writeM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
         errlogPrintf("setInputSampling: writeM3IoModeRegister failed [%d]\n", errno);
+        return -1;
+    }
+#endif
+
+    return 0; // Success
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61GetInputFilter'
+//
+static const iocshArg      getInputFilterArg0    = { "[unit]", iocshArgInt };
+static const iocshArg      getInputFilterArg1    = { "slot",   iocshArgInt };
+static const iocshArg      getInputFilterArg2    = { "",       iocshArgArgv };
+static const iocshArg     *getInputFilterArgs[]  = {
+    &getInputFilterArg0,
+    &getInputFilterArg1,
+    &getInputFilterArg2,
+};
+static const iocshFuncDef  getInputFilterFuncDef = { "f3rp61GetInputFilter", 3, getInputFilterArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Get input filter time constant for specified unit and slot.\n"
+    "The unit is optional (treated as 0 if omitted).\n"
+#endif
+};
+
+static void getInputFilterCallFunc(const iocshArgBuf *args)
+{
+    int unit = 0;
+    int slot = 0;
+    int argc = args[2].aval.ac;
+
+    //debug
+    //printf("%d : %d %d\n", argc, args[0].ival, args[1].ival);
+
+    if (argc < 0) {
+        fprintf(stderr, "f3rp61GetInputFilter: error : argument is missing\n");
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+        return;
+    } else if (argc == 0) {
+        unit = 0;
+        slot = args[0].ival;
+    } else {
+        unit = args[0].ival;
+        slot = args[1].ival;
+    }
+
+    //
+    if (! getInputFilter(unit, slot)) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
+}
+
+static int getInputFilter(int unit, int slot)
+{
+    if (unit<0 || unit>=M3IO_NUM_UNIT) {
+        errlogPrintf("getInputFilter: unit number out of range\n");
+        return -1;
+    }
+    if (slot<=0 || slot>M3IO_NUM_SLOT) {
+        errlogPrintf("getInputFilter: slot number out of range\n");
+        return -1;
+    }
+
+    uint16_t wdata[8]; // 3 would be enough, but readM3IoModeRegister requires 8
+    printf("Unit %d Slot %d\n", unit, slot);
+
+#if defined(__powerpc__)
+    M3IO_ACCESS_REG drly = {
+        .unitno = unit,
+        .slotno = slot,
+        .start  = 1,
+        .count  = 3,
+    };
+    if (ioctl(f3rp61_fd, M3IO_READ_MODE, &drly) < 0) {
+        errlogPrintf("getInputFilter: ioctl M3IO_READ_MODE failed [%d]\n", errno);
+        return -1;
+    }
+    wdata[0] = drly.u.wdata[0];
+    wdata[1] = drly.u.wdata[1];
+    wdata[2] = drly.u.wdata[2];
+#else
+    if (readM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
+        errlogPrintf("getInputFilter: readM3IoModeRegister failed [%d]\n", errno);
+        return -1;
+    }
+#endif
+
+    //debug
+    //printf("Mode reg. 0x%04x  0x%04x 0x%04x\n", wdata[0], wdata[1], wdata[2]);
+
+    // Interrup Edge (input modules) or Output Hold (output modules)
+    const char *str[] = {"128-64ms", "64-32ms", "16-8ms", "4-2ms", "1-0.5ms", "250-125us", "62.5-31.25us", "none"};
+    for (int block = 0; block < 4; block++) {
+        uint32_t ch    = (block * 16) + 1;
+        uint32_t shift = (3 - block) * 4 + 1;
+        uint32_t val   = (wdata[2]>>shift) & 0x0007;
+        printf("ch %02d-%02d : %d %4s\n", ch, ch+15, val, str[val]);
+    }
+
+    return 0; // Success
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61SetInputFilter'
+//
+static const iocshArg      setInputFilterArg0    = { "[unit]", iocshArgInt };
+static const iocshArg      setInputFilterArg1    = { "slot",   iocshArgInt };
+static const iocshArg      setInputFilterArg2    = { "ch",     iocshArgInt };
+static const iocshArg      setInputFilterArg3    = { "val",    iocshArgInt };
+static const iocshArg      setInputFilterArg4    = { "",       iocshArgArgv };
+static const iocshArg     *setInputFilterArgs[]  = {
+    &setInputFilterArg0,
+    &setInputFilterArg1,
+    &setInputFilterArg2,
+    &setInputFilterArg3,
+    &setInputFilterArg4,
+};
+static const iocshFuncDef  setInputFilterFuncDef = { "f3rp61SetInputFilter", 5, setInputFilterArgs,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Set input filter time constant for specified unit and slot.\n"
+    "The unit is optional (treated as 0).\n"
+    "ch  : 1 (channel 1-8), 9 (channel 9-16), ..., 57 (channel 57-64)\n"
+    "val : 0 (128-64ms), 1 (64-32ms),   2 (16-8ms),       3 (4-2ms),\n"
+    "      4 (1-0.5ms),  5 (250-125us), 6 (62.5-31.25us), 7 (none)\n"
+#endif
+};
+
+static void setInputFilterCallFunc(const iocshArgBuf *args)
+{
+    int unit = 0;
+    int slot = 0;
+    int ch   = 0;
+    int val  = 0;
+    int argc = args[4].aval.ac;
+
+    //debug
+    //printf("%d : %d %d %d %d\n", argc, args[0].ival, args[1].ival, args[2].ival, args[3].ival);
+
+    if (argc < 0) {
+        fprintf(stderr, "f3rp61SetInputFilter: error : argument is missing\n");
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+        return;
+    } else if (argc == 0) {
+        unit = 0;
+        slot = args[0].ival;
+        ch   = args[1].ival;
+        val  = args[2].ival;
+    } else {
+        unit = args[0].ival;
+        slot = args[1].ival;
+        ch   = args[2].ival;
+        val  = args[3].ival;
+    }
+
+    //
+    if (! setInputFilter(unit, slot, ch, val)) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
+}
+
+static int setInputFilter(int unit, int slot, int ch, int val)
+{
+    uint16_t wdata[8]; // 3 would be enough, but readM3IoModeRegister requires 8
+
+    if (unit<0 || unit>=M3IO_NUM_UNIT) {
+        errlogPrintf("setInputFilter: unit number out of range\n");
+        return -1;
+    }
+    if (slot<=0 || slot>M3IO_NUM_SLOT) {
+        errlogPrintf("setInputFilter: slot number out of range\n");
+        return -1;
+    }
+    if (ch<=0 || ch>NUM_IRQ_CH) {
+        errlogPrintf("setInputFilter: channel number out of range\n");
+        return -1;
+    }
+
+    // Read mode registers to extract current setting
+#if defined(__powerpc__)
+    M3IO_ACCESS_REG drly = {
+        .unitno = unit,
+        .slotno = slot,
+        .start  = 1,
+        .count  = 3,
+    };
+    if (ioctl(f3rp61_fd, M3IO_READ_MODE, &drly) < 0) {
+        errlogPrintf("setInputFilter: ioctl failed [%d]\n", errno);
+        return -1;
+    }
+    wdata[0] = drly.u.wdata[0];
+    wdata[1] = drly.u.wdata[1];
+    wdata[2] = drly.u.wdata[2];
+#else
+    if (readM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
+        errlogPrintf("setInputFilter: readM3IoModeRegister failed [%d]\n", errno);
+        return -1;
+    }
+#endif
+
+    // Change the setting for the specified channel
+    uint32_t block = (ch - 1) / 16;
+    uint32_t shift = (3 - block) * 4 + 1;
+    uint32_t mask  = 0x07 << shift;
+
+    //debug
+    //printf("Unit %d, Slot %d, Ch %d, val %d(0x%02x) : Shift %d Mask 0x%04x\n", unit, slot, ch, wdata[2], wdata[2], shift, mask);
+    //printf("0x%04x | 0x%04x 0x%04x => 0x%04x\n", wdata[2], (wdata[2]&~mask), (val&0x07)<<shift, (wdata[2] & ~mask) | ((val & 0x07) << shift));
+
+    // Modify the desired bits
+    wdata[2] = (wdata[2] & ~mask) | ((val & 0x07) << shift);
+
+    //debug
+    //printf("Mode reg. 0x%04x  0x%04x 0x%04x\n", wdata[0], wdata[1], wdata[2]);
+
+    // Write back the mode registers
+#if defined(__powerpc__)
+    drly.u.wdata[0] = wdata[0];
+    drly.u.wdata[1] = wdata[1];
+    drly.u.wdata[2] = wdata[2]; // This element has not been modified
+    if (ioctl(f3rp61_fd, M3IO_WRITE_MODE, &drly) < 0) {
+        errlogPrintf("setInputFilter: ioctl M3IO_WRITE_MODE failed [%d]\n", errno);
+        return -1;
+    }
+#else
+    if (writeM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
+        errlogPrintf("setInputFilter: writeM3IoModeRegister failed [%d]\n", errno);
         return -1;
     }
 #endif
@@ -1619,6 +1859,10 @@ static void drvF3RP61RegisterCommands(void)
         //
         iocshRegister(&getInputSamplingFuncDef,        getInputSamplingCallFunc);
         iocshRegister(&setInputSamplingFuncDef,        setInputSamplingCallFunc);
+
+        //
+        iocshRegister(&getInputFilterFuncDef,          getInputFilterCallFunc);
+        iocshRegister(&setInputFilterFuncDef,          setInputFilterCallFunc);
     }
 }
 

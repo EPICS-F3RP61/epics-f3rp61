@@ -789,11 +789,11 @@ static int getInternalDeviceConfig(void)
     unsigned int nrly;
     unsigned int nreg;
     if (referM3InternalDataTable(&nrly, &nreg)<0) {
-        errlogPrintf("drvF3RP61: referM3InternalDataTable failed [%d]\n", errno);
+        errlogPrintf("f3rp61GetInternalDeviceConfig: referM3InternalDataTable failed [%d]\n", errno);
         return -1;
     }
 
-    printf("%7s %7s\n","rly", "reg");
+    printf("%7s %7s\n","nRlys", "nReg");
     printf("%7d %7d\n", nrly, nreg);
 
     return 0; // Success
@@ -803,52 +803,83 @@ static int getInternalDeviceConfig(void)
 //
 // Register iocsh command 'f3rp61SetInternalDeviceConfig'
 //
-static const iocshArg     setInternalDeviceConfigArg0     = { "nRlys", iocshArgInt };
-static const iocshArg     setInternalDeviceConfigArg1     = { "nRegs", iocshArgInt };
-static const iocshArg     setInternalDeviceConfigArg2     = { "[loc]", iocshArgInt };
-static const iocshArg     *setInternalDeviceConfigArgs[]  = {
+static const iocshArg     setInternalDeviceConfigArg0     = { "[loc]", iocshArgInt };
+static const iocshArg     setInternalDeviceConfigArg1     = { "nRlys", iocshArgInt };
+static const iocshArg     setInternalDeviceConfigArg2     = { "nRegs", iocshArgInt };
+static const iocshArg     setInternalDeviceConfigArg3     = { "",      iocshArgArgv };
+static const iocshArg    *setInternalDeviceConfigArgs[]  = {
     &setInternalDeviceConfigArg0,
     &setInternalDeviceConfigArg1,
     &setInternalDeviceConfigArg2,
+    &setInternalDeviceConfigArg3,
 };
-static const iocshFuncDef  setInternalDeviceConfigFuncDef = { "f3rp61SetInternalDeviceConfig", 3, setInternalDeviceConfigArgs,
+static const iocshFuncDef  setInternalDeviceConfigFuncDef = { "f3rp61SetInternalDeviceConfig", 4, setInternalDeviceConfigArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Configure local device assignment.\n"
-    "nRlys : Number of relays (0, 32, 64, ...)\n"
-    "nRegs : Number of data registers (0, 2, 4, ...)\n"
-    "loc   : Location of local device\n"
+    "[loc] : Location of local device (treated as 0 if omitted))\n"
     "        0:SDRAM\n"
 #  if defined(__powerpc__)
     "        1:Sytem SRAM on F3RP6x\n" // 256kB
 #  endif
     "        2:User SRAM on F3RPxx-2L\n" // F3RP61-2L supports up to 4MB, while not sure for F3RP7x-2L
+    "nRlys : Number of relays (0, 32, 64, ...)\n"
+    "nRegs : Number of data registers (0, 2, 4, ...)\n"
 //    "Calling f3rp61SetInternalDeviceConfig after iocInit has no effect.\n"
 #endif
 };
 
 static void setInternalDeviceConfigCallFunc(const iocshArgBuf *args)
 {
-    if (! setInternalDeviceConfig(args[0].ival, args[1].ival, args[2].ival)) {
+    int loc  = 0;
+    int nrly = 0;
+    int nreg = 0;
+    int argc = args[3].aval.ac;
+
+    //debug
+    //printf("%d : %d %d %d\n", argc, args[0].ival, args[1].ival, args[2].ival);
+
+    if (argc < 0) {
+        fprintf(stderr, "f3rp61SetInternalDeviceConfig: error : argument is missing\n");
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+        return;
+    } else if (argc == 0) {
+        loc  = 0;
+        nrly = args[0].ival;
+        nreg = args[1].ival;
+    } else {
+        loc  = args[0].ival;
+        nrly = args[1].ival;
+        nreg = args[2].ival;
+    }
+
+if (! setInternalDeviceConfig(loc, nrly, nreg)) {
 #ifdef IOCSHFUNCDEF_HAS_USAGE
         iocshSetError(-1);
 #endif
     }
 }
 
-static int setInternalDeviceConfig(int nrly, int nreg, int loc)
+static int setInternalDeviceConfig(int loc, int nrly, int nreg)
 {
-    static char *locname[] = { "SDRAM", "System-SRAM", "User-SRAM" };
+    //debug
+    //fprintf(stderr, "f3rp61SetInternalDeviceConfig : loc %d, nrly %d, nreg %d\n", loc, nrly, nreg);
 
-    if (nrly < 0) {
-        errlogPrintf("setInternalDeviceConfig: number of internal relays out of range\n");
+    if (nrly < 0 || nrly % 32) {
+        errlogPrintf("f3rp61SetInternalDeviceConfig: number of internal relays out of range\n");
         return -1;
     }
-    if (nreg < 0) {
-        errlogPrintf("setInternalDeviceConfig: number of internal registers out of range\n");
+    if (nreg < 0 || nreg % 2) {
+        errlogPrintf("f3rp61SetInternalDeviceConfig: number of internal registers out of range\n");
         return -1;
     }
-    if (loc != 0 && loc != 2) {
-        errlogPrintf("setInternalDeviceConfig: parameter for internal device out of range\n");
+    if (loc != 0 && loc != 2
+#if defined(__powerpc__)
+        && loc != 1
+#endif
+        ) {
+        errlogPrintf("f3rp61SetInternalDeviceConfig: location of local device out of range\n");
         return -1;
     }
 
@@ -859,7 +890,7 @@ static int setInternalDeviceConfig(int nrly, int nreg, int loc)
     unsigned int cur_nrly;
     unsigned int cur_nreg;
     if (referM3InternalDataTable(&cur_nrly, &cur_nreg)<0) {
-        errlogPrintf("drvF3RP61: referM3InternalDataTable failed [%d]\n", errno);
+        errlogPrintf("f3rp61SetInternalDeviceConfig: referM3InternalDataTable failed [%d]\n", errno);
         return -1;
     }
 
@@ -869,20 +900,21 @@ static int setInternalDeviceConfig(int nrly, int nreg, int loc)
     }
 
     if (setM3InternalDataTable(loc, nrly, nreg)<0) {
+        static char *locname[] = { "SDRAM", "System-SRAM", "User-SRAM" };
         switch (errno) {
         case S_m3dev_INVALID_NUMBER: // 392
-            fprintf(stderr, "error : Parameter out of range\n");
+            fprintf(stderr, "f3rp61SetInternalDeviceConfig: error : Parameter out of range\n");
             break;
         case S_m3dev_DEVICE_NOT_FOUND: //393
-            fprintf(stderr, "error : Specified device not found : %s\n", locname[loc]);
+            fprintf(stderr, "f3rp61SetInternalDeviceConfig : error : Specified device not found : %s\n", locname[loc]);
             break;
         case S_m3dev_DEVICE_ENTRY_ERROR: //394; F3RP6x only
             //fprintf(stderr, "%s failed.\n", cmdname);
-            fprintf(stderr, "Local device appears to be already configured.\n");
+            fprintf(stderr, "f3rp61SetInternalDeviceConfig : error : Local device appears to be already configured.\n");
             fprintf(stderr, "System reboot is required to alter the configuration.\n");
             break;
         default:
-            fprintf(stderr, "error : %s\n", strerror(errno));
+            fprintf(stderr, "f3rp61SetInternalDeviceConfig : error : %s\n", strerror(errno));
         }
         return -1;
     }
@@ -920,7 +952,7 @@ static int getSharedDeviceConfig(void)
     M3COMDATACONFIG com;
     M3COMDATACONFIG ext;
     if (referM3ComDataConfig(&com, &ext)<0) {
-        errlogPrintf("drvF3RP61: referM3ComDataConfig failed [%d]\n", errno);
+        errlogPrintf("f3rp61GetSharedDeviceConfig: referM3ComDataConfig failed [%d]\n", errno);
         return -1;
     }
 
@@ -964,33 +996,33 @@ static void setSharedDeviceConfigCallFunc(const iocshArgBuf *args)
     }
 }
 
-static int setSharedDeviceConfig(int cpuno, int nrlys, int nregs, int ext_nrlys, int ext_nregs)
+static int setSharedDeviceConfig(int cpuno, int nrly, int nreg, int ext_nrly, int ext_nreg)
 {
     if (cpuno < 0 || cpuno > 3) {
         errlogPrintf("f3rp61SetSharedDeviceConfig: CPU number out of range\n");
         return -1;
     }
-    if (nrlys < 0 || nrlys >  2048) {
+    if (nrly < 0 || nrly >  2048) {
         errlogPrintf("f3rp61SetSharedDeviceConfig: Number of shared relays out of range\n");
         return -1;
     }
-    if (nregs < 0 || nregs > 1024) {
+    if (nreg < 0 || nreg > 1024) {
         errlogPrintf("f3rp61SetSharedDeviceConfig: Number of shared registers out of range\n");
         return -1;
     }
-    if (ext_nrlys < 0 || ext_nrlys >  2048) {
+    if (ext_nrly < 0 || ext_nrly >  2048) {
         errlogPrintf("f3rp61SetSharedDeviceConfig: Number of extended shared relays out of range\n");
         return -1;
     }
-    if (ext_nregs < 0 || ext_nregs > 3072) {
+    if (ext_nreg < 0 || ext_nreg > 3072) {
         errlogPrintf("f3rp61SetSharedDeviceConfig: Number of extended shared registers out of range\n");
         return -1;
     }
 
-    com_data_config.wNumberOfRelay[cpuno] = nrlys;
-    com_data_config.wNumberOfRegister[cpuno] = nregs;
-    ext_com_data_config.wNumberOfRelay[cpuno] = ext_nrlys;
-    ext_com_data_config.wNumberOfRegister[cpuno] = ext_nregs;
+    com_data_config.wNumberOfRelay[cpuno] = nrly;
+    com_data_config.wNumberOfRegister[cpuno] = nreg;
+    ext_com_data_config.wNumberOfRelay[cpuno] = ext_nrly;
+    ext_com_data_config.wNumberOfRegister[cpuno] = ext_nreg;
 
     return 0; // Success
 }
@@ -1024,7 +1056,7 @@ static int getLinkDeviceConfig(void)
 {
     M3LINKDATACONFIG link;
     if (referM3LinkDeviceConfig(&link)<0) {
-        errlogPrintf("drvF3RP61: referM3LinkDeviceConfig failed [%d]\n", errno);
+        errlogPrintf("f3rp61GetLinkDeviceConfig: referM3LinkDeviceConfig failed [%d]\n", errno);
         return -1;
     }
 
@@ -1043,12 +1075,14 @@ static int getLinkDeviceConfig(void)
 static const iocshArg      setLinkDeviceConfigArg0    = { "sysNo", iocshArgInt };
 static const iocshArg      setLinkDeviceConfigArg1    = { "nRlys", iocshArgInt };
 static const iocshArg      setLinkDeviceConfigArg2    = { "nRegs", iocshArgInt };
+static const iocshArg      setLinkDeviceConfigArg3    = { "",      iocshArgArgv };
 static const iocshArg     *setLinkDeviceConfigArgs[]  = {
     &setLinkDeviceConfigArg0,
     &setLinkDeviceConfigArg1,
-    &setLinkDeviceConfigArg2
+    &setLinkDeviceConfigArg2,
+    &setLinkDeviceConfigArg3,
 };
-static const iocshFuncDef  setLinkDeviceConfigFuncDef = { "f3rp61SetLinkDeviceConfig", 3, setLinkDeviceConfigArgs,
+static const iocshFuncDef  setLinkDeviceConfigFuncDef = { "f3rp61SetLinkDeviceConfig", 4, setLinkDeviceConfigArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Configure link device assignment.\n"
     "Calling f3rp61SetLinkDeviceConfig after iocInit has no effect.\n"
@@ -1057,30 +1091,53 @@ static const iocshFuncDef  setLinkDeviceConfigFuncDef = { "f3rp61SetLinkDeviceCo
 
 static void setLinkDeviceConfigCallFunc(const iocshArgBuf *args)
 {
-    if (! setLinkDeviceConfig(args[0].ival, args[1].ival, args[2].ival)) {
+    int sysno = 0;
+    int nrly  = 0;
+    int nreg  = 0;
+    int argc = args[3].aval.ac;
+
+    //debug
+    //printf("%d : %d %d %d\n", argc, args[0].ival, args[1].ival, args[2].ival);
+
+    if (argc < 0) {
+        fprintf(stderr, "f3rp61SetInterruptEdge: error : argument is missing\n");
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+        return;
+    } else {
+        sysno = args[0].ival;
+        nrly  = args[1].ival;
+        nreg  = args[2].ival;
+    }
+
+    if (! setLinkDeviceConfig(sysno, nrly, nreg)) {
 #ifdef IOCSHFUNCDEF_HAS_USAGE
         iocshSetError(-1);
 #endif
     }
 }
 
-static int setLinkDeviceConfig(int sysno, int nrlys, int nregs)
+static int setLinkDeviceConfig(int sysno, int nrly, int nreg)
 {
+    //debug
+    //fprintf(stderr, "f3rp61SetLinkDeviceConfig : sys %d, nrly %d, nreg %d\n", sysno, nrly, nreg);
+
     if (sysno <0 || sysno > (M3IO_NUM_LINKS-1) ) {
         errlogPrintf("f3rp61SetLinkDeviceConfig: Number of FL-net interface out of range\n");
         return -1;
     }
-    if (nrlys < 1 || nrlys > 8192) {
+    if (nrly < 1 || nrly > 8192) {
         errlogPrintf("f3rp61SetLinkDeviceConfig: Number of link relays out of range\n");
         return -1;
     }
-    if (nregs < 1 || nregs > 8192) {
+    if (nreg < 1 || nreg > 8192) {
         errlogPrintf("f3rp61SetLinkDeviceConfig: Number of link registers out of range\n");
         return -1;
     }
 
-    link_data_config.wNumberOfRelay[sysno] = nrlys;
-    link_data_config.wNumberOfRegister[sysno] = nregs;
+    link_data_config.wNumberOfRelay[sysno] = nrly;
+    link_data_config.wNumberOfRegister[sysno] = nreg;
 
     return 0; // Success
 }
@@ -1144,11 +1201,11 @@ static void getInterruptEdgeCallFunc(const iocshArgBuf *args)
 static int getInterruptEdge(int unit, int slot)
 {
     if (unit<0 || unit>=M3IO_NUM_UNIT) {
-        errlogPrintf("getInterruptEdge: unit number out of range\n");
+        errlogPrintf("f3rp61GetInterruptEdge: unit number out of range\n");
         return -1;
     }
     if (slot<=0 || slot>M3IO_NUM_SLOT) {
-        errlogPrintf("getInterruptEdge: slot number out of range\n");
+        errlogPrintf("f3rp61GetInterruptEdge: slot number out of range\n");
         return -1;
     }
 
@@ -1163,7 +1220,7 @@ static int getInterruptEdge(int unit, int slot)
         .count  = 3,
     };
     if (ioctl(f3rp61_fd, M3IO_READ_MODE, &drly) < 0) {
-        errlogPrintf("getInterruptEdge: ioctl M3IO_READ_MODE failed [%d]\n", errno);
+        errlogPrintf("f3rp61GetInterruptEdge: ioctl M3IO_READ_MODE failed [%d]\n", errno);
         return -1;
     }
     wdata[0] = drly.u.wdata[0];
@@ -1171,7 +1228,7 @@ static int getInterruptEdge(int unit, int slot)
     wdata[2] = drly.u.wdata[2];
 #else
     if (readM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
-        errlogPrintf("getInterruptEdge: readM3IoModeRegister failed [%d]\n", errno);
+        errlogPrintf("f3rp61GetInterruptEdge: readM3IoModeRegister failed [%d]\n", errno);
         return -1;
     }
 #endif
@@ -1265,15 +1322,15 @@ static int setInterruptEdge(int unit, int slot, int ch, int val)
     uint16_t wdata[8]; // 3 would be enough, but readM3IoModeRegister requires 8
 
     if (unit<0 || unit>=M3IO_NUM_UNIT) {
-        errlogPrintf("setInterruptEdge: unit number out of range\n");
+        errlogPrintf("f3rp61SetInterruptEdge: unit number out of range\n");
         return -1;
     }
     if (slot<=0 || slot>M3IO_NUM_SLOT) {
-        errlogPrintf("setInterruptEdge: slot number out of range\n");
+        errlogPrintf("f3rp61SetInterruptEdge: slot number out of range\n");
         return -1;
     }
     if (ch<=0 || ch>NUM_IRQ_CH) {
-        errlogPrintf("setInterruptEdge: channel number out of range\n");
+        errlogPrintf("f3rp61SetInterruptEdge: channel number out of range\n");
         return -1;
     }
 
@@ -1286,7 +1343,7 @@ static int setInterruptEdge(int unit, int slot, int ch, int val)
         .count  = 3,
     };
     if (ioctl(f3rp61_fd, M3IO_READ_MODE, &drly) < 0) {
-        errlogPrintf("setInterruptEdge: ioctl failed [%d]\n", errno);
+        errlogPrintf("f3rp61SetInterruptEdge: ioctl failed [%d]\n", errno);
         return -1;
     }
     wdata[0] = drly.u.wdata[0];
@@ -1294,7 +1351,7 @@ static int setInterruptEdge(int unit, int slot, int ch, int val)
     wdata[2] = drly.u.wdata[2];
 #else
     if (readM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
-        errlogPrintf("setInterruptEdge: readM3IoModeRegister failed [%d]\n", errno);
+        errlogPrintf("f3rp61SetInterruptEdge: readM3IoModeRegister failed [%d]\n", errno);
         return -1;
     }
 #endif
@@ -1328,12 +1385,12 @@ static int setInterruptEdge(int unit, int slot, int ch, int val)
     drly.u.wdata[1] = wdata[1];
     drly.u.wdata[2] = wdata[2]; // This element has not been modified
     if (ioctl(f3rp61_fd, M3IO_WRITE_MODE, &drly) < 0) {
-        errlogPrintf("setInterruptEdge: ioctl M3IO_WRITE_MODE failed [%d]\n", errno);
+        errlogPrintf("f3rp61SetInterruptEdge: ioctl M3IO_WRITE_MODE failed [%d]\n", errno);
         return -1;
     }
 #else
     if (writeM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
-        errlogPrintf("setInterruptEdge: writeM3IoModeRegister failed [%d]\n", errno);
+        errlogPrintf("f3rp61SetInterruptEdge: writeM3IoModeRegister failed [%d]\n", errno);
         return -1;
     }
 #endif
@@ -1400,7 +1457,7 @@ static void getInputSamplingCallFunc(const iocshArgBuf *args)
 static int getInputSampling(int unit, int slot)
 {
     if (unit<0 || unit>=M3IO_NUM_UNIT) {
-        errlogPrintf("getInputSampling: unit number out of range\n");
+        errlogPrintf("f3rp61GetInputSampling: unit number out of range\n");
         return -1;
     }
     if (slot<=0 || slot>M3IO_NUM_SLOT) {
@@ -1419,7 +1476,7 @@ static int getInputSampling(int unit, int slot)
         .count  = 3,
     };
     if (ioctl(f3rp61_fd, M3IO_READ_MODE, &drly) < 0) {
-        errlogPrintf("getInputSampling: ioctl M3IO_READ_MODE failed [%d]\n", errno);
+        errlogPrintf("f3rp61GetInputSampling: ioctl M3IO_READ_MODE failed [%d]\n", errno);
         return -1;
     }
     wdata[0] = drly.u.wdata[0];
@@ -1427,7 +1484,7 @@ static int getInputSampling(int unit, int slot)
     wdata[2] = drly.u.wdata[2];
 #else
     if (readM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
-        errlogPrintf("getInputSampling: readM3IoModeRegister failed [%d]\n", errno);
+        errlogPrintf("f3rp61GetInputSampling: readM3IoModeRegister failed [%d]\n", errno);
         return -1;
     }
 #endif
@@ -1515,15 +1572,15 @@ static int setInputSampling(int unit, int slot, int ch, int val)
     uint16_t wdata[8]; // 3 would be enough, but readM3IoModeRegister requires 8
 
     if (unit<0 || unit>=M3IO_NUM_UNIT) {
-        errlogPrintf("setInputSampling: unit number out of range\n");
+        errlogPrintf("f3rp61SetInputSampling: unit number out of range\n");
         return -1;
     }
     if (slot<=0 || slot>M3IO_NUM_SLOT) {
-        errlogPrintf("setInputSampling: slot number out of range\n");
+        errlogPrintf("f3rp61SetInputSampling: slot number out of range\n");
         return -1;
     }
     if (ch<=0 || ch>NUM_IRQ_CH) {
-        errlogPrintf("setInputSampling: channel number out of range\n");
+        errlogPrintf("f3rp61SetInputSampling: channel number out of range\n");
         return -1;
     }
 
@@ -1536,7 +1593,7 @@ static int setInputSampling(int unit, int slot, int ch, int val)
         .count  = 3,
     };
     if (ioctl(f3rp61_fd, M3IO_READ_MODE, &drly) < 0) {
-        errlogPrintf("setInputSampling: ioctl failed [%d]\n", errno);
+        errlogPrintf("f3rp61SetInputSampling: ioctl failed [%d]\n", errno);
         return -1;
     }
     wdata[0] = drly.u.wdata[0];
@@ -1544,7 +1601,7 @@ static int setInputSampling(int unit, int slot, int ch, int val)
     wdata[2] = drly.u.wdata[2];
 #else
     if (readM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
-        errlogPrintf("setInputSampling: readM3IoModeRegister failed [%d]\n", errno);
+        errlogPrintf("f3rp61SetInputSampling: readM3IoModeRegister failed [%d]\n", errno);
         return -1;
     }
 #endif
@@ -1573,12 +1630,12 @@ static int setInputSampling(int unit, int slot, int ch, int val)
     drly.u.wdata[1] = wdata[1];
     drly.u.wdata[2] = wdata[2]; // This element has not been modified
     if (ioctl(f3rp61_fd, M3IO_WRITE_MODE, &drly) < 0) {
-        errlogPrintf("setInputSampling: ioctl M3IO_WRITE_MODE failed [%d]\n", errno);
+        errlogPrintf("f3rp61SetInputSampling: ioctl M3IO_WRITE_MODE failed [%d]\n", errno);
         return -1;
     }
 #else
     if (writeM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
-        errlogPrintf("setInputSampling: writeM3IoModeRegister failed [%d]\n", errno);
+        errlogPrintf("f3rp61SetInputSampling: writeM3IoModeRegister failed [%d]\n", errno);
         return -1;
     }
 #endif
@@ -1639,11 +1696,11 @@ static void getInputFilterCallFunc(const iocshArgBuf *args)
 static int getInputFilter(int unit, int slot)
 {
     if (unit<0 || unit>=M3IO_NUM_UNIT) {
-        errlogPrintf("getInputFilter: unit number out of range\n");
+        errlogPrintf("f3rp61GetInputFilter: unit number out of range\n");
         return -1;
     }
     if (slot<=0 || slot>M3IO_NUM_SLOT) {
-        errlogPrintf("getInputFilter: slot number out of range\n");
+        errlogPrintf("f3rp61GetInputFilter: slot number out of range\n");
         return -1;
     }
 
@@ -1658,7 +1715,7 @@ static int getInputFilter(int unit, int slot)
         .count  = 3,
     };
     if (ioctl(f3rp61_fd, M3IO_READ_MODE, &drly) < 0) {
-        errlogPrintf("getInputFilter: ioctl M3IO_READ_MODE failed [%d]\n", errno);
+        errlogPrintf("f3rp61GetInputFilter: ioctl M3IO_READ_MODE failed [%d]\n", errno);
         return -1;
     }
     wdata[0] = drly.u.wdata[0];
@@ -1666,7 +1723,7 @@ static int getInputFilter(int unit, int slot)
     wdata[2] = drly.u.wdata[2];
 #else
     if (readM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
-        errlogPrintf("getInputFilter: readM3IoModeRegister failed [%d]\n", errno);
+        errlogPrintf("f3rp61GetInputFilter: readM3IoModeRegister failed [%d]\n", errno);
         return -1;
     }
 #endif
@@ -1754,15 +1811,15 @@ static int setInputFilter(int unit, int slot, int ch, int val)
     uint16_t wdata[8]; // 3 would be enough, but readM3IoModeRegister requires 8
 
     if (unit<0 || unit>=M3IO_NUM_UNIT) {
-        errlogPrintf("setInputFilter: unit number out of range\n");
+        errlogPrintf("f3rp61SetInputFilter: unit number out of range\n");
         return -1;
     }
     if (slot<=0 || slot>M3IO_NUM_SLOT) {
-        errlogPrintf("setInputFilter: slot number out of range\n");
+        errlogPrintf("f3rp61SetInputFilter: slot number out of range\n");
         return -1;
     }
     if (ch<=0 || ch>NUM_IRQ_CH) {
-        errlogPrintf("setInputFilter: channel number out of range\n");
+        errlogPrintf("f3rp61SetInputFilter: channel number out of range\n");
         return -1;
     }
 
@@ -1775,7 +1832,7 @@ static int setInputFilter(int unit, int slot, int ch, int val)
         .count  = 3,
     };
     if (ioctl(f3rp61_fd, M3IO_READ_MODE, &drly) < 0) {
-        errlogPrintf("setInputFilter: ioctl failed [%d]\n", errno);
+        errlogPrintf("f3rp61SetInputFilter: ioctl failed [%d]\n", errno);
         return -1;
     }
     wdata[0] = drly.u.wdata[0];
@@ -1783,7 +1840,7 @@ static int setInputFilter(int unit, int slot, int ch, int val)
     wdata[2] = drly.u.wdata[2];
 #else
     if (readM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
-        errlogPrintf("setInputFilter: readM3IoModeRegister failed [%d]\n", errno);
+        errlogPrintf("f3rp61SetInputFilter: readM3IoModeRegister failed [%d]\n", errno);
         return -1;
     }
 #endif
@@ -1809,12 +1866,12 @@ static int setInputFilter(int unit, int slot, int ch, int val)
     drly.u.wdata[1] = wdata[1];
     drly.u.wdata[2] = wdata[2]; // This element has not been modified
     if (ioctl(f3rp61_fd, M3IO_WRITE_MODE, &drly) < 0) {
-        errlogPrintf("setInputFilter: ioctl M3IO_WRITE_MODE failed [%d]\n", errno);
+        errlogPrintf("f3rp61SetInputFilter: ioctl M3IO_WRITE_MODE failed [%d]\n", errno);
         return -1;
     }
 #else
     if (writeM3IoModeRegister(unit, slot, 1, 3, wdata) < 0) {
-        errlogPrintf("setInputFilter: writeM3IoModeRegister failed [%d]\n", errno);
+        errlogPrintf("f3rp61SetInputFilter: writeM3IoModeRegister failed [%d]\n", errno);
         return -1;
     }
 #endif

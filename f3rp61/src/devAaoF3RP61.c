@@ -327,7 +327,7 @@ static long write_aao(aaoRecord *prec)
 #endif
 
     } else if (device == 'Y') { // Output relays on I/O modules
-        if (count>4) {
+        if (count>4) { // The maximum number of blocks is 4
             count = 4;
         }
         M3IO_ACCESS_REG drly = {
@@ -360,7 +360,10 @@ static long write_aao(aaoRecord *prec)
 
     //
     prec->udf = FALSE;
-    prec->nord = prec->nelm;
 
+    //
+    prec->nord = count / dpvt->count;
+
+    //
     return 0;
 }

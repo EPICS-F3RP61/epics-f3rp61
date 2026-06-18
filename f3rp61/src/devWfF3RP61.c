@@ -220,7 +220,7 @@ static long read_wf(waveformRecord *prec)
 #endif
 
     } else if (device == 'X') { // Input relays on I/O modules
-        if (count>4) {
+        if (count>4) { // The maximum number of blocks is 4
             count = 4;
         }
         M3IO_ACCESS_REG drly = {
@@ -238,7 +238,7 @@ static long read_wf(waveformRecord *prec)
         }
 
     } else if (device == 'Y') { // Output relays on I/O modules
-        if (count>4) {
+        if (count>4) { // The maximum number of blocks is 4
             count = 4;
         }
         M3IO_ACCESS_REG drly = {
@@ -385,7 +385,9 @@ static long read_wf(waveformRecord *prec)
         }
     }
 
-    prec->nord = prec->nelm;
+    //
+    prec->nord = count / dpvt->count;
 
+    //
     return 0;
 }

@@ -124,5 +124,6 @@ static long write_so(stringoutRecord *precord)
     //
     precord->udf = FALSE;
 
+    //
     return 0;
 }

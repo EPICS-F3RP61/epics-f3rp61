@@ -140,6 +140,7 @@ static long init_record(aaoRecord *prec)
                device == 'E' || device == 'L' || // Shared relays and Link relays
                device == 'r') {                  // Shared memory
     } else if (device == 'Y') {                  // Output relays on I/O modules
+    } else if (device == 'M') {                  // Mode registers on I/O modules
     } else if (device == 'A') {                  // I/O registers on special modules
     } else {
         errlogPrintf("devAaoF3RP61: %s : unsupported device \'%c\'\n", prec->name, device);
@@ -344,6 +345,46 @@ static long write_aao(aaoRecord *prec)
             errlogPrintf("devAaoF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
             return -1;
         }
+
+    } else if (device == 'M') { // Mode registers on I/O modules
+#if defined(__powerpc__)
+        // The F3RP61 Linux BSP Reference manual states that start
+        // address is fixed at 1 and the count at 3. However it
+        // appears that start address of 2, 3, or 4 are also
+        // accepted. Similary, the count can be 1, 2, or 4. Be aware
+        // that writing to the address 4 does not make sense, and may
+        // cause problems.
+        if (count>4) { // The maximum number of blocks is 3, but 4 seems OK
+            count = 4; // 3
+        }
+        M3IO_ACCESS_REG drly = {
+            .unitno = dpvt->unit,
+            .slotno = dpvt->slot,
+//            .start  = 1,
+//            .count  = 3,
+            .start  = dpvt->addr,
+            .count  = count,
+        };
+        for (int32_t i=0; i<count; i++) {
+            drly.u.wdata[i] = wdata[i];
+        }
+        if (ioctl(f3rp61_fd, M3IO_WRITE_MODE, &drly) < 0) {
+            errlogPrintf("devAaoF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
+            return -1;
+        }
+#else
+        if (count>8) { // The maximum number of blocks is 8
+            count = 8;
+        }
+        const int32_t unit = dpvt->unit;
+        const int32_t slot = dpvt->slot;
+        const int32_t addr = dpvt->addr;
+        if (writeM3IoModeRegister(unit, slot, addr, count, wdata) < 0) {
+            errlogPrintf("devAaoF3RP61: %s : writeM3IoModeRegister failed [%d]\n", prec->name, errno);
+            return -1;
+        }
+#endif
+
     } else {//(device == 'A')   // I/O registers on special modules
         M3IO_ACCESS_REG drly = {
             .unitno = dpvt->unit,

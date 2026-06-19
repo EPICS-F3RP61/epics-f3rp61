@@ -96,20 +96,6 @@ static long init_record(longoutRecord *precord)
                device == 'r') {                  // Shared memory
     } else if (device == 'Y') {                  // Output relays on I/O modules
     } else if (device == 'M') {                  // Mode registers on I/O modules
-        if (conv == 'B') {
-            errlogPrintf("devLoF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
-            precord->pact = 1;
-            return -1;
-        }
-#if defined(__powerpc__)
-        // On F3RP61 start and count are fixed to 1 and 3 in ioctl() request,
-        // and only the 1st element is valid in the data read out.
-        if (conv == 'L' ) {
-            errlogPrintf("devLoF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
-            precord->pact = 1;
-            return -1;
-        }
-#endif
     } else if (device == 'A') {                  // I/O registers on special modules
     } else {
         errlogPrintf("devLoF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
@@ -224,13 +210,19 @@ static long write_longout(longoutRecord *precord)
 
     } else if (device == 'M') { // Mode registers on I/O modules
 #if defined(__powerpc__)
-        // On F3RP61 start and count are fixed to 1 and 3 in ioctl() request,
-        // and only the 1st element is valid in the data written.
+        // The F3RP61 Linux BSP Reference manual states that start
+        // address is fixed at 1 and the count at 3. However it
+        // appears that start address of 2, 3, or 4 are also
+        // accepted. Similary, the count can be 1, 2, or 4. Be aware
+        // that writing to the address 4 does not make sense, and may
+        // cause problems.
         M3IO_ACCESS_REG drly = {
             .unitno = dpvt->unit,
             .slotno = dpvt->slot,
-            .start  = 1,
-            .count  = 3,
+            //.start  = 1,
+            //.count  = 3,
+            .start  = dpvt->addr,
+            .count  = count,
         };
         drly.u.wdata[0] = wdata[0];
         if (ioctl(f3rp61_fd, M3IO_WRITE_MODE, &drly) < 0) {
@@ -272,5 +264,6 @@ static long write_longout(longoutRecord *precord)
     //
     precord->udf = FALSE;
 
+    //
     return 0;
 }

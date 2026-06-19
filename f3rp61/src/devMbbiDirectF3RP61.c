@@ -264,5 +264,6 @@ static long read_mbbiDirect(mbbiDirectRecord *precord)
         precord->rval = (int16_t)wdata[0];
     }
 
+    //
     return 0;
 }

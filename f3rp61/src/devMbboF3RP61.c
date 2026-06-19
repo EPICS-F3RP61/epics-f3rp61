@@ -235,5 +235,6 @@ static long write_mbbo(mbboRecord *precord)
     //
     precord->udf = FALSE;
 
+    //
     return 0;
 }

@@ -126,5 +126,6 @@ static long read_si(stringinRecord *precord)
     // fill VAL field
     strncpy(precord->val, bdata, 40);
 
+    //
     return 0;
 }

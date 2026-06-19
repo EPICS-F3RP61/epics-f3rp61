@@ -96,20 +96,6 @@ static long init_record(longinRecord *precord)
                device == 'r') {                  // Shared memory
     } else if (device == 'X' || device == 'Y') { // Input and output relays on I/O modules
     } else if (device == 'M') {                  // Mode registers on I/O modules
-        if (dpvt->conv == 'B') {
-            errlogPrintf("devLiF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
-            precord->pact = 1;
-            return -1;
-        }
-#if defined(__powerpc__)
-        // On F3RP61 start and count are fixed to 1 and 3 in ioctl() request,
-        // and only the 1st element is valid in the data read out.
-        if (dpvt->conv == 'L' ) {
-            errlogPrintf("devLiF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
-            precord->pact = 1;
-            return -1;
-        }
-#endif
     } else if (device == 'A') {                  // I/O registers on special modules
     } else {
         errlogPrintf("devLiF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
@@ -242,13 +228,19 @@ static long read_longin(longinRecord *precord)
 
     } else if (device == 'M') { // Mode registers on I/O modules
 #if defined(__powerpc__)
-        // On F3RP61 start and count are fixed to 1 and 3 in ioctl() request,
-        // and only the 1st element is valid in the data read out.
+        // The F3RP61 Linux BSP Reference manual states that start
+        // address is fixed at 1 and the count at 3. However it
+        // appears that start address of 2, 3, or 4 are also
+        // accepted. Similary, the count can be 1, 2, or 4. Be aware
+        // that writing to the address 4 does not make sense, and may
+        // cause problems.
         M3IO_ACCESS_REG drly = {
             .unitno = dpvt->unit,
             .slotno = dpvt->slot,
-            .start  = 1,
-            .count  = 3,
+            //.start  = 1,
+            //.count  = 3,
+            .start  = dpvt->addr,
+            .count  = count,
         };
         if (ioctl(f3rp61_fd, M3IO_READ_MODE, &drly) < 0) {
             errlogPrintf("devLiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
@@ -303,5 +295,6 @@ static long read_longin(longinRecord *precord)
         precord->val = (int16_t)wdata[0];
     }
 
+    //
     return 0;
 }

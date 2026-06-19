@@ -55,17 +55,23 @@
 #  define M3CPU_WRITE_COM       M3IO_WRITE_COM
 #endif
 
+//
+typedef enum {
+    // These value are defined appropriately for as value of the
+    // subCode member of the MCMD_REQUEST structure.
+    kRead  = 0x01,
+    kWrite = 0x02,
+} F3RP61SEQ_RW;
+
 // Access type for sequence CPU device
 typedef enum {
+    // These value are defined appropriately for as value of the
+    // accessType member of the M3_READ_SEQDEV and the M3_WRITE_SEQDEV
+    // structure.
     kBit   = 0x00,
     kWord  = 0x02,
     // kLong = 0x04, // F3RP71 native API does not suport long-word access
 } F3RP61SEQ_ACCESS_TYPE;
-
-typedef enum {
-    kRead  = 0x01,
-    kWrite = 0x02,
-} F3RP61SEQ_RW;
 
 //
 typedef struct {

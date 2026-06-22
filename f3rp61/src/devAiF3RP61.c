@@ -20,6 +20,10 @@
 //
 #include <math.h>
 
+//
+static const F3RP61_RW rw = kRead;
+static const F3RP61_ACCESS_TYPE type = kWord;
+
 // Create the dset for devAiF3RP61
 static long init_record();
 static long read_ai();
@@ -67,7 +71,7 @@ static long init_record(aiRecord *precord)
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
 
     //
-    const int ret = f3rp61ParseLink(plink, dpvt, (dbCommon *)precord, "devAiF3RP61");
+    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)precord, sizeof(double), 1, "devAiF3RP61");
     if (ret < 0) {
         //errlogPrintf("devAiF3RP61: %s : syntax error in INP field\n", precord->name);
         precord->pact = 1;
@@ -87,21 +91,7 @@ static long init_record(aiRecord *precord)
         return -1;
     }
 
-    // Check device validity
-    const int8_t device = dpvt->device;
-    if (0) {                                     // dummy
-    } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
-               device == 'E' || device == 'L' || // Shared relays and Link relays
-               device == 'r') {                  // Shared memory
-    } else if (device == 'X' || device == 'Y') { // Input and output relays on I/O modules
-    } else if (device == 'M') {                  // Mode registers on I/O modules
-    } else if (device == 'A') {                  // I/O registers on special modules
-    } else {
-        errlogPrintf("devAiF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
-        precord->pact = 1;
-        return -1;
-    }
-
+    //
     precord->dpvt = dpvt;
 
     return 0;
@@ -124,7 +114,7 @@ static long read_ai(aiRecord *precord)
     const int32_t count  = dpvt->count; // =1, =2(&F, &L), =4(&D)
 
     // Buffers for data read
-    uint16_t wdata[4] = {0};
+    uint16_t *wdata = dpvt->buf;
 
     // Issue API function
     if (0) {                    // dummy
@@ -233,7 +223,9 @@ static long read_ai(aiRecord *precord)
             errlogPrintf("devAiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
             return -1;
         }
-        wdata[0] = drly.u.wdata[0];
+        for (int32_t i=0; i<count; i++) { // =1, =2(&F, &L), =4(&D)
+            wdata[i] = drly.u.wdata[i];
+        }
 #else
         const int32_t unit = dpvt->unit;
         const int32_t slot = dpvt->slot;
@@ -246,12 +238,12 @@ static long read_ai(aiRecord *precord)
 
     } else {//(device == 'A')   // I/O registers on special modules
         M3IO_ACCESS_REG drly = {
-            .unitno = dpvt->unit,
-            .slotno = dpvt->slot,
-            .start  = dpvt->addr,
-            .count  = count,
+            .unitno   = dpvt->unit,
+            .slotno   = dpvt->slot,
+            .start    = dpvt->addr,
+            .count    = count,
+            .u.pwdata = wdata,
         };
-        drly.u.pwdata = wdata;
         if (ioctl(f3rp61_fd, M3IO_READ_REG, &drly) < 0) {
             errlogPrintf("devAiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
             return -1;

@@ -380,13 +380,13 @@ long f3rp61Init(int after)
 // Parses INP or OUT link and initializes F3RP61_DPVT structure.
 // Registeres IO as well, if specified.
 //
-int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, const dbCommon *prec, const char *sup)
+int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, F3RP61_RW rw, F3RP61_ACCESS_TYPE type, const dbCommon *prec, size_t size, uint32_t nelm, const char *sup)
 {
-    const size_t size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
-    //char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
-    char buf[size];
-    strncpy(buf, plink->value.instio.string, size);
-    buf[size - 1] = '\0';
+    const size_t len = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
+    //char *buf  = callocMustSucceed(len, sizeof(char), "calloc failed");
+    char buf[len];
+    strncpy(buf, plink->value.instio.string, len);
+    buf[len - 1] = '\0';
 
     // Parse conversion specifier
     dpvt->conv = 'W'; // default conversion for Word access
@@ -469,6 +469,49 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, const dbCommon 
         return -1;
     }
 
+    // Check device validity
+    switch (type) {
+    case kBit:
+        switch (device) {
+        case 'X': // input relay
+            if (rw == kWrite) {
+                errlogPrintf("%s: %s : write access to read-only device \'%c\'\n", sup, prec->name, device);
+                return -1;
+            }
+        case 'Y': // output relay
+        case 'E': // shared relay
+        case 'L': // link relay
+            break;
+        default:
+            errlogPrintf("%s: %s : unsupported device \'%c\'\n", sup, prec->name, device);
+            return -1;
+            break;
+        }
+        break;
+    default: // kWord
+        switch (device) {
+        case 'X': // input relay
+            if (rw == kWrite) {
+                errlogPrintf("%s: %s : write access to read-only device \'%c\'\n", sup, prec->name, device);
+                return -1;
+            }
+        case 'Y': // output relay
+        case 'E': // shared relay
+        case 'L': // link relay
+        case 'R': // shared register
+        case 'W': // link register
+        case 'M': // mode register
+        case 'A': // I/O register on special modules
+        case 'r': // shared memory
+            break;
+        default:
+            errlogPrintf("%s: %s : unsupported device \'%c\'\n", sup, prec->name, device);
+            return -1;
+            break;
+        }
+        break;
+    }
+
     //
     dpvt->device = device;
     dpvt->unit   = unit;
@@ -479,12 +522,32 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, const dbCommon 
     dpvt->count = 1;
     if (dpvt->conv == 'F' || dpvt->conv == 'L') {
         dpvt->count = 2;
+    } else if (dpvt->conv == 'X') {
+        dpvt->count = 2;
     } else if (dpvt->conv == 'D') {
         dpvt->count = 4;
     }
 
+    // Allocate buffer for I/O
+    if (type == kBit) {
+        // for bit-device, we'll use local variable
+        dpvt->buf = 0;
+    } else {
+        size_t bufsiz = nelm * dpvt->count;
+        if (device=='M') {
+#if defined(__powerpc__)
+#else
+            // readM3IoModeRegister() requies buffer of uint16_t[8], but it seems that we don't need this
+            //if (bufsiz < 8) {
+            //    bufsiz = 8;
+            //}
+#endif
+        }
+        dpvt->buf = callocMustSucceed(bufsiz, sizeof(int16_t), "calloc failed");
+    }
+
     // debug
-    //printf("%s:%s %s U%d,S%d%c%d,U%d,S%d,X%d\n", __FILE__, __func__, prec->name, dpvt->unit, dpvt->slot, dpvt->device, dpvt->addr, dpvt->irqunit, dpvt->irqslot, dpvt->irqaddr);
+    //printf("%s %s[%d] U%d,S%d%c%d,U%d,S%d,X%d\n", __func__, prec->name, nelm, dpvt->unit, dpvt->slot, dpvt->device, dpvt->addr, dpvt->irqunit, dpvt->irqslot, dpvt->irqaddr);
 
     // success
     return 0;

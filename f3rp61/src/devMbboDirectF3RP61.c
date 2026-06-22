@@ -18,6 +18,10 @@
 //
 #include <drvF3RP61.h>
 
+//
+static const F3RP61_RW rw = kWrite;
+static const F3RP61_ACCESS_TYPE type = kWord;
+
 // Create the dset for devMbboDirectF3RP61
 static long init_record();
 static long write_mbboDirect();
@@ -62,7 +66,7 @@ static long init_record(mbboDirectRecord *precord)
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
 
     //
-    const int ret = f3rp61ParseLink(plink, dpvt, (dbCommon *)precord, "devLoF3RP61");
+    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)precord, sizeof(int32_t), 1, "devLoF3RP61");
     if (ret < 0) {
         //errlogPrintf("devLoF3RP61: %s : syntax error in INP field\n", precord->name);
         precord->pact = 1;
@@ -89,21 +93,7 @@ static long init_record(mbboDirectRecord *precord)
         return -1;
     }
 
-    // Check device validity
-    const int8_t device = dpvt->device;
-    if (0) {                                     // dummy
-    } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
-               device == 'E' || device == 'L' || // Shared relay and Link relay
-               device == 'r') {                  // Shared memory
-    } else if (device == 'Y' ||                  // Output relays on I/O modules
-               device == 'M') {                  // Mode registers on I/O modules
-    } else if (device == 'A') {                  // I/O registers on special modules
-    } else {
-        errlogPrintf("devMbboDirectF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
-        precord->pact = 1;
-        return -1;
-    }
-
+    //
     precord->dpvt = dpvt;
 
     return 2; // no conversion
@@ -120,8 +110,8 @@ static long write_mbboDirect(mbboDirectRecord *precord)
     const int32_t count  = dpvt->count;
 
     // Compose data to write
-    uint16_t wdata[8] = {0}; // 2 would be enough, but readM3IoModeRegister requires 8
-    uint16_t mask[2]  = {0xffff, 0xffff};
+    uint16_t *wdata   = dpvt->buf;
+    uint16_t  mask[2] = {0xffff, 0xffff};
 
     wdata[0] = (uint16_t)precord->rval;
     if (conv == 'L') {
@@ -199,15 +189,24 @@ static long write_mbboDirect(mbboDirectRecord *precord)
 
     } else if (device == 'M') { // Mode registers on I/O modules
 #if defined(__powerpc__)
-        // On F3RP61 start and count are fixed to 1 and 3 in ioctl() request,
-        // and only the 1st element is valid in the data written.
+        // The F3RP61 Linux BSP Reference manual states that start
+        // address is fixed at 1 and the count at 3. However it
+        // appears that start address of 2, 3, or 4 are also
+        // accepted. Similary, the count can be 1, 2, or 4. Be aware
+        // that writing to the address 4 does not make sense, and may
+        // cause problems.
         M3IO_ACCESS_REG drly = {
             .unitno = dpvt->unit,
             .slotno = dpvt->slot,
-            .start  = 1,
-            .count  = 3,
+            //.start  = 1,
+            //.count  = 3,
+            .start  = dpvt->addr,
+            .count  = count,
         };
         drly.u.wdata[0] = wdata[0];
+        if (conv == 'L') {
+            drly.u.wdata[1] = wdata[1];
+        }
         if (ioctl(f3rp61_fd, M3IO_WRITE_MODE, &drly) < 0) {
             errlogPrintf("devMbboDirectF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
             return -1;
@@ -224,12 +223,12 @@ static long write_mbboDirect(mbboDirectRecord *precord)
 
     } else {//(device == 'A')   // I/O registers on special modules
         M3IO_ACCESS_REG drly = {
-            .unitno = dpvt->unit,
-            .slotno = dpvt->slot,
-            .start  = dpvt->addr,
-            .count  = count,
+            .unitno   = dpvt->unit,
+            .slotno   = dpvt->slot,
+            .start    = dpvt->addr,
+            .count    = count,
+            .u.pwdata = wdata,
         };
-        drly.u.pwdata = wdata;
         if (ioctl(f3rp61_fd, M3IO_WRITE_REG, &drly) < 0) {
             errlogPrintf("devMbboDirectF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
             return -1;

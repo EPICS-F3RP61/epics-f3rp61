@@ -17,6 +17,10 @@
 //
 #include <drvF3RP61.h>
 
+//
+static const F3RP61_RW rw = kRead;
+static const F3RP61_ACCESS_TYPE type = kBit;
+
 // Create the dset for devBiF3RP61
 static long init_record();
 static long read_bi();
@@ -59,7 +63,7 @@ static long init_record(biRecord *precord)
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
 
     //
-    const int ret = f3rp61ParseLink(plink, dpvt, (dbCommon *)precord, "devBiF3RP61");
+    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)precord, sizeof(char), 1, "devBiF3RP61");
     if (ret < 0) {
         //errlogPrintf("devLiF3RP61: %s : syntax error in INP field\n", precord->name);
         precord->pact = 1;
@@ -75,18 +79,7 @@ static long init_record(biRecord *precord)
         return -1;
     }
 
-    // Check device validity
-    const int8_t device = dpvt->device;
-    if (0) {                                     // dummy
-    } else if (device == 'E' || device == 'L') { // Shared relays and Link relays
-    } else if (device == 'X') {                  // Input relays on I/O modules
-    } else if (device == 'Y') {                  // Output relays on I/O modules
-    } else {
-        errlogPrintf("devBiF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
-        precord->pact = 1;
-        return -1;
-    }
-
+    //
     precord->dpvt = dpvt;
 
     return 0;
@@ -110,7 +103,6 @@ static long read_bi(biRecord *precord)
 
     // Buffers for data read
     uint8_t cdata = 0;
-    uint8_t wdata = 0;
 
     // Issue API function
     if (0) {                    // dummy
@@ -156,10 +148,10 @@ static long read_bi(biRecord *precord)
             errlogPrintf("devBiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
             return -1;
         }
-        wdata = drly.u.outrly[0].data;
-        wdata >>= shift;
-        wdata &= 0x01;
-        precord->rval = wdata;
+        cdata = drly.u.outrly[0].data;
+        cdata >>= shift;
+        cdata &= 0x01;
+        precord->rval = cdata;
     } else {
         //
     }

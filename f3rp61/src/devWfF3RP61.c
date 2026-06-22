@@ -17,6 +17,10 @@
 //
 #include <drvF3RP61.h>
 
+//
+static const F3RP61_RW rw = kRead;
+static const F3RP61_ACCESS_TYPE type = kWord;
+
 // Create the dset for devWfF3RP61
 static long init_record();
 static long read_wf();
@@ -64,15 +68,12 @@ static long init_record(waveformRecord *prec)
     const char *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
 
     //
-    const int ret = f3rp61ParseLink(plink, dpvt, (dbCommon *)prec, "devWfF3RP61");
+    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)prec, dbValueSize(prec->ftvl), nelm, "devWfF3RP61");
     if (ret < 0) {
         //errlogPrintf("devWfF3RP61: %s : syntax error in INP field\n", prec->name);
         prec->pact = 1;
         return -1;
     }
-
-    void *wdata = callocMustSucceed(nelm, sizeof(uint16_t)*dpvt->count, "calloc failed");
-    dpvt->wdata = wdata;
 
     // Check conversion specifier
     const int8_t conv = dpvt->conv;
@@ -127,22 +128,11 @@ static long init_record(waveformRecord *prec)
         return -1;
     }
 
-    // Check device validity
-    const int8_t device = dpvt->device;
-    if (0) {                                     // dummy
-    } else if (device == 'R' || device == 'W' || // Shared registers and Link registers
-               device == 'E' || device == 'L' || // Shared relays and Link relays
-               device == 'r') {                  // Shared memory
-    } else if (device == 'X' || device == 'Y') { // Input and output relays on I/O modules
-    } else if (device == 'M') {                  // Mode registers on I/O modules
-    } else if (device == 'A') {                  // I/O registers on special modules
-    } else {
-        errlogPrintf("devWfF3RP61: %s : unsupported device \'%c\'\n", prec->name, device);
-        prec->pact = 1;
-        return -1;
-    }
-
+    //
     prec->dpvt = dpvt;
+
+    //
+    //fprintf(stderr, "%s %s[%d] device:%c unit:%d slot:%d addr:%d count:%d\n", __func__, prec->name, prec->nelm, dpvt->device, dpvt->unit, dpvt->slot, dpvt->addr, dpvt->count);
 
     return 0;
 }
@@ -166,8 +156,11 @@ static long read_wf(waveformRecord *prec)
     // debug
     //errlogPrintf("devWfF3RP61: %s : count=%d (%d*%d) SCAN%s\n", prec->name, count, dpvt->count, nelm, (prec->scan)==SCAN_IO_EVENT?" by I/O intr":"");
 
+    // debug
+    //fprintf(stderr, "%s %s[%d] device:%c unit:%d slot:%d addr:%d count:%d\n", __func__, prec->name, prec->nelm, dpvt->device, dpvt->unit, dpvt->slot, dpvt->addr, count);
+
     // Buffers for data read
-    uint16_t *wdata = dpvt->wdata;
+    uint16_t *wdata = dpvt->buf;
 
     // Issue API function
     if (0) {                    // dummy
@@ -289,7 +282,7 @@ static long read_wf(waveformRecord *prec)
             wdata[i] = drly.u.wdata[i];
         }
 #else
-        if (count>8) { // The maximum number of blocks is 8yy
+        if (count>8) { // The maximum number of blocks is 8
             count = 8;
         }
         const int32_t unit = dpvt->unit;
@@ -303,12 +296,12 @@ static long read_wf(waveformRecord *prec)
 
     } else {//(device == 'A')   // I/O registers on special modules
         M3IO_ACCESS_REG drly = {
-            .unitno = dpvt->unit,
-            .slotno = dpvt->slot,
-            .start  = dpvt->addr,
-            .count  = count,
+            .unitno   = dpvt->unit,
+            .slotno   = dpvt->slot,
+            .start    = dpvt->addr,
+            .count    = count,
+            .u.pwdata = wdata,
         };
-        drly.u.pwdata = wdata;
         if (ioctl(f3rp61_fd, M3IO_READ_REG, &drly) < 0) {
             errlogPrintf("devWfF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
             return -1;

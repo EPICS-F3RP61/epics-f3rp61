@@ -17,6 +17,10 @@
 //
 #include <drvF3RP61.h>
 
+//
+static const F3RP61_RW rw = kWrite;
+static const F3RP61_ACCESS_TYPE type = kBit;
+
 // Create the dset for devBoF3RP61
 static long init_record();
 static long write_bo();
@@ -59,7 +63,7 @@ static long init_record(boRecord *precord)
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
 
     //
-    const int ret = f3rp61ParseLink(plink, dpvt, (dbCommon *)precord, "devBoF3RP61");
+    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)precord, sizeof(char), 1, "devBoF3RP61");
     if (ret < 0) {
         //errlogPrintf("devBoF3RP61: %s : syntax error in INP field\n", precord->name);
         precord->pact = 1;
@@ -75,17 +79,7 @@ static long init_record(boRecord *precord)
         return -1;
     }
 
-    // Check device validity
-    const int8_t device = dpvt->device;
-    if (0) {                                     // dummy
-    } else if (device == 'E' || device == 'L') { // Shared relays and Link relays
-    } else if (device == 'Y') {                  // Output relays on I/O modules
-    } else {
-        errlogPrintf("devBoF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
-        precord->pact = 1;
-        return -1;
-    }
-
+    //
     precord->dpvt = dpvt;
 
     return 0;

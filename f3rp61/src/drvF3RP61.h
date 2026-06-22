@@ -45,6 +45,22 @@
 #endif
 
 //
+typedef enum {
+    // Thse values have no significance, yet they are kept consistent
+    // with drvF3RP61Seq.h
+    kRead  = 0x01,
+    kWrite = 0x02,
+} F3RP61_RW;
+
+// Access type for module access
+typedef enum {
+    // Thse values have no significance, yet they are kept consistent
+    // with drvF3RP61Seq.h
+    kBit  = 0x00,
+    kWord = 0x02,
+} F3RP61_ACCESS_TYPE;
+
+//
 typedef struct {
     uint8_t   conv;    // conversion specifier
     // Device for I/O
@@ -59,7 +75,7 @@ typedef struct {
     uint8_t   irqslot; // slot number     (1, 2, ..., 16)
     uint8_t   irqaddr; // position number (1, 2, ..., 32)
     //
-    uint16_t *wdata;   // buffer for waveform record
+    void     *buf;     // buffer for I/O
 } F3RP61_DPVT;
 
 //
@@ -71,7 +87,7 @@ long f3rp61Init(int after);
 long f3rp61GetIoIntInfo(int, dbCommon *, IOSCANPVT *);
 
 // helper function(s)
-int f3rp61ParseLink(const struct link *, F3RP61_DPVT *, const dbCommon *, const char *);
+int f3rp61ParseLink(const struct link *, F3RP61_DPVT *, F3RP61_RW, F3RP61_ACCESS_TYPE, const dbCommon *, size_t, uint32_t, const char *);
 
 //
 extern int f3rp61_fd;

@@ -17,6 +17,10 @@
 //
 #include <drvF3RP61.h>
 
+//
+static const F3RP61_RW rw = kRead;
+static const F3RP61_ACCESS_TYPE type = kWord;
+
 // Create the dset for devSiF3RP61
 static long init_record();
 static long read_si();
@@ -61,7 +65,7 @@ static long init_record(stringinRecord *precord)
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
 
     //
-    const int ret = f3rp61ParseLink(plink, dpvt, (dbCommon *)precord, "devSiF3RP61");
+    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)precord, sizeof(int8_t), 40, "devSiF3RP61");
     if (ret < 0) {
         //errlogPrintf("devSiF3RP61: %s : syntax error in INP field\n", precord->name);
         precord->pact = 1;
@@ -102,10 +106,10 @@ static long read_si(stringinRecord *precord)
     //const int8_t  device = dpvt->device;
     //const int8_t  conv   = dpvt->conv;
     //const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
-    const int32_t count  = dpvt->count;
+    const int32_t count  = dpvt->count * 20;
 
     // Buffers for data read
-    char bdata[40];
+    char *bdata = dpvt->buf;
 
     // Issue API function
     M3IO_ACCESS_REG drly = {

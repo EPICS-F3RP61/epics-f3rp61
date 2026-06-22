@@ -169,6 +169,7 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_DPVT *dpvt, F3RP61SEQ
             errlogPrintf("%s: %s : unsupported device \'%c\'\n", sup, prec->name, device);
             return -1;
         }
+        break;
     default: // kWord
         switch (device) {
         case 'X': // input relay // preliminary

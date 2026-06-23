@@ -109,20 +109,20 @@ static long write_so(stringoutRecord *prec)
     //const int8_t  device = dpvt->device;
     //const int8_t  conv   = dpvt->conv;
     //const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
-    const int32_t count  = dpvt->count * 20;
+    const int32_t count  = dpvt->count;
 
     // Compose data to write
     void *bdata = dpvt->buf;
-    strncpy(bdata, prec->val, 40);
+    strncpy(bdata, prec->val, count*sizeof(int16_t));
 
     // Issue API function
     M3IO_ACCESS_REG drly = {
         .unitno = dpvt->unit,
         .slotno = dpvt->slot,
         .start  = dpvt->addr,
-        .count  = count,
+        .count    = count,
+        .u.pbdata = bdata,
     };
-    drly.u.pbdata = (unsigned char *)bdata;
 
     if (ioctl(f3rp61_fd, M3IO_WRITE_REG, drly) < 0) {
         errlogPrintf("devSoF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);

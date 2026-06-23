@@ -110,19 +110,19 @@ static long read_si(stringinRecord *prec)
     //const int8_t  device = dpvt->device;
     //const int8_t  conv   = dpvt->conv;
     //const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
-    const int32_t count  = dpvt->count * 20;
+    const int32_t count  = dpvt->count;
 
     // Buffers for data read
-    char *bdata = dpvt->buf;
+    void *bdata = dpvt->buf;
 
     // Issue API function
     M3IO_ACCESS_REG drly = {
-        .unitno = dpvt->unit,
-        .slotno = dpvt->slot,
-        .start  = dpvt->addr,
-        .count  = count,
+        .unitno   = dpvt->unit,
+        .slotno   = dpvt->slot,
+        .start    = dpvt->addr,
+        .count    = count,
+        .u.pbdata = bdata,
     };
-    drly.u.pbdata = (unsigned char *)bdata;
     if (ioctl(f3rp61_fd, M3IO_READ_REG, drly) < 0) {
         errlogPrintf("devSiF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
         return -1;
@@ -132,7 +132,7 @@ static long read_si(stringinRecord *prec)
     prec->udf = FALSE;
 
     // fill VAL field
-    strncpy(prec->val, bdata, 40);
+    strncpy(prec->val, bdata, count*sizeof(int16_t));
 
     //
     return 0;

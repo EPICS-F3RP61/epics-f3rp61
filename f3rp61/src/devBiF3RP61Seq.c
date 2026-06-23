@@ -59,7 +59,7 @@ static long init_record(biRecord *precord)
     F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
 
     //
-    const int ret = f3rp61seqParseLink(plink, dpvt, kRead, kBit, (dbCommon *)precord, "devBiF3RP61Seq");
+    const int ret = f3rp61seqParseLink(plink, dpvt, kRead, kBit, (dbCommon *)precord);
     if (ret < 0) {
         //errlogPrintf("devBiF3RP61Seq: %s : syntax error in INP field\n", precord->name);
         precord->pact = 1;

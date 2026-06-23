@@ -87,7 +87,7 @@ long f3rp61Init(int after);
 long f3rp61GetIoIntInfo(int, dbCommon *, IOSCANPVT *);
 
 // helper function(s)
-int f3rp61ParseLink(const struct link *, F3RP61_DPVT *, F3RP61_RW, F3RP61_ACCESS_TYPE, const dbCommon *, size_t, uint32_t, const char *);
+int f3rp61ParseLink(const struct link *, F3RP61_DPVT *, F3RP61_RW, F3RP61_ACCESS_TYPE, const dbCommon *, size_t, uint32_t);
 
 //
 extern int f3rp61_fd;

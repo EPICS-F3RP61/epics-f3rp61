@@ -64,11 +64,11 @@ static long init_record(aaiRecord *prec)
     // Allocate private data storage area
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
     const uint32_t nelm = prec->nelm;
-    const uint16_t ftvl = prec->ftvl;
+    const dbfType  ftvl = prec->ftvl;
     const char *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
 
     //
-    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)prec, dbValueSize(prec->ftvl), nelm, "devAaiF3RP61");
+    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)prec, dbValueSize(prec->ftvl), nelm);
     if (ret < 0) {
         //errlogPrintf("devAaiF3RP61: %s : syntax error in INP field\n", prec->name);
         prec->pact = 1;
@@ -141,7 +141,7 @@ static long read_aai(aaiRecord *prec)
 {
     //
     const uint32_t nelm = prec->nelm;
-    const uint16_t ftvl = prec->ftvl;
+    const dbfType  ftvl = prec->ftvl;
 
     //
     F3RP61_DPVT   *dpvt   = prec->dpvt;

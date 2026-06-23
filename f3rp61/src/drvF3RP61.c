@@ -380,7 +380,7 @@ long f3rp61Init(int after)
 // Parses INP or OUT link and initializes F3RP61_DPVT structure.
 // Registeres IO as well, if specified.
 //
-int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, F3RP61_RW rw, F3RP61_ACCESS_TYPE type, const dbCommon *prec, size_t size, uint32_t nelm, const char *sup)
+int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, F3RP61_RW rw, F3RP61_ACCESS_TYPE type, const dbCommon *prec, size_t size, uint32_t nelm)
 {
     const size_t len = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     //char *buf  = callocMustSucceed(len, sizeof(char), "calloc failed");
@@ -394,7 +394,7 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, F3RP61_RW rw, F
     if (popt) {
         *popt++ = '\0';
         if (sscanf(popt, "%c", &dpvt->conv) < 1) {
-            errlogPrintf("%s: %s : can't get conversion specifier\n", sup, prec->name);
+            errlogPrintf("%s: %s : can't get conversion specifier\n", __func__, prec->name);
             return -1;
         }
     }
@@ -420,14 +420,14 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, F3RP61_RW rw, F
             slot = (addr % 10000) / 100;
             addr =  addr % 100;
         } else {
-            errlogPrintf("%s: %s : can't get interrupt source address\n", sup, prec->name);
+            errlogPrintf("%s: %s : can't get interrupt source address\n", __func__, prec->name);
             return -1;
         }
 
         if (unit<0  || unit>=M3IO_NUM_UNIT || // unit : 0,2,..., 7
             slot<=0 || slot>M3IO_NUM_SLOT  || // slot : 1,2,...,16
             addr<=0 || addr>NUM_IRQ_CH    ) { // addr : 1,2,...,64 (or 32)
-            errlogPrintf("%s: %s : Invalid interrupt source : U%d,S%d,X%d\n", sup, prec->name, unit, slot, addr);
+            errlogPrintf("%s: %s : Invalid interrupt source : U%d,S%d,X%d\n", __func__, prec->name, unit, slot, addr);
             return -1;
         }
 
@@ -436,7 +436,7 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, F3RP61_RW rw, F
         dpvt->irqslot = slot;
         dpvt->irqaddr = addr;
         if (f3rp61RegisterIoInterrupt(prec, unit, slot, addr) < 0) {
-            errlogPrintf("%s: %s : can't register I/O interrupt\n", sup, prec->name);
+            errlogPrintf("%s: %s : can't register I/O interrupt\n", __func__, prec->name);
             return -1;
         }
     }
@@ -461,11 +461,11 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, F3RP61_RW rw, F
             slot = (addr % 10000) / 100;
             addr =  addr % 100;
         } else if (device == 'A') { // Address for 'A' may exceed 1000
-            errlogPrintf("%s: %s : Invalid device : %s\n", sup, prec->name, buf);
+            errlogPrintf("%s: %s : Invalid device : %s\n", __func__, prec->name, buf);
             return -1;
         }
     } else {
-        errlogPrintf("%s: %s : can't get I/O address\n", sup, prec->name);
+        errlogPrintf("%s: %s : can't get I/O address\n", __func__, prec->name);
         return -1;
     }
 
@@ -475,7 +475,7 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, F3RP61_RW rw, F
         switch (device) {
         case 'X': // input relay
             if (rw == kWrite) {
-                errlogPrintf("%s: %s : write access to read-only device \'%c\'\n", sup, prec->name, device);
+                errlogPrintf("%s: %s : write access to read-only device \'%c\'\n", __func__, prec->name, device);
                 return -1;
             }
         case 'Y': // output relay
@@ -483,7 +483,7 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, F3RP61_RW rw, F
         case 'L': // link relay
             break;
         default:
-            errlogPrintf("%s: %s : unsupported device \'%c\'\n", sup, prec->name, device);
+            errlogPrintf("%s: %s : unsupported device \'%c\'\n", __func__, prec->name, device);
             return -1;
             break;
         }
@@ -492,7 +492,7 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, F3RP61_RW rw, F
         switch (device) {
         case 'X': // input relay
             if (rw == kWrite) {
-                errlogPrintf("%s: %s : write access to read-only device \'%c\'\n", sup, prec->name, device);
+                errlogPrintf("%s: %s : write access to read-only device \'%c\'\n", __func__, prec->name, device);
                 return -1;
             }
         case 'Y': // output relay
@@ -505,7 +505,7 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, F3RP61_RW rw, F
         case 'r': // shared memory
             break;
         default:
-            errlogPrintf("%s: %s : unsupported device \'%c\'\n", sup, prec->name, device);
+            errlogPrintf("%s: %s : unsupported device \'%c\'\n", __func__, prec->name, device);
             return -1;
             break;
         }

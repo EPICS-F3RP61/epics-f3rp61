@@ -66,7 +66,7 @@ static long init_record(mbbiRecord *precord)
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
 
     //
-    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)precord, sizeof(int32_t), 1, "devMbbiF3RP61");
+    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)precord, sizeof(int32_t), 1);
     if (ret < 0) {
         //errlogPrintf("devMbbiF3RP61: %s : syntax error in INP field\n", precord->name);
         precord->pact = 1;

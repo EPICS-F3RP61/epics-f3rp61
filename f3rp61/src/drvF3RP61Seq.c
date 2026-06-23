@@ -107,7 +107,7 @@ static long init(void)
 //
 // Parses INP or OUT link and initializes F3RP61SEQ_DPVT structure.
 //
-int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_DPVT *dpvt, F3RP61SEQ_RW rw, F3RP61SEQ_ACCESS_TYPE type, const dbCommon *prec, const char *sup)
+int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_DPVT *dpvt, F3RP61SEQ_RW rw, F3RP61SEQ_ACCESS_TYPE type, const dbCommon *prec)
 {
     const size_t size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     //char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
@@ -121,7 +121,7 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_DPVT *dpvt, F3RP61SEQ
     if (popt) {
         *popt++ = '\0';
         if (sscanf(popt, "%c", &dpvt->conv) < 1) {
-            errlogPrintf("%s: %s : can't get conversion specifier\n", sup, prec->name);
+            errlogPrintf("%s: %s : can't get conversion specifier\n", __func__, prec->name);
             return -1;
         }
     }
@@ -148,7 +148,7 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_DPVT *dpvt, F3RP61SEQ
     int8_t device = 0;
     int srcSlot = 0, destSlot = 0, top = 0;
     if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
-        errlogPrintf("%s: %s : can't get device address\n", sup, prec->name);
+        errlogPrintf("%s: %s : can't get device address\n", __func__, prec->name);
         return -1;
     }
 
@@ -158,15 +158,15 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_DPVT *dpvt, F3RP61SEQ
         switch (device) {
         case 'X': // input relay // preliminary
             if (rw == kWrite) {
-                errlogPrintf("%s: %s : write access to read-only device \'%c\'\n", sup, prec->name, device);
+                errlogPrintf("%s: %s : write access to read-only device \'%c\'\n", __func__, prec->name, device);
                 return -1;
             }
         case 'Y': // output relay // preliminary
-        case 'I': // internal relays
-        case 'M': // special relays
+        case 'I': // internal relay
+        case 'M': // special relay
             break;
         default:
-            errlogPrintf("%s: %s : unsupported device \'%c\'\n", sup, prec->name, device);
+            errlogPrintf("%s: %s : unsupported device \'%c\'\n", __func__, prec->name, device);
             return -1;
         }
         break;
@@ -174,19 +174,19 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_DPVT *dpvt, F3RP61SEQ
         switch (device) {
         case 'X': // input relay // preliminary
             if (rw == kWrite) {
-                errlogPrintf("%s: %s : write access to read-only device \'%c\'\n", sup, prec->name, device);
+                errlogPrintf("%s: %s : write access to read-only device \'%c\'\n", __func__, prec->name, device);
                 return -1;
             }
         case 'Y': // output relay // preliminary
-        case 'I': // internal relays
-        case 'M': // special relays
-        case 'D': // data registers
-        case 'B': // file registers
-        case 'F': // cache registers
-        case 'Z': // special registers
+        case 'I': // internal relay
+        case 'M': // special relay
+        case 'D': // data register
+        case 'B': // file register
+        case 'F': // cache register
+        case 'Z': // special register
             break;
         default:
-            errlogPrintf("%s: %s : unsupported device \'%c\'\n", sup, prec->name, device);
+            errlogPrintf("%s: %s : unsupported device \'%c\'\n", __func__, prec->name, device);
             return -1;
         }
         break;
@@ -194,16 +194,16 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_DPVT *dpvt, F3RP61SEQ
 
     // Read the slot number of this CPU module
     if (ioctl(f3rp61seqFd, M3CPU_GET_NUM, &srcSlot) < 0) {
-        errlogPrintf("%s: %s : ioctl failed [%d]\n", sup, prec->name, errno);
+        errlogPrintf("%s: %s : ioctl failed [%d]\n", __func__, prec->name, errno);
         return -1;
     }
 
     //debug
-    //fprintf(stderr, "%s : %s : srcSlot=%d destSlot=%d device=%c pos=%d\n", sup, prec->name, srcSlot, destSlot, device, top);
+    //fprintf(stderr, "%s : %s : srcSlot=%d destSlot=%d device=%c pos=%d\n", __func__, prec->name, srcSlot, destSlot, device, top);
 
     if (destSlot == srcSlot) {
         // Its better to use local device access API rather than sequence CPU device API (when local device access is supported by the device support)
-        //errlogPrintf("%s: %s : Its recommended using \"F3RP61\" device type rather than \"F3RP61Seq\"\n", sup, prec->name);
+        //errlogPrintf("%s: %s : Its recommended using \"F3RP61\" device type rather than \"F3RP61Seq\"\n", __func__, prec->name);
 
         // In order to access the local device on the F3RP61 itself as
         // a sequence CPU device, the command processing server must

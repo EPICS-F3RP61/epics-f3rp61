@@ -87,7 +87,7 @@ typedef struct {
 int f3rp61seqQueueRequest();
 
 // helper function(s)
-int    f3rp61seqParseLink(const struct link *, F3RP61SEQ_DPVT *, F3RP61SEQ_RW, F3RP61SEQ_ACCESS_TYPE, const dbCommon *, const char *);
+int    f3rp61seqParseLink(const struct link *, F3RP61SEQ_DPVT *, F3RP61SEQ_RW, F3RP61SEQ_ACCESS_TYPE, const dbCommon *);
 int8_t f3rp61seqGetDevice(F3RP61SEQ_DPVT *);
 
 //

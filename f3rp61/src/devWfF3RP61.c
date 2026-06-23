@@ -50,6 +50,9 @@ epicsExportAddress(dset, devWfF3RP61);
 // values.
 static long init_record(waveformRecord *prec)
 {
+    //debug
+    //printf("%s:%s %s\n", __FILE__, __func__, prec->name);
+
     //
     struct link *plink = &prec->inp;
 
@@ -64,11 +67,10 @@ static long init_record(waveformRecord *prec)
     // Allocate private data storage area
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
     const uint32_t nelm = prec->nelm;
-    const dbfType  ftvl = prec->ftvl;
-    const char *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
+    prec->dpvt = dpvt;
 
     //
-    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)prec, dbValueSize(prec->ftvl), nelm);
+    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, nelm);
     if (ret < 0) {
         //errlogPrintf("devWfF3RP61: %s : syntax error in INP field\n", prec->name);
         prec->pact = 1;
@@ -76,7 +78,9 @@ static long init_record(waveformRecord *prec)
     }
 
     // Check conversion specifier
-    const int8_t conv = dpvt->conv;
+    const dbfType  ftvl = prec->ftvl;
+    const char    *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
+    const int8_t   conv = dpvt->conv;
     if (0) {
     } else if (ftvl == DBF_DOUBLE) {
         if (conv == 'W') {        // Dummy for Word access
@@ -127,9 +131,6 @@ static long init_record(waveformRecord *prec)
         prec->pact = 1;
         return -1;
     }
-
-    //
-    prec->dpvt = dpvt;
 
     //
     //fprintf(stderr, "%s %s[%d] device:%c unit:%d slot:%d addr:%d count:%d\n", __func__, prec->name, prec->nelm, dpvt->device, dpvt->unit, dpvt->slot, dpvt->addr, dpvt->count);

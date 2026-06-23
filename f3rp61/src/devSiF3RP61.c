@@ -48,27 +48,32 @@ epicsExportAddress(dset, devSiF3RP61);
 // init_record() initializes record - parses INP/OUT field string,
 // allocates private data storage area and sets initial configuration
 // values.
-static long init_record(stringinRecord *precord)
+static long init_record(stringinRecord *prec)
 {
+    //debug
+    //printf("%s:%s %s\n", __FILE__, __func__, prec->name);
+
     //
-    struct link *plink = &precord->inp;
+    struct link *plink = &prec->inp;
 
     // Link type must be INST_IO
     if (plink->type != INST_IO) {
-        recGblRecordError(S_db_badField, precord,
+        recGblRecordError(S_db_badField, prec,
                           "devSiF3RP61 (init_record) Illegal INP field");
-        precord->pact = 1;
+        prec->pact = 1;
         return S_db_badField;
     }
 
     // Allocate private data storage area
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
+    const uint32_t nelm = 20;
+    prec->dpvt = dpvt;
 
     //
-    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)precord, sizeof(int8_t), 40);
+    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, nelm);
     if (ret < 0) {
-        //errlogPrintf("devSiF3RP61: %s : syntax error in INP field\n", precord->name);
-        precord->pact = 1;
+        //errlogPrintf("devSiF3RP61: %s : syntax error in INP field\n", prec->name);
+        prec->pact = 1;
         return -1;
     }
 
@@ -76,8 +81,8 @@ static long init_record(stringinRecord *precord)
     const int8_t conv = dpvt->conv;
     if (conv == 'W') {        // Dummy for Word access
     } else {
-        errlogPrintf("devSiF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
-        precord->pact = 1;
+        errlogPrintf("devSiF3RP61: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
+        prec->pact = 1;
         return -1;
     }
 
@@ -87,22 +92,21 @@ static long init_record(stringinRecord *precord)
     } else if (device == 'A') {                  // I/O registers on special modules
         dpvt->count  = 20;
     } else {
-        errlogPrintf("devSiF3RP61: %s : unsupported device \'%c\'\n", precord->name, device);
-        precord->pact = 1;
+        errlogPrintf("devSiF3RP61: %s : unsupported device \'%c\'\n", prec->name, device);
+        prec->pact = 1;
         return -1;
     }
 
-    precord->dpvt = dpvt;
-
+    //
     return 0;
 }
 
 // read_si() is called when there was a request to process a record.
 // When called, it reads the value from the driver and stores to the
 // VAL field.
-static long read_si(stringinRecord *precord)
+static long read_si(stringinRecord *prec)
 {
-    F3RP61_DPVT  *dpvt = precord->dpvt;
+    F3RP61_DPVT  *dpvt = prec->dpvt;
     //const int8_t  device = dpvt->device;
     //const int8_t  conv   = dpvt->conv;
     //const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
@@ -120,15 +124,15 @@ static long read_si(stringinRecord *precord)
     };
     drly.u.pbdata = (unsigned char *)bdata;
     if (ioctl(f3rp61_fd, M3IO_READ_REG, drly) < 0) {
-        errlogPrintf("devSiF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
+        errlogPrintf("devSiF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
         return -1;
     }
 
     //
-    precord->udf = FALSE;
+    prec->udf = FALSE;
 
     // fill VAL field
-    strncpy(precord->val, bdata, 40);
+    strncpy(prec->val, bdata, 40);
 
     //
     return 0;

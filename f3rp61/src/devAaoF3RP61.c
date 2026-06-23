@@ -70,11 +70,10 @@ static long init_record(aaoRecord *prec)
     // Allocate private data storage area
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
     const uint32_t nelm = prec->nelm;
-    const dbfType  ftvl = prec->ftvl;
-    const char *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
+    prec->dpvt = dpvt;
 
     //
-    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)prec, dbValueSize(prec->ftvl), nelm);
+    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, nelm);
     if (ret < 0) {
         //errlogPrintf("devAaoF3RP61: %s : syntax error in INP field\n", prec->name);
         prec->pact = 1;
@@ -82,7 +81,9 @@ static long init_record(aaoRecord *prec)
     }
 
     // Check conversion specifier
-    const int8_t conv = dpvt->conv;
+    const dbfType  ftvl    = prec->ftvl;
+    const char    *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
+    const int8_t   conv    = dpvt->conv;
     if (0) {
     } else if (ftvl == DBF_DOUBLE) {
         if (conv == 'W') {        // Dummy for Word access
@@ -135,8 +136,6 @@ static long init_record(aaoRecord *prec)
     }
 
     //
-    prec->dpvt = dpvt;
-
     return 0;
 }
 

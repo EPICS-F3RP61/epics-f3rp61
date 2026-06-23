@@ -46,27 +46,32 @@ epicsExportAddress(dset, devBoF3RP61);
 // init_record() initializes record - parses INP/OUT field string,
 // allocates private data storage area and sets initial configuration
 // values.
-static long init_record(boRecord *precord)
+static long init_record(boRecord *prec)
 {
+    //debug
+    //printf("%s:%s %s\n", __FILE__, __func__, prec->name);
+
     //
-    struct link *plink = &precord->out;
+    struct link *plink = &prec->out;
 
     // Link type must be INST_IO
     if (plink->type != INST_IO) {
-        recGblRecordError(S_db_badField, precord,
+        recGblRecordError(S_db_badField, prec,
                           "devBoF3RP61 (init_record) Illegal OUT field");
-        precord->pact = 1;
+        prec->pact = 1;
         return S_db_badField;
     }
 
     // Allocate private data storage area
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
+    const uint32_t nelm = 1;
+    prec->dpvt = dpvt;
 
     //
-    const int ret = f3rp61ParseLink(plink, dpvt, rw, type, (dbCommon *)precord, sizeof(char), 1);
+    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, nelm);
     if (ret < 0) {
-        //errlogPrintf("devBoF3RP61: %s : syntax error in INP field\n", precord->name);
-        precord->pact = 1;
+        //errlogPrintf("devBoF3RP61: %s : syntax error in INP field\n", prec->name);
+        prec->pact = 1;
         return -1;
     }
 
@@ -74,34 +79,32 @@ static long init_record(boRecord *precord)
     const int8_t conv = dpvt->conv;
     if (conv == 'W') {        // Dummy for Word access
     } else {
-        errlogPrintf("devBiF3RP61: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
-        precord->pact = 1;
+        errlogPrintf("devBiF3RP61: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
+        prec->pact = 1;
         return -1;
     }
 
     //
-    precord->dpvt = dpvt;
-
     return 0;
 }
 
 // write_bo() is called when there was a request to process a record.
 // When called, it sends the value from the VAL field to the driver.
-static long write_bo(boRecord *precord)
+static long write_bo(boRecord *prec)
 {
     // debug
-    //if (precord->scan == SCAN_IO_EVENT) {
-    //    errlogPrintf("devBoF3RP61: %s : SCAN by I/O intr\n", precord->name);
+    //if (prec->scan == SCAN_IO_EVENT) {
+    //    errlogPrintf("devBoF3RP61: %s : SCAN by I/O intr\n", prec->name);
     //}
 
-    F3RP61_DPVT  *dpvt = precord->dpvt;
+    F3RP61_DPVT  *dpvt = prec->dpvt;
     const int8_t  device = dpvt->device;
     //const int8_t  conv   = dpvt->conv;
     //const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
     //const int32_t count  = dpvt->count;
 
     // Compose data to write
-    uint8_t cdata = precord->rval;
+    uint8_t cdata = prec->rval;
 
     // Issue API function
     if (0) {                    // dummy
@@ -109,14 +112,14 @@ static long write_bo(boRecord *precord)
     } else if (device == 'E') { // Shared relays
         const int32_t addr = dpvt->addr;
         if (writeM3ComRelayB(addr, 1, &cdata) < 0) {
-            errlogPrintf("devBoF3RP61: %s : writeM3ComRelayB failed [%d]n", precord->name, errno);
+            errlogPrintf("devBoF3RP61: %s : writeM3ComRelayB failed [%d]n", prec->name, errno);
             return -1;
         }
 
     } else if (device == 'L') { // Link relays
         const int32_t addr = dpvt->addr;
         if (writeM3LinkRelayB(addr, 1, &cdata) < 0) {
-            errlogPrintf("devBoF3RP61: %s : writeM3LinkRelayB failed [%d]\n", precord->name, errno);
+            errlogPrintf("devBoF3RP61: %s : writeM3LinkRelayB failed [%d]\n", prec->name, errno);
             return -1;
         }
 
@@ -128,7 +131,7 @@ static long write_bo(boRecord *precord)
             .data     = cdata,
         };
         if (ioctl(f3rp61_fd, M3IO_WRITE_OUTRELAY_POINT, &outrlyp) < 0) {
-            errlogPrintf("devBoF3RP61: %s : ioctl failed [%d]\n", precord->name, errno);
+            errlogPrintf("devBoF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
             return -1;
         }
     } else {
@@ -136,7 +139,7 @@ static long write_bo(boRecord *precord)
     }
 
     //
-    precord->udf = FALSE;
+    prec->udf = FALSE;
 
     //
     return 0;

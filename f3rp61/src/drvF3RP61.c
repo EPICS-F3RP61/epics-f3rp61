@@ -380,7 +380,7 @@ long f3rp61Init(int after)
 // Parses INP or OUT link and initializes F3RP61_DPVT structure.
 // Registeres IO as well, if specified.
 //
-int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, F3RP61_RW rw, F3RP61_ACCESS_TYPE type, const dbCommon *prec, size_t size, uint32_t nelm)
+int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE type, const dbCommon *prec, const uint32_t nelm)
 {
     const size_t len = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     //char *buf  = callocMustSucceed(len, sizeof(char), "calloc failed");
@@ -389,6 +389,7 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_DPVT *dpvt, F3RP61_RW rw, F
     buf[len - 1] = '\0';
 
     // Parse conversion specifier
+    F3RP61_DPVT *dpvt = prec->dpvt;
     dpvt->conv = 'W'; // default conversion for Word access
     char *popt = strchr(buf, '&');
     if (popt) {

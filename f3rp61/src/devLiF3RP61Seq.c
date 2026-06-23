@@ -46,27 +46,28 @@ epicsExportAddress(dset, devLiF3RP61Seq);
 // init_record() initializes record - parses INP/OUT field string,
 // allocates private data storage area and sets initial configuration
 // values.
-static long init_record(longinRecord *precord)
+static long init_record(longinRecord *prec)
 {
     //
-    struct link *plink = &precord->inp;
+    struct link *plink = &prec->inp;
 
     // Link type must be INST_IO
     if (plink->type != INST_IO) {
-        recGblRecordError(S_db_badField, precord,
+        recGblRecordError(S_db_badField, prec,
                           "devLiF3RP61Seq (init_record) Illegal INP field");
-        precord->pact = 1;
+        prec->pact = 1;
         return S_db_badField;
     }
 
     // Allocate private data storage area
     F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
+    prec->dpvt = dpvt;
 
     //
-    const int ret = f3rp61seqParseLink(plink, dpvt, kRead, kWord, (dbCommon *)precord);
+    const int ret = f3rp61seqParseLink(plink, kRead, kWord, (dbCommon *)prec);
     if (ret < 0) {
-        //errlogPrintf("devLiF3RP61Seq: %s : syntax error in INP field\n", precord->name);
-        precord->pact = 1;
+        //errlogPrintf("devLiF3RP61Seq: %s : syntax error in INP field\n", prec->name);
+        prec->pact = 1;
         return -1;
     }
 
@@ -77,14 +78,13 @@ static long init_record(longinRecord *precord)
     } else if (conv == 'U') { // Unsigned integer
     } else if (conv == 'L') { // Long word
     } else {
-        errlogPrintf("devLiF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
-        precord->pact = 1;
+        errlogPrintf("devLiF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
+        prec->pact = 1;
         return -1;
     }
 
     //
-    callbackSetUser(precord, &dpvt->callback);
-    precord->dpvt = dpvt;
+    callbackSetUser(prec, &dpvt->callback);
 
     return 0;
 }
@@ -92,13 +92,13 @@ static long init_record(longinRecord *precord)
 // read_longin() is called when there was a request to process a record.
 // When called, it reads the value from the driver and stores to the
 // VAL field, then sets PACT field back to TRUE.
-static long read_longin(longinRecord *precord)
+static long read_longin(longinRecord *prec)
 {
-    F3RP61SEQ_DPVT *dpvt = precord->dpvt;
+    F3RP61SEQ_DPVT *dpvt = prec->dpvt;
 
-    if (precord->pact) { // Second call (PACT is TRUE)
+    if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
-            errlogPrintf("devLiF3RP61Seq: %s : read_longin failed\n", precord->name);
+            errlogPrintf("devLiF3RP61Seq: %s : read_longin failed\n", prec->name);
             return -1;
         }
 
@@ -107,36 +107,36 @@ static long read_longin(longinRecord *precord)
         uint16_t *wdata = pmcmdResponse->dataBuff.wData;
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devLiF3RP61Seq: %s : errorCode 0x%04x returned\n", precord->name, pmcmdResponse->errorCode);
+            errlogPrintf("devLiF3RP61Seq: %s : errorCode 0x%04x returned\n", prec->name, pmcmdResponse->errorCode);
             return -1;
         }
 
         //
-        precord->udf = FALSE;
+        prec->udf = FALSE;
 
         // fill VAL field
         const char conv = dpvt->conv;
         if (conv == 'B') {
-            precord->val = devF3RP61bcd2int(wdata[0], precord);
+            prec->val = devF3RP61bcd2int(wdata[0], prec);
 
         } else if (conv == 'L') {
-            precord->val = wdata[1]<<16 | wdata[0];
+            prec->val = wdata[1]<<16 | wdata[0];
 
         } else if (conv == 'U') {
-            precord->val = (uint16_t)wdata[0];
+            prec->val = (uint16_t)wdata[0];
 
         } else {
-            precord->val = (int16_t)wdata[0];
+            prec->val = (int16_t)wdata[0];
         }
 
     } else { // First call (PACT is still FALSE)
         // Issue read request
         if (f3rp61seqQueueRequest(dpvt) < 0) {
-            errlogPrintf("devLiF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", precord->name);
+            errlogPrintf("devLiF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", prec->name);
             return -1;
         }
 
-        precord->pact = 1;
+        prec->pact = 1;
     }
 
     return 0;

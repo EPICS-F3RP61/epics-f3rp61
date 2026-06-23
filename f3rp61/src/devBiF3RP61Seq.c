@@ -42,27 +42,28 @@ epicsExportAddress(dset, devBiF3RP61Seq);
 // init_record() initializes record - parses INP/OUT field string,
 // allocates private data storage area and sets initial configuration
 // values.
-static long init_record(biRecord *precord)
+static long init_record(biRecord *prec)
 {
     //
-    struct link *plink = &precord->inp;
+    struct link *plink = &prec->inp;
 
     // Link type must be INST_IO
     if (plink->type != INST_IO) {
-        recGblRecordError(S_db_badField, precord,
+        recGblRecordError(S_db_badField, prec,
                           "devBiF3RP61Seq (init_record) Illegal INP field");
-        precord->pact = 1;
+        prec->pact = 1;
         return S_db_badField;
     }
 
     // Allocate private data storage area
     F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
+    prec->dpvt = dpvt;
 
     //
-    const int ret = f3rp61seqParseLink(plink, dpvt, kRead, kBit, (dbCommon *)precord);
+    const int ret = f3rp61seqParseLink(plink, kRead, kBit, (dbCommon *)prec);
     if (ret < 0) {
-        //errlogPrintf("devBiF3RP61Seq: %s : syntax error in INP field\n", precord->name);
-        precord->pact = 1;
+        //errlogPrintf("devBiF3RP61Seq: %s : syntax error in INP field\n", prec->name);
+        prec->pact = 1;
         return -1;
     }
 
@@ -70,14 +71,13 @@ static long init_record(biRecord *precord)
     const int8_t conv = dpvt->conv;
     if (conv == 'W') {        // Dummy for Word access
     } else {
-        errlogPrintf("devLiF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
-        precord->pact = 1;
+        errlogPrintf("devLiF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
+        prec->pact = 1;
         return -1;
     }
 
     //
-    callbackSetUser(precord, &dpvt->callback);
-    precord->dpvt = dpvt;
+    callbackSetUser(prec, &dpvt->callback);
 
     return 0;
 }
@@ -85,13 +85,13 @@ static long init_record(biRecord *precord)
 // read_bi() is called when there was a request to process a record.
 // When called, it reads the value from the driver and stores to the
 // VAL field, then sets PACT field back to TRUE.
-static long read_bi(biRecord *precord)
+static long read_bi(biRecord *prec)
 {
-    F3RP61SEQ_DPVT *dpvt = precord->dpvt;
+    F3RP61SEQ_DPVT *dpvt = prec->dpvt;
 
-    if (precord->pact) { // Second call (PACT is TRUE)
+    if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
-            errlogPrintf("devBiF3RP61Seq: %s : read_bi failed\n", precord->name);
+            errlogPrintf("devBiF3RP61Seq: %s : read_bi failed\n", prec->name);
             return -1;
         }
 
@@ -99,24 +99,24 @@ static long read_bi(biRecord *precord)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devBiF3RP61Seq: %s : errorCode 0x%04x returned\n", precord->name, pmcmdResponse->errorCode);
+            errlogPrintf("devBiF3RP61Seq: %s : errorCode 0x%04x returned\n", prec->name, pmcmdResponse->errorCode);
             return -1;
         }
 
         //
-        precord->udf = FALSE;
+        prec->udf = FALSE;
 
         // fill VAL field
-        precord->rval = (unsigned long) pmcmdResponse->dataBuff.wData[0];
+        prec->rval = (unsigned long) pmcmdResponse->dataBuff.wData[0];
 
     } else { // First call (PACT is still FALSE)
         // Issue read request
         if (f3rp61seqQueueRequest(dpvt) < 0) {
-            errlogPrintf("devBiF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", precord->name);
+            errlogPrintf("devBiF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", prec->name);
             return -1;
         }
 
-        precord->pact = 1;
+        prec->pact = 1;
     }
 
     return 0;

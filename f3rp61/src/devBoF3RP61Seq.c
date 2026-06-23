@@ -42,27 +42,28 @@ epicsExportAddress(dset, devBoF3RP61Seq);
 // init_record() initializes record - parses INP/OUT field string,
 // allocates private data storage area and sets initial configuration
 // values.
-static long init_record(boRecord *precord)
+static long init_record(boRecord *prec)
 {
     //
-    struct link *plink = &precord->out;
+    struct link *plink = &prec->out;
 
     // Link type must be INST_IO
     if (plink->type != INST_IO) {
-        recGblRecordError(S_db_badField, precord,
+        recGblRecordError(S_db_badField, prec,
                           "devBoF3RP61Seq (init_record) Illegal OUT field");
-        precord->pact = 1;
+        prec->pact = 1;
         return S_db_badField;
     }
 
     // Allocate private data storage area
     F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
+    prec->dpvt = dpvt;
 
     //
-    const int ret = f3rp61seqParseLink(plink, dpvt, kWrite, kBit, (dbCommon *)precord);
+    const int ret = f3rp61seqParseLink(plink, kWrite, kBit, (dbCommon *)prec);
     if (ret < 0) {
-        //errlogPrintf("devLoF3RP61Seq: %s : syntax error in INP field\n", precord->name);
-        precord->pact = 1;
+        //errlogPrintf("devLoF3RP61Seq: %s : syntax error in INP field\n", prec->name);
+        prec->pact = 1;
         return -1;
     }
 
@@ -70,14 +71,13 @@ static long init_record(boRecord *precord)
     const int8_t conv = dpvt->conv;
     if (conv == 'W') {        // Dummy for Word access
     } else {
-        errlogPrintf("devBoF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", precord->name, conv);
-        precord->pact = 1;
+        errlogPrintf("devBoF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
+        prec->pact = 1;
         return -1;
     }
 
     //
-    callbackSetUser(precord, &dpvt->callback);
-    precord->dpvt = dpvt;
+    callbackSetUser(prec, &dpvt->callback);
 
     return 0;
 }
@@ -85,13 +85,13 @@ static long init_record(boRecord *precord)
 // write_bo() is called when there was a request to process a record.
 // When called, it sends the value from the VAL filed to the driver,
 // then sets PACT field back to TRUE.
-static long write_bo(boRecord *precord)
+static long write_bo(boRecord *prec)
 {
-    F3RP61SEQ_DPVT *dpvt = precord->dpvt;
+    F3RP61SEQ_DPVT *dpvt = prec->dpvt;
 
-    if (precord->pact) { // Second call (PACT is TRUE)
+    if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
-            errlogPrintf("devBoF3RP61Seq: %s : write_bo failed\n", precord->name);
+            errlogPrintf("devBoF3RP61Seq: %s : write_bo failed\n", prec->name);
             return -1;
         }
 
@@ -99,12 +99,12 @@ static long write_bo(boRecord *precord)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
 
         if (pmcmdResponse->errorCode) {
-            errlogPrintf("devBoF3RP61Seq: %s : errorCode 0x%04x returned\n", precord->name, pmcmdResponse->errorCode);
+            errlogPrintf("devBoF3RP61Seq: %s : errorCode 0x%04x returned\n", prec->name, pmcmdResponse->errorCode);
             return -1;
         }
 
         //
-        precord->udf = FALSE;
+        prec->udf = FALSE;
 
     } else { // First call (PACT is still FALSE)
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
@@ -112,15 +112,15 @@ static long write_bo(boRecord *precord)
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
 
         //
-        pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) precord->rval;
+        pM3WriteSeqdev->dataBuff.wData[0] = (unsigned short) prec->rval;
 
         // Issue write request
         if (f3rp61seqQueueRequest(dpvt) < 0) {
-            errlogPrintf("devBoF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", precord->name);
+            errlogPrintf("devBoF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", prec->name);
             return -1;
         }
 
-        precord->pact = 1;
+        prec->pact = 1;
     }
 
     return 0;

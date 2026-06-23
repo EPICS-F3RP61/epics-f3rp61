@@ -107,13 +107,16 @@ static long init(void)
 //
 // Parses INP or OUT link and initializes F3RP61SEQ_DPVT structure.
 //
-int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_DPVT *dpvt, F3RP61SEQ_RW rw, F3RP61SEQ_ACCESS_TYPE type, const dbCommon *prec)
+int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_RW rw, F3RP61SEQ_ACCESS_TYPE type, const dbCommon *prec)
 {
     const size_t size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     //char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
     char buf[size];
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
+
+    //
+    F3RP61SEQ_DPVT *dpvt = prec->dpvt;
 
     // Parse conversion specifier
     dpvt->conv = 'W'; // default for Word access

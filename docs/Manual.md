@@ -9,27 +9,30 @@ Device and Driver Support for F3RP70, F3RP71, and F3RP61
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Overview](#overview)
-- [Device Types](#device-types)
-- [Supported Record Types](#supported-record-types)
-- [Accessing I/O Module](#accessing-io-module)
-  - [Accessing Input Relay (X)](#accessing-input-relay-x)
-  - [Accessing Output Relay (Y)](#accessing-output-relay-y)
-  - [Accessing Data Register](#accessing-data-register)
-    - [Using 'unsigned' value option](#using-unsigned-value-option)
-    - [Using 'binary-coded-decimal (BCD)' option](#using-binary-coded-decimal-bcd-option)
-    - [Read an array of data](#read-an-array-of-data)
+- [Supported Device Types, Record Types and Conversion Specifiers](#supported-device-types-record-types-and-conversion-specifiers)
+  - [Device Types](#device-types)
+  - [Record Types](#record-types)
+  - [Conversion Specifiers](#conversion-specifiers)
+  - [Reading / Writing an Array of Data](#reading--writing-an-array-of-data)
+- [Accessing Input Relays, Output Relays and Data Registers on I/O Modules (F3RP61 devices)](#accessing-input-relays-output-relays-and-data-registers-on-io-modules-f3rp61-devices)
+  - [Input / Output Link (`INP`/`OUT`) Fields for Input Relays, Output Relays and Data Registers](#input--output-link-inpout-fields-for-input-relays-output-relays-and-data-registers)
+  - [Accessing Input Relays (X)](#accessing-input-relays-x)
+  - [Accessing Output Relays (Y)](#accessing-output-relays-y)
+  - [Accessing Data Registers (A)](#accessing-data-registers-a)
   - [Accessing Mode Register](#accessing-mode-register)
-- [Handling Special Module](#handling-special-module)
-- [Important Notice on Using Linux CPU in Multi-CPU Configuration](#important-notice-on-using-linux-cpu-in-multi-cpu-configuration)
-- [Communication with Sequence CPU](#communication-with-sequence-cpu)
+  - [Handling Special Module](#handling-special-module)
+  - [I/O Interrupt Support](#io-interrupt-support)
+- [Accessing Shared Relays and Shared Registers](#accessing-shared-relays-and-shared-registers)
+  - [Important Notice on Using Linux CPU in Multi-CPU Configuration](#important-notice-on-using-linux-cpu-in-multi-cpu-configuration)
   - [Communication Based on Shared Device](#communication-based-on-shared-device)
     - [Communication Based on Shared Device Using New Interface<a name="UsingNewInterface"></a>](#communication-based-on-shared-device-using-new-interfacea-nameusingnewinterfacea)
-      - [Notes on Using Shared Device with F3RP71 (**not** F3RP61)<a name="SharedDeviceWithF3RP71"></a>](#notes-on-using-shared-device-with-f3rp71-not-f3rp61a-nameshareddevicewithf3rp71a)
+      - [Notes on Using Shared Device with F3RP70 or F3RP71 (**not** F3RP61)<a name="SharedDeviceWithF3RP71"></a>](#notes-on-using-shared-device-with-f3rp70-or-f3rp71-not-f3rp61a-nameshareddevicewithf3rp71a)
+      - [Input / Output Link (INP/OUT) Fields for Shared Relays / Registers](#input--output-link-inpout-fields-for-shared-relays--registers)
       - [Reading/Writing Shared Relays (1-bit variables)](#readingwriting-shared-relays-1-bit-variables)
-      - [Reading/Writing  Shared Registers (16-bit variables)](#readingwriting--shared-registers-16-bit-variables)
+      - [Reading/Writing Shared Registers](#readingwriting-shared-registers)
     - [Communication Based on Shared Memory Using Old Interface](#communication-based-on-shared-memory-using-old-interface)
-  - [Accessing Internal Device of Sequence CPU](#accessing-internal-device-of-sequence-cpu)
-- [I/O Interrupt Support](#io-interrupt-support)
+- [Accessing Internal Relays or Data/File/Cache Registes on Sequence CPU (F3RP61Seq devices)](#accessing-internal-relays-or-datafilecache-registes-on-sequence-cpu-f3rp61seq-devices)
+  - [Input / Output Link (INP/OUT) Fields](#input--output-link-inpout-fields)
 - [FL-net Support](#fl-net-support)
 - [LED / Rotary Switch / Status Register support](#led--rotary-switch--status-register-support)
   - [LED support](#led-support)
@@ -67,7 +70,7 @@ replace the ladder program. See [Handling Special
 Module](#handling-special-module) for more detail. If some
 initialization is required on a special module, it can be done by
 using an EPICS sequencer program, or a run-time database comprised of
-records that have the PINI field value of "YES".
+records that have the PINI field value of `YES`.
 
 
 The Linux CPU works as an IOC either with or without sequence CPUs
@@ -89,111 +92,182 @@ interrupt into a message to a user-level process running on it. Based
 on this function, the device and driver support supports processing
 records upon an I/O interrupt.
 
+# Supported Device Types, Record Types and Conversion Specifiers
 
-# Device Types
+## Device Types
 
 In order to use the device and driver support, the device type (DTYP) field of the
 record must be set to either:
 
-* "**F3RP61**" for accessing relays and registers on I/O modules, and
+* **`F3RP61`** for accessing relays and registers on I/O modules, and
   shared relays and shared registers,
-* "**F3RP61Seq**" or accessing internal devices ("D", "I", "B") of
+* **`F3RP61Seq`** or accessing internal devices (`D`, `I`, `B`) of
   the sequence CPUs on the same base unit, or
-* "**F3RP61SysCtl**" for controlling status LEDs and/or reading rotary
+* **`F3RP61SysCtl`** for controlling status LEDs and/or reading rotary
    switch position of the Linux CPU module.
 
-Note that F3RP71 also uses "F3RP61", "F3RP61Seq", and "F3RP61SysCtl"
+Note that F3RP71 also uses `F3RP61`, `F3RP61Seq`, and `F3RP61SysCtl`
 for its device type.
 
+## Record Types
 
-# Supported Record Types
-
-The table below shows the supported device type along with the
+The table below shows the supported PLC device types along with the
 relevant record types.
 
-| PLC&nbsp;device | Description                             |  DTYP      | &nbsp;Data&nbsp;width&nbsp; | Supported record types                                                                |
-|-----------------|-----------------------------------------|------------|-----------------------------|---------------------------------------------------------------------------------------|
-| X               | Input relays on input modules           | F3RP61     | 1-bit, 16-bit               | bi,     longin,          mbbiDirect,             mbbi,       ai                       |
-| Y               | Output relays on output modules         | F3RP61     | 1-bit, 16-bit               | bi, bo, longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                   |
-| I               | Internal relays                         | F3RP61Seq  | 1-bit, 16-bit               | bi, bo, longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                   |
-| E               | (Extended) Shared relays                | F3RP61     | 1-bit, 16-bit               | bi, bo, longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo                           |
-| M               | Special relays                          | F3RP61Seq  | 1-bit                       | bi, bo                                                                                |
-| M               | Mode registers on I/O modules           | F3RP61     |        16-bit               |         longin, longout  mbbiDirect, mbboDirect, mbbi, mbbo                           |
-| L               | Link relays (for FA Link and FL-net)    | F3RP61     | 1-bit, 16-bit               | bi, bo, longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo                           |
-| D               | Data registers                          | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao,                  |
-| B               | File registers                          | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao,                  |
-| F               | Cache registers                         | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao,                  |
-| R               | (Extented) Shared registers             | F3RP61     |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao,         waveform |
-| Z               | Special registers                       | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                   |
-| W               | Link registers (for FA Link and FL-net) | F3RP61     |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao,         waveform |
-| A               | Registers on special module             | F3RP61     |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao, si, so, waveform |
-| T               | Timer relays                            |            |                             |                                                                                       |
-| C               | Counter relays                          |            |                             |                                                                                       |
-| V               | Index registers                         |            |                             |                                                                                       |
-| r               | Shared memory                           | F3RP61     |        16-bit               |         longin, longout  mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                   |
+| PLC&nbsp;device | Description                             |  DTYP      | &nbsp;Data&nbsp;width&nbsp; | Supported record types                                                                          |
+|-----------------|-----------------------------------------|------------|-----------------------------|-------------------------------------------------------------------------------------------------|
+| X               | Input relays on input modules           | F3RP61     | 1-bit, 16-bit               | bi,     longin,          mbbiDirect,             mbbi,       ai,             waveform, aai      |
+| Y               | Output relays on output modules         | F3RP61     | 1-bit, 16-bit               | bi, bo, longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao,         waveform, aai, aao |
+| E               | (Extended) Shared relays                | F3RP61     | 1-bit, 16-bit               | bi, bo, longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo  ai, ao,         waveform, aai, aao |
+| L               | Link relays (for FA Link and FL-net)    | F3RP61     | 1-bit, 16-bit               | bi, bo, longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao,         waveform, aai, aao |
+| M               | Mode registers on I/O modules           | F3RP61     |        16-bit               |         longin, longout  mbbiDirect, mbboDirect, mbbi, mbbo  ao, ao,         waveform, aai, aao |
+| R               | (Extented) Shared registers             | F3RP61     |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao,         waveform, aai, aao |
+| W               | Link registers (for FA Link and FL-net) | F3RP61     |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao,         waveform, aai, aao |
+| A               | Registers on special module             | F3RP61     |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao, si, so, waveform, aai, aao |
+| r               | Shared memory                           | F3RP61     |        16-bit               |         longin, longout  mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
+| I               | Internal relays                         | F3RP61Seq  | 1-bit, 16-bit               | bi, bo, longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
+| M               | Special relays                          | F3RP61Seq  | 1-bit, 16-bit               | bi, bo, longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
+| D               | Data registers                          | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
+| B               | File registers                          | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
+| F               | Cache registers                         | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
+| Z               | Special registers                       | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
+| T               | Timer relays                            |            |                             |                                                                                                 |
+| C               | Counter relays                          |            |                             |                                                                                                 |
+| V               | Index registers                         |            |                             |                                                                                                 |
 
 **Note**: Special modules refer only to those modules accessed through
 READ/WRITE instruction of the sequence CPU modules, e.g. analog
 input/output, temperature control, PID control, high-speed counter,
 etc.
 
-
 The table below shows supported record types with DTYP fields used to
-access specific devices. Some record types accepts option following
-register number, in which register is treated as:
+access specific devices. Some record types accepts conversion specifier.
 
-* &U - unsigned integer (16-bit)
-* &L - long-word (32-bit) access
-* &B - binary-coded-decimal (BCD)
-* &F - Single precision floating point (32-bit)
-* &D - Double precision floating point (64-bit)
+| Record type   | DTYP         | Supported device                          | Supportedd conversion specifiers |
+|---------------|--------------|-------------------------------------------|----------------------------------|
+| bi            | F3RP61       | X, Y, E, L                                |                                  |
+| bo            | F3RP61       |    Y, E, L                                |                                  |
+| longin        | F3RP61       | X, Y, E, L, R, W, M, A  r                 | U, L, B                          |
+| longout       | F3RP61       |    Y, E, L, R, W, M, A  r                 | U, L, B                          |
+| mbbiDirect    | F3RP61       | X, Y, E, L, R, W, M, A, r                 | U, L                             |
+| mbboDirect    | F3RP61       |    Y, E, L, R, W, M, A, r                 | U, L                             |
+| mbbi          | F3RP61       | X, Y, E, L, R, W, M, A, r                 | U, L                             |
+| mbbo          | F3RP61       |    Y, E, L, W, R, M, A, r                 | U, L                             |
+| ai            | F3RP61       | X, Y, E, L, R, W, M, A  r                 | U, L, F, D                       |
+| ao            | F3RP61       |    Y, E, L, R, W, M, A  r                 | U, L, F, D                       |
+| aai, waveform | F3RP61       | X, Y, E, L, R, W, M, A, r                 | U, L, F, D                       |
+| aao           | F3RP61       |    Y, E, L, R, W, M, A, r                 | U, L, F, D                       |
+| si            | F3RP61       |                      A                    |                                  |
+| so            | F3RP61       |                      A                    |                                  |
+| bi            | F3RP61Seq    | I, M                                      |                                  |
+| bo            | F3RP61Seq    | I, M                                      |                                  |
+| longin        | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B                          |
+| longout       | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B                          |
+| mbbiDirect    | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                             |
+| mbboDirect    | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                             |
+| mbbi          | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                             |
+| mbbo          | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                             |
+| ai            | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, F, D                       |
+| ao            | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, F, D                       |
+| bi            | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3; System Stat. Reg. |                                  |
+| bo            | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3                    |                                  |
+| mbbi          | F3RP61SysCtl | Rotary Switch position                    |                                  |
 
-| Record type | DTYP         | **Supported device**                      | **Additional option supported**                                                         |
-|-------------|--------------|-------------------------------------------|-----------------------------------------------------------------------------------------|
-| bi          | F3RP61       | X, Y, E, L                                |                                                                                         |
-| bi          | F3RP61Seq    | I, M                                      |                                                                                         |
-| bi          | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3; System Stat. Reg. |                                                                                         |
-| bo          | F3RP61       |    Y, E, L                                |                                                                                         |
-| bo          | F3RP61Seq    | I, M                                      |                                                                                         |
-| bo          | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3                    |                                                                                         |
-| longin      | F3RP61       | X, Y, E, L, R, W,       r                 | U, L, B                                                                                 |
-| longin      | F3RP61       |                      A                    | U, L, B ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module  |
-| longin      | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B                                                                                 |
-| longout     | F3RP61       |    Y, E, L, R, W,       r                 | U, L, B                                                                                 |
-| longout     | F3RP61       |                      A                    | U, L, B ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module  |
-| longout     | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B                                                                                 |
-| ai          | F3RP61       | X, Y, E, L, R, W,       r                 | U, L, F, D                                                                              |
-| ai          | F3RP61       |                      A                    | U, L ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module     |
-| ai          | F3RP61Seq    | I,    D, B, F, Z                          | U, L, F, D                                                                              |
-| ao          | F3RP61       |    Y, E, L, R, W,       r                 | U, L, F, D                                                                              |
-| ao          | F3RP61       |                      A                    | U, L ; **note**: L option for 'A' register is supposed to use with XP01/XP02 module     |
-| ao          | F3RP61Seq    | I,    D, B, F, Z                          | U, L, F, D                                                                              |
-| si          | F3RP61       |                      A                    |                                                                                         |
-| so          | F3RP61       |                      A                    |                                                                                         |
-| mbbi        | F3RP61       | X, Y, E, L, R, W, M, A, r                 | U, L                                                                                    |
-| mbbi        | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                                                                                    |
-| mbbi        | F3RP61SysCtl | Rotary Switch position                    |                                                                                         |
-| mbbo        | F3RP61       |    Y, E, L, W, R, M, A, r                 | U, L                                                                                    |
-| mbbo        | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                                                                                    |
-| mbbiDirect  | F3RP61       | X, Y, E, L, R, W, M, A, r                 | U, L                                                                                    |
-| mbbiDirect  | F3RP61Seq    | I, M, D, B, F                             | U, L                                                                                    |
-| mbboDirect  | F3RP61       |    Y, E, L, R, W, M, A, r                 | U, L                                                                                    |
-| mbboDirect  | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                                                                                    |
-| waveform    | F3RP61       |                      A                    | **FTVL field**: DBF\_ULONG, DBF\_USHORT, DBF\_SHORT                                     |
-| waveform    | F3RP61       |             R, W,       r                 | **FTVL field**: DBF\_DOUBLE, DBF\_FLOAT, DBF\_LONG, DBF\_ULONG, DBF\_SHORT, DBF\_USHORT |
+**Notes**
+- Device `r` represents shared memory (or 'Old interface' for shared registers/relays).
+- In `aai`, `waveform`, and `aao` records, the supported `FTVL` fields are `DBF_DOUBLE`, `DBF_FLOAT`, `DBF_LONG`, `DBF_ULONG`, `DBF`_SHORT`, `DBF_USHORT`.
+- When the relay device is accessed by records other than `bi`/`bo`, the subsequent 16 relays are accessed as 16-bit data. In this case, the device number must be multiple of 16 plus 1, i.e., 1, 17, 33, 49, and so on.
 
-**Note**: Device "r" represents shared memory (or 'Old interface' for shared registers/relays).
+## Conversion Specifiers
+
+For some of supported record types, conversion specifier can be used in the `INP` / `OUT` field.
+The type conversion specifiers determines how to interpret he byte sequence in the registers (or relays) being read (or written) as follows:
+
+- (no specifier) - Treat 16-bit data as signed 16-bit integer.
+- &U - Treat as unsigned 16-bit integer.
+- &L - Treat two subsequent 16-bit data as 32-bit integer (long-word).
+- &B - Treat 16-bit data as binary-coded-decimal (BCD).
+  - In case of input record, 16-bit BCD data (0 – 9999) read from the
+device is converted to unsigned integer value and stored in the `VAL`
+field of the record. If the data from the device includes an invalid
+hexadecimal number (A – F), the invalid number is rounded to 9, and
+the alarm severity and the alarm status are set to `INVALID` / `HIGH`.
+  - In case of output record, integer value in `VAL` field is converted to
+16-bit BCD data (0 – 9999) and sent to the device. When the value is
+sent to the device, the value in `VAL` field higher than 9999 is
+rounded to 9999, and the negative value is rounded to 0. If the values
+is rounded to either 9999 or 0, the alarm severity and the alarm
+status are set to `INVALID` / `HW_LIMIT`.
+- &F - Interpret two subsequent 16-bit data as single precision floating point (32-bit)
+- &D - Interpret four subsequent 16-bit data as double precision floating point (64-bit)
+
+Not all the supported conversion specifiers are necessarily
+meaningful. For example, consider reading 32 subsequent special relays
+to an `ai` record using the `&F` conversion.
+
+## Reading / Writing an Array of Data
+
+'aai`, `waveform`, and `aao` records are supported to read / write an
+array of data from subsequent relays or registers. The supported
+`FTVL` fields are `DBF_DOUBLE`, `DBF_FLOAT`, `DBF_LONG`, `DBF_ULONG`,
+`DBF`_SHORT`, `DBF_USHORT`. The `FTVL` field and conversion specifier
+in the `INP`/`OUT` can be specified independently.
+
+Due to hardware constraints, such as limitations of the I/O module,
+the number of elements actually read or written (`NORD` field) may be
+smaller than the number of elements in the record (`NELM` field).
 
 
-# Accessing I/O Module
-## Accessing Input Relay (X)
+# Accessing Input Relays, Output Relays and Data Registers on I/O Modules (F3RP61 devices)
 
-Input relays are read-only devices. Binary input (bi) records,
-multi-binary input direct (mbbiDirect) records, long input (longin)
-records and analog input (ai) records are supported by the device
-support. The three numbers, a unit number, a slot number and an input
-relay number must be specified in the INP field as the following
-example shows.
+## Input / Output Link (`INP`/`OUT`) Fields for Input Relays, Output Relays and Data Registers
+
+The notation for input (`INP`) or output (`OUT`) link field for accessing I/O modules is as following:
+
+```
+field(INP, "@Uunit,Sslot,typenumber[&conversion")
+```
+
+e.g.
+
+```
+field(INP, "@U1,S2,X03&L")
+```
+
+- unit : Unit number (starts from 0)
+- slot : slot number (starts from 1)
+- type : CPU Device type such as Input relays or Data registers
+- number : device number (starts from 1)
+- conversion : Conversion specifier to interpret the byte sequence in the registers (or relays):
+  * (no specifier) - Treat 16-bit data as signed 16-bit integer
+  * &U - unsigned integer (16-bit)
+  * &L - long-word (32-bit) access
+  * &B - binary-coded-decimal (BCD)
+  * &F - Single precision floating point (32-bit)
+  * &D - Double precision floating point (64-bit)
+
+Optionally, PLC-like notation is supported for 'X' and 'Y' devices:
+
+```
+field(INP, "@typenumber[&conversion")
+```
+
+e.g.
+
+```
+field(INP, "@X10203&L")
+```
+
+Combination of supported record types and PLC devive types are described in [Record Types](#record-types).
+
+## Accessing Input Relays (X)
+
+Input relays are read-only devices. Binary input (`bi`) records,
+multi-binary input direct (`mbbiDirect`) records, long input
+(`longin`) records and analog input (`ai`) records are supported by
+the device support. The three numbers, a unit number, a slot number
+and an input relay number must be specified in the `INP` field as the
+following example shows.
 
 ```
 record(bi, "f3rp61_example_1") {
@@ -207,7 +281,7 @@ the first input relay (X1) of an I/O module in the second slot (S2) of
 the main unit (U0).
 
 The next example shows how to read 16 bits of status data on a group
-of input relays by using an mbbiDirect record.
+of input relays by using an `mbbiDirect` record.
 
 ```
 record(mbbiDirect, "f3rp61_example_2") {
@@ -216,9 +290,9 @@ record(mbbiDirect, "f3rp61_example_2") {
 }
 ```
 
-In this case, the number "1" as in "X1" specifies the first relay to
-read. The status bits on the 16 relays, X1, X2, ... , X16 are read into
-the B0, B1, ... , BF fields of the mbbiDirect record.
+In this case, the number `1` as in `X1` specifies the first relay to
+read. The status bits on the 16 relays, `X1`, `X2`, `X3`, ... are read
+into the `B0`, `B1`, `B2`, ... fields of the `mbbiDirect` record.
 
 The next example shows how to read a digital value of 16 bits on a
 group of input relays which represents a state from a range of up to
@@ -240,11 +314,12 @@ record(mbbi, "f3rp61_example_3") {
 ```
 
 In this case, it is assumed that the Least Significant Bit (LSB) is on
-X1 and the Most Significant Bit (MSB) is on X16, and the digital value
+`X1` and the Most Significant Bit (MSB) is on `X16`, and the digital value
 on the input relays is assumed to be unsigned short. The unsigned
-short value is set to RVAL field to determine the current state of
-this record out of 4 states. For example, when the unsigned short
-value is 4, this record represents "Error" state.
+short value is set to `RVAL` field to determine the current state of
+this record out of 4 states.
+For example, when the unsigned short value is 4, this record represents `Error` state.
+
 
 The next example shows how to read a digital value of 16 bits on a
 group of input relays by using longin records.
@@ -257,9 +332,9 @@ record(longin, "f3rp61_example_4") {
 ```
 
 In this case, it is assumed that the Least Significant Bit (LSB) is on
-X1 and the Most Significant Bit (MSB) is on X16, and the digital value
-on the input relays is assumed to be signed short. If the value is
-unsigned short, "&U" must follow the relay number as follows.
+`X1` and the Most Significant Bit (MSB) is on `X16`, and the digital
+value on the input relays is assumed to be signed short. If the value
+is unsigned short, `&U` must follow the relay number as follows.
 
 ```
 record(longin, "f3rp61_example_5") {
@@ -270,19 +345,20 @@ record(longin, "f3rp61_example_5") {
 
 The rules explained in the last two examples apply to the ai
 record. The value read from the input relays goes into the raw value
-(RVAL) field of the ai record.
+(`RVAL`) field of the ai record.
 
 
-##  Accessing Output Relay (Y)
+## Accessing Output Relays (Y)
 
-Output relays are read-write devices. Just replacing "X" with "Y"
+Output relays are read-write devices. Just replacing `X` with `Y`
 in the INP fields of the example records shown in the previous
 subsection suffices to read output relays.
 
-In order to write output relays, binary output (bo) records, multi-bit
-binary output direct (mbboDirect) records, long output (longout)
-records, and analog output (ao) records can be used. The following
-example shows how to write an output relay by using a bo record.
+In order to write output relays, binary output (`bo`) records,
+multi-bit binary output direct (`mbboDirect`) records, long output
+(`longout`) records, and analog output (`ao`) records can be used. The
+following example shows how to write an output relay by using a bo
+record.
 
 ```
 record(bo, "f3rp61_example_6") {
@@ -296,7 +372,7 @@ the first output relay (Y1) of an I/O module in the second slot (S2)
 of the main unit (U0).
 
 The next example shows how to write 16 bits of data onto a group of
-output relays by using an mbboDirect record.
+output relays by using an `mbboDirect` record.
 
 ```
 record(mbboDirect, "f3rp61_example_7") {
@@ -305,9 +381,9 @@ record(mbboDirect, "f3rp61_example_7") {
 }
 ```
 
-In this case, the number in "Y1" specifies the first relay to
-write. The 16-bits data of the mbboDirect record, B0, B1, ... , BF, are
-written onto the output relays, Y1, Y2, ... , Y16 respectively.
+In this case, the number in `Y1` specifies the first relay to
+write. The 16-bits data of the `mbboDirect` record, `B0`, `B1`, `B2`, ... are
+written onto the output relays, `Y1`, `Y2`, `Y3`, ... , respectively.
 
 The next example shows how to write a value of 16 bits onto a group of
 output relays by using an mbbo record.
@@ -331,10 +407,10 @@ record(mbbo, "f3rp61_example_8") {
 
 In this case, it is assumed that the Least Significant Bit (LSB) goes
 onto Y1 and the Most Significant Bit (MSB) goes onto Y16, and the
-value is unsigned short. The value set to VAL field is considered as
-an index of one of 5 states. If VAL is set to 3 which represents
-"Forward", RVAL is set to 4 according to THVL, and then the value in
-RVAL is finally written to Y1 - Y16 as an unsigned short value.
+value is unsigned short. The value set to `VAL` field is considered as
+an index of one of 5 states. If `VAL` is set to 3 which represents
+`Forward`, `RVAL` is set to 4 according to THVL, and then the value in
+RVAL is finally written to `Y1` - `Y16` as an unsigned short value.
 
 The next example shows how to write a value of 16 bits onto a group of
 output relays by using a longout record.
@@ -348,7 +424,7 @@ record(longout, "f3rp61_example_9") {
 
 In this case, it is assumed that the Least Significant Bit (LSB) goes
 onto Y1 and the Most Significant Bit (MSB) goes onto Y16, and the
-value is signed short. If the value is unsigned short, "&U" must
+value is signed short. If the value is unsigned short, `&U` must
 follow the relay number as follows.
 
 ```
@@ -359,24 +435,19 @@ record(longout, "f3rp61_example_10") {
 ```
 
 The rules explained in the last two examples apply to the ao
-record. The value in the raw value (RVAL) field of the ao record is
+record. The value in the raw value (`RVAL`) field of the ao record is
 written onto the output relays.
 
 
-##  Accessing Data Register
+## Accessing Data Registers (A)
 
 Analog I/O modules and other special modules, such as motion control
 modules, etc., have many registers to hold the I/O data and relevant
-parameters. In order to read / write these registers, longin /
-longout, ai / ao and mbbiDirect / mbboDirect records are
-supported. While some of the registers hold 32-bit data, the device and
-driver support supports only reading / writing a value of 16
-bits. 32-bit registers must be read / written, according to the
-specification of the I/O module, by using two records, one for the
-upper half and the other for the lower half of the 32 bits of the
-value.
+parameters. In order to read / write these registers, `longin` /
+`longout`, `ai` / `ao`, and `mbbiDirect` / `mbboDirect` records are
+supported.
 
-The following example shows how to use a longin record to read a
+The following example shows how to use a `longin` record to read a
 16-bit register.
 
 ```
@@ -389,7 +460,7 @@ record(longin, "f3rp61_example_11") {
 The above record reads a value of 16-bit data from the first register
 (A1) of a module in the third slot (S3) of the main unit (U0).
 
-The following example shows how to use a longout record to write a
+The following example shows how to use a `longout` record to write a
 16-bit register.
 
 ```
@@ -402,15 +473,17 @@ record(longout, "f3rp61_example_12") {
 The above record writes a value of 16-bit data onto the first register
 (A1) of a module in the third slot (S3) of the main unit (U0).
 
-The rules in the above two examples apply to ai /ao, mbbiDirect /
-mbboDirect records. The value read from (written onto) the device
-comes in (goes out) via the RVAL field of the records.
+The rules in the above two examples apply to `ai` / `ao`, `mbbiDirect`
+/ `mbboDirect` records. The value read from (written onto) the device
+comes in (goes out) via the `RVAL` field of the records.
 
 
-### Using 'unsigned' value option
+<!--
+### Using 'unsigned' conversion specifier
 
-As to longin and ai type records, the "&U" option can be specified at
-the end of the INP field to read unsigned 16-bit data as shown below.
+As to longin and ai type records, the `&U` conversion specifier can be
+specified at the end of the INP field to read unsigned 16-bit data as
+shown below.
 
 ```
 record(longin, "f3rp61_example_13") {
@@ -418,25 +491,26 @@ record(longin, "f3rp61_example_13") {
     field(INP, "@U0,S3,A1&U")
 }
 ```
+-->
 
+<!--
+### Using 'binary-coded-decimal (BCD)' conversion specifier
 
-### Using 'binary-coded-decimal (BCD)' option
-
-As to longin and longout type records, "&B" option can be specified at
-the end of INP or OUT field.
+As to longin and longout type records, `&B` conversion specifier can
+be specified at the end of INP or OUT field.
 
 In case of input record, 16-bit BCD data (0 – 9999) read from the
-device is converted to unsigned integer value and stored in the VAL
+device is converted to unsigned integer value and stored in the `VAL`
 field of the record. If the data from the device includes an invalid
 hexadecimal number (A – F), the invalid number is rounded to 9, and
-the alarm severity and the alarm status are set to INVALID / HIGH.
+the alarm severity and the alarm status are set to `INVALID` / `HIGH`.
 
-In case of output record, integer value in VAL field is converted to
+In case of output record, integer value in `VAL` field is converted to
 16-bit BCD data (0 – 9999) and sent to the device. When the value is
-sent to the device, the value in VAL field higher than 9999 is rounded
-to 9999, and the negative value is rounded to 0. If the values is
-rounded to either 9999 or 0, the alarm severity and the alarm status
-are set to INVALID / HW\_LIMIT.
+sent to the device, the value in `VAL` field higher than 9999 is
+rounded to 9999, and the negative value is rounded to 0. If the values
+is rounded to either 9999 or 0, the alarm severity and the alarm
+status are set to `INVALID` / `HW_LIMIT`.
 
 Usage is shown below.
 
@@ -450,13 +524,15 @@ record(longout, "f3rp61_example_15") {
     field(OUT, "@U0,S3,A1&B")
 }
 ```
+-->
 
-
+<!--
 ### Read an array of data
 
-Waveform type records are supported to read out an array of data from
-the registers of I/O intelligent modules. The allowed values of FTVL
-(Field Type of VaLue) are SHORT, USHORT, and ULONG.
+'aai`, `waveform`, and `aao` records are supported to read / write an
+array of data from the relays or registers of I/O modules.  The
+supported `FTVL` fields are `DBF_DOUBLE`, `DBF_FLOAT`, `DBF_LONG`,
+`DBF_ULONG`, `DBF`_SHORT`, `DBF_USHORT`.
 
 The following example shows how to read successive 8 registers of an
 intelligent module in Slot 3 of Unit 0. The address, A1, specifies the
@@ -470,18 +546,48 @@ record(waveform, "f3rp61_example_16") {
     field(NELM, "8")
 }
 ```
-
+-->
 
 ## Accessing Mode Register
 
-Non-intelligent digital I/O modules have mode registers to hold the
-scan rates, interrupt raising conditions (rising edge / falling edge),
-filtering conditions of the I/O channels. In order to access the mode
-registers, an mbbiDirect /mbboDirect record can be used with a
-character for addressing, "M", in the INP / OUT field of the records.
+Non-intelligent digital I/O modules have mode registers which hold
+settings for input sampling period, input filter time constant,
+interrupt edge (rising or falling), or output on faiulre (hold or
+reset).
 
-The following example shows how to use an mbbiDirect record to read a
-16-bit register.
+Following iocsh commands will read back these values for the I/O
+module in the specified unit and slot. When unit is omitted, it is
+treated as 0.
+
+```shell
+f3rp61GetInputSampling [unit] slot
+f3rp61GetInterruptEdge [unit] slot
+f3rp61GetInputFilter   [unit] slot
+f3rp61GetOutputHold    [unit] slot
+```
+
+Following iocsh commands will set these values for specified unit and
+slot. When unit is omitted, it is treated as 0.
+
+```shell
+f3rp61SetInputSampling [unit] slot ch val
+f3rp61SetInterruptEdge [unit] slot ch val
+f3rp61SetInputFilter   [unit] slot ch val
+f3rp61SetOutputHold    [unit] slot ch val
+```
+
+The usage will be shown, for example by `help f3rp61SetInterrupEdge` (available from EPICS base R7.0.4 onwards).
+
+Refer to User's Manual for the detail of channels and values:
+
+- F3RP70 / F3RP71
+  - **IM 34M06M52-02E**, "e-RT3 CPU Module (SDRD␣2) BSP Common Function Manual", 4.4 Mode register access
+  - **IM 34M06M52-22E**, "e-RT3 Linux BSP (SFRD12) Programming Manual", 4.5.1 I/O module
+- F3RP61
+  - **IM 34M06M51-32E**, "e-RT3 CPU Module (F3RP6␣) BSP Common Function Manual", 4.4 Mode register access
+  - **IM 34M06M51-44E**, "RTOS-CPU module (F3RP61-␣␣) Linux BSP Reference Manual", 1.4.8 ioctl
+
+Mode registers can also be read and written as EPICS records by specifying `M` device in INP / OUT field, for example:
 
 ```
 record(mbbiDirect, "f3rp61_example_17") {
@@ -490,6 +596,7 @@ record(mbbiDirect, "f3rp61_example_17") {
 }
 ```
 
+<!--
 The above record reads a value of 16-bit data from the first mode
 register (M1) of a non-intelligent digital I/O module in the third
 slot (S3) of the main unit (U0).
@@ -520,9 +627,9 @@ behavior is just a specification or a bug of the mbbo record. At any
 rate, if you complete setting the conditions on a digital I/O module
 bit by bit by using B0, B1, B2, …, BF fields of an mbbo record, you
 are free from the problem mentioned above.
+-->
 
-
-# Handling Special Module
+## Handling Special Module
 
 This section describes how to handle special modules that require some
 sequence logic to execute I/O operations. As an example, we consider a
@@ -626,8 +733,86 @@ control module, and to handle exceptions that can occur in the
 sequence (for example, an error caused by a wrong parameter set by the
 user).
 
+## I/O Interrupt Support
 
-# Important Notice on Using Linux CPU in Multi-CPU Configuration
+Digital input modules of FA-M3 can interrupt the Linux CPU when they
+detect a rising edge or falling edge of the input signals. The
+kernel-level driver of the BSP can transform the interrupt into a
+message to a user-level process. Based on the function, processing
+records by I/O interrupt is supported with the device and driver
+support. Any records that have the `DTYP` field value of `F3RP61` and
+the `SCAN` field `I/O Intr` get processed upon an interrupt on a
+specified channel of the specified module. This feature allows you to
+trigger a read / write operation by external trigger signals.
+
+Suppose a unit which comprises of an F3RP71 in slot 1, a digital input
+module in slot2, and an A/D module in slot 3. The following record
+reads the first data register (A1) of the A/D module upon a trigger
+input into the first channel (X1) of the digital input module. (The
+`INP` field format takes the form of
+"@I/O\_data\_channel:interrupt\_source".)
+
+```
+record(ai, "f3rp61_example_46") {
+    field(DTYP, "F3RP61")
+    field(SCAN, "I/O Intr")
+    field(INP, "@U0,S3,A1:U0,S2,X1")
+}
+```
+
+If you have a D/A module in slot 4, in addition to the module
+configuration mentioned above, you can write an output value into the
+first data register (A1) of the D/A module upon the same trigger input
+by using the following record.
+
+```
+record(ao, "f3rp61_example_47") {
+    field(DTYP, "F3RP61")
+    field(SCAN, "I/O Intr")
+    field(OUT, "@U0,S4,A1:U0,S2,X1")
+}
+```
+
+The following example might seem a little bit strange, but it helps
+you see how quick the Linux CPU can respond to interrupts.
+
+```
+record(bi, "f3rp61_example_48") {
+    field(DTYP, "F3RP61")
+    field(SCAN, "I/O Intr")
+    field(INP, "@U0,S2,X1:U0,S2,X1")
+}
+```
+
+The `bi` record reads the status (level) of the relay for the trigger
+input. Suppose the trigger signal is a pulse and the digital module
+generates an interrupt at the rising edge. If the `bi` record reads
+the status before the signal level falls down, the record reads the
+status of "on" (1). Otherwise, it reads the status of "off" (0). By
+changing the pulse duration with checking the record value, you can
+roughly measure the time required for the record to get processed with
+the rising edge of the trigger signal as the starting point.
+
+
+# Accessing Shared Relays and Shared Registers
+
+There are two ways to access the sequence CPU from the Linux CPU: One
+is a shared-memory-based method and the other is message-based one.
+The former is synchronous access that completes instantly, just like
+the access to the I/O relays and registers of an I/O module. The
+latter is asynchronous and takes a few milliseconds to complete. For
+this reason, two different `DTYP`s are defined in the device and driver
+support, namely `F3RP61` for the former (synchronous) and `F3RP61Seq`
+for the latter (asynchronous).
+
+This section describes the shared-memory-based method, which specifies
+`F3RP61` for the `DTYP` field:
+
+```
+field(DTYP, "F3RP61")
+```
+
+## Important Notice on Using Linux CPU in Multi-CPU Configuration
 
 This section gives you an important notice on using a Linux CPU
 together with sequence CPUs on the same unit.
@@ -640,8 +825,8 @@ case, one have to pay attention to the following two points:
 - The sequence CPU must be in the first slot (slot 1). The CPU in the
   first slot becomes the master of the unit, which resets the whole
   system upon rebooting.
-- The F3RP71 should NOT access, regardless of read or write, to those
-  I/O modules used by the sequence CPU for the interlock system.
+- The Linux CPU **should NOT** access, regardless of read or write, to
+  those I/O modules used by the sequence CPU for the interlock system.
 
 The reason of the second point is as follows. If an I/O module is
 accessed by a Linux CPU, the I/O module recognizes and remembers that
@@ -653,33 +838,20 @@ when they detect the signal. It makes the I/O modules inaccessible by
 the sequence CPU and makes the ladder program stop with I/O
 errors. For this reason, it is highly recommended that you make the
 Linux CPU read the status of interlock indirectly via some internal
-devices ("I", "D", "B") of the sequence CPU or, through the shared
-devices ("E", "R") by using a method described in the next section.
+devices (`I`, `D`, `B`) of the sequence CPU or, through the shared
+devices (`E`, `R`) by using a method described in the next section.
 
 On the other hand, if one or more I/O modules are used with a Linux
 CPU for some control in the multi-CPU configuration, you need to tell
 the sequence CPU not to touch the I/O modules under the Linux CPU's
 control. This setting can be done on the sequence CPU by using the
 ladder development software, WideField3 (or WideField2). From the menu
-of your "Project", select "Configuration" and then, select "DIO
-Setup". Change the default setup from "Use" to "Not used" for the I/O
+of your `Project`, select `Configuration` and then, select `DIO
+Setup`. Change the default setup from `Use` to `Not used` for the I/O
 modules. Otherwise, the sequence CPU overwrites the data of the output
 channels of the modules with the value of zero even when any I/O
 execution commands on the I/O modules do not appear explicitly in the
 ladder program.
-
-
-# Communication with Sequence CPU
-
-Two different types of methods are supported for a Linux CPU to
-communicate with sequence CPUs that work on the same base unit. One is
-shared-memory-based communication and the other is message-based
-communication. The former is synchronous access that finishes
-instantly, just like the access to the I/O relays and registers of an
-I/O module. The latter is asynchronous and takes a few milliseconds to
-complete. For this reason, two different DTYPs are defined in the
-device and driver support, namely "F3RP61" for the former (synchronous)
-and "F3RP61Seq" for the latter (asynchronous).
 
 
 ## Communication Based on Shared Device
@@ -710,13 +882,13 @@ shown in the figure below.
 The device and driver support make use of APIs for shared device
 (i.e., shared relays and shared registers), which are available in
 F3RP71 BSP (R1.03 or later), as well as in F3RP61 BSP (R2.01 or
-later). Calling f3rp61ComDeviceConfigure() prior to iocInit() in the
-IOC start-up script (st.cmd) allocates shared devices for specified
-CPU:
+later). Calling `f3rp61SetSharedDeviceConfig` command prior to
+`iocInit` in the IOC start-up script (st.cmd) allocates shared devices
+for specified CPU:
 
 ```shell
-f3rp61ComDeviceConfigure(0, 512, 256, 64, 32)
-f3rp61ComDeviceConfigure(1, 512, 256, 64, 32)
+f3rp61SetSharedDeviceConfig 0 512 256 64 32
+f3rp61SetSharedDeviceConfig 1 512 256 64 32
 ```
 
 The first line allocates 512 shared relays, 256 words of shared
@@ -728,19 +900,49 @@ the CPU in slot 2 (e.g., F3RP71 CPU).  Note that indices starts from
 sequence CPU shall be consistent with Inter-CPU Shared Memory Setup in
 WideField3.
 
+The former name of `f3rpSetSharedDeviceConfig`,
+`f3rp61ComDeviceConfigure` has also been retained for backward
+compatibility.
 
-#### Notes on Using Shared Device with F3RP71 (**not** F3RP61)<a name="SharedDeviceWithF3RP71"></a>
+The `f3rp61GetSharedDeviceConfig` command will read back the
+shared device configuration from all CPUs.
 
-Make sure that, when using F3RP71 (**not** F3RP61) in a multi-CPU
-configuration, "Non-Simultaneous" is selected for "Shared Refreshed
-Data" in Inter-CPU Shared Memory Setup.  Otherwise even if F3RP71
-writes anything to the shared memory, it looks like as if nothing has
-been modified when read from the sequence CPU.  Refer to following
-manuals for the detail: - **IM 34M06M52-02E**, "e-RT3 CPU Module
-(SFRD␣2) BSP Common Function Manual", 5.2 Shared device - **IM
-34M06Q16-02E**, "FA-M3 Programming Tool WideField3 (Offline)", D3.1.13
-Inter-CPU Shared Memory Setup.
 
+#### Notes on Using Shared Device with F3RP70 or F3RP71 (**not** F3RP61)<a name="SharedDeviceWithF3RP71"></a>
+
+Make sure that, when using F3RP70 or F3RP71 (**not** F3RP61) in a
+multi-CPU configuration, `Non-Simultaneous` is selected for `Shared
+Refreshed Data` in Inter-CPU Shared Memory Setup.  Otherwise even if
+F3RP71 writes anything to the shared memory, it looks like as if
+nothing has been modified when read from the sequence CPU.  Refer to
+following manuals for the detail:
+
+- **IM 34M06M52-02E**, "e-RT3 CPU Module (SFRD␣2) BSP Common Function Manual", 5.2 Shared device
+- **IM 34M06Q16-02E**, "FA-M3 Programming Tool WideField3 (Offline)", D3.1.13 Inter-CPU Shared Memory Setup.
+
+#### Input / Output Link (INP/OUT) Fields for Shared Relays / Registers
+
+The notation for input (`INP`) or output (`OUT`) link field for accessing shared relays and registers is as following:
+
+```
+field(INP, "@typenumber[&conversion")
+```
+
+e.g.
+
+```
+field(INP, "@R003&L")
+```
+
+- type : Device type
+- number : device number
+- conversion : Conversion specifier to interpret the byte sequence in the registers (or relays):
+  * (no specifier) - Treat 16-bit data as signed 16-bit integer
+  * &U - unsigned integer (16-bit)
+  * &L - long-word (32-bit) access
+  * &B - binary-coded-decimal (BCD)
+  * &F - Single precision floating point (32-bit)
+  * &D - Double precision floating point (64-bit)
 
 #### Reading/Writing Shared Relays (1-bit variables)
 
@@ -772,20 +974,10 @@ this case, the relay (E1) must be allocated to the Linux CPU as
 mentioned earlier.
 
 
-#### Reading/Writing  Shared Registers (16-bit variables)
+#### Reading/Writing Shared Registers
 
-Shared registers are 16-bit variables that can be accessed with
-records of the following types:
-
-* longin, longout (available options: "L" - long, "B" - binary-coded-decimal);
-* ai, ao (available options: "L", "F" – float, "D" - double);
-* mbbi, mbbo;
-* mbbiDirect, mbboDirect;
-* waveform.
-
-Some types have additional options that describe in what format the
-value will be stored in the VAL field of the record. Usage of each
-record type and its options are described with the examples below.
+Shared registers are read-write devices. Usage of each record type
+and its conversion specifier is described with the examples below.
 
 The following example shows how to read a shared register by using a
 longin record.
@@ -800,9 +992,10 @@ record(longin, "f3rp61_example_21") {
 The longin record can be used to read the first shared register
 (R1). In this case, the register (R1) can be allocated to any CPU.
 
-The following example shows the usage of "B" option. Shared register
-value that is read from a register is regarded as BCD format,
-converted to integer value, and then stored in the VAL field as such.
+The following example shows the usage of "B" conversion
+specifier. Shared register value that is read from a register is
+regarded as BCD format, converted to integer value, and then stored in
+the VAL field as such.
 
 
 ```
@@ -838,8 +1031,9 @@ The longout record can be used to write the first shared register
 (R1). In this case, the register (R1) must be allocated to the Linux
 CPU.
 
-The following example shows usage of "B" option. Value in the VAL
-field is converted to BCD format and written to a shared register.
+The following example shows usage of "B" conversion specifier. Value
+in the VAL field is converted to BCD format and written to a shared
+register.
 
 ```
 record(longout, "f3rp61_example_25") {
@@ -886,8 +1080,8 @@ record(ai, "f3rp61_example_28") {
 
 If two registers, say, R1 and R2, are written by a Sequence CPU to
 transfer a float type (32-bits) value, it can be read by using the
-following record, of which INP field value has the address "@R1" with
-the trailing "&F".
+following record, of which INP field value has the address `@R1` with
+the trailing `&F`.
 
 ```
 record(ai, "f3rp61_example_29") {
@@ -896,10 +1090,10 @@ record(ai, "f3rp61_example_29") {
 }
 ```
 
-If four registers, say, R1, R2, R3 and R4, are written by a Sequence
+If four registers, say, `R1`, `R2`, `R3` and `R4`, are written by a Sequence
 CPU to transfer a double type (64-bits) value, it can be read by using
-the following record, of which INP field value has the address "@R1"
-with the trailing "&D".
+the following record, of which INP field value has the address `@R1`
+with the trailing `&D`.
 
 ```
 record(ai, "f3rp61_example_30") {
@@ -978,12 +1172,11 @@ write the shared registers.
 
 ### Communication Based on Shared Memory Using Old Interface
 
-The author recommends that you choose the method to access the shared
-device (shared relays and shared registers) based on the new APIs
-since it is much easier to understand. The device and driver support,
-however, still supports accessing the shared memory based on the old
-APIs for backward compatibility. If you choose this option, you need
-to know the following points.
+It is strongly recommended to use the new APIs to access shared relays
+and shared registers, which is much easier to understand.  This device
+and driver support, however, still supports the old shared memory APIs
+for the backward compatibility.  To use the old APIs you need to know
+the following points.
 
 * While a sequence CPU can access shared relays bit by bit, an F3RP61
     CPU can access the shared relays only by word.
@@ -1095,15 +1288,49 @@ Ai / ao and longin / longout, are also supported to read / write the
 shared registers.
 
 
-## Accessing Internal Device of Sequence CPU
+# Accessing Internal Relays or Data/File/Cache Registes on Sequence CPU (F3RP61Seq devices)
 
 The alternative method for a Linux CPU to communicate with a sequence
-CPU is to use the message-based transaction. It enables the Linux CPU
-to access internal relays and registers of the sequence CPU. Currently
-supported by the device support are internal relays "I", internal
-registers "D", file registers "B", and cache registers "F".
+CPU is to use the message-based communicaion transaction, which
+specifies `F3RP61Seq` for the `DTYP` field:
 
-Record types that support access to internal relays are bi and bo.
+```
+field(DTYP, "F3RP61")
+```
+
+It enables the Linux CPU to access internal relays and registers of
+the sequence CPU. Currently supported by the device support are
+internal relays `I`, internal registers `D`, file registers `B`, and
+cache registers `F`.
+
+
+## Input / Output Link (INP/OUT) Fields
+
+The notation for input (`INP`) or output (`OUT`) link field for `F3RP61Seq` device is as following:
+
+```
+field(INP, "@CPUcpu,typenumber[&conversion]")
+```
+
+e.g.
+
+```
+field(INP, "@CPU1,I00003&L")
+```
+
+- cpu  : CPU number (starts from 1)
+- slot : slot number (starts from 1)
+- type : CPU Device type such as Input relays or Data registers
+- number : device number (starts from 1)
+- conversion : Conversion specifier to interpret the byte sequence in the registers (or relays):
+  * (no specifier) - Treat 16-bit data as signed 16-bit integer
+  * &U - unsigned integer (16-bit)
+  * &L - long-word (32-bit) access
+  * &B - binary-coded-decimal (BCD)
+  * &F - Single precision floating point (32-bit)
+  * &D - Double precision floating point (64-bit)
+
+Combination of supported record types and PLC devive types are described in [Supported Record Types](#supported-record-types).
 
 The following example shows how to set (1)/ reset (0) an internal
 relay ("I"), say, "I4", of CPU1 (a sequence CPU in slot 1).
@@ -1115,7 +1342,7 @@ record(bo, "f3rp61_example_40") {
 }
 ```
 
-Note that the device type must be "F3RP61Seq" in this case. In order
+Note that the device type must be `F3RP61Seq` in this case. In order
 to read back the result, you can use the following record.
 
 ```
@@ -1125,17 +1352,9 @@ record(bi, "f3rp61_example_41") {
 }
 ```
 
-Record types that provide access to internal registers "D", file
-registers "B", cache registers "F" are:
-
-* longin, longout,
-* ai, ao,
-* mbbi, mbbo,
-* mbbiDirect, mbboDirect.
-
 Record types longin/longout support a BCD (binary-coded-decimal)
-option. Usage and detailed explanation are provided with the examples
-below.
+conversion specifier. Usage and detailed explanation are provided with
+the examples below.
 
 In order to write a data register ("D"), say, "D7", of CPU1 (a
 sequence CPU in slot 1), the following record can be used.
@@ -1156,9 +1375,10 @@ record(longin, "f3rp61_example_43") {
 }
 ```
 
-The following example shows the usage of "B" option. Shared register
-value that is read from a register is regarded as BCD format,
-converted to integer value, and then stored in the VAL field as such.
+The following example shows the usage of "B" conversion
+specifier. Shared register value that is read from a register is
+regarded as BCD format, converted to integer value, and then stored in
+the VAL field as such.
 
 ```
 record(longin, "f3rp61_example_44") {
@@ -1167,9 +1387,9 @@ record(longin, "f3rp61_example_44") {
 }
 ```
 
-The following example shows the usage of "B" option for output
-record. Value in the VAL field is converted to BCD format and written
-to a shared register.
+The following example shows the usage of "B" conversion specifier for
+output record. Value in the VAL field is converted to BCD format and
+written to a shared register.
 
 ```
 record(longout, "f3rp61_example_45") {
@@ -1177,67 +1397,6 @@ record(longout, "f3rp61_example_45") {
     field(OUT, "@CPU1,D7")
 }
 ```
-
-
-# I/O Interrupt Support
-
-Digital input modules of FA-M3 can interrupt the Linux CPU when they
-detect a rising edge or falling edge of the input signals. The
-kernel-level driver of the BSP can transform the interrupt into a
-message to a user-level process. Based on the function, processing
-records by I/O interrupt is supported with the device and driver
-support. Any records that have the DTYP field value of "F3RP61" and
-the SCAN value of "I/O Intr" get processed upon an interrupt on a
-specified channel of the specified module. This feature allows you to
-trigger a read / write operation by external trigger signals.
-
-Suppose a unit which comprises of an F3RP71 in slot 1, a digital input
-module in slot2, and an A/D module in slot 3. The following record
-reads the first data register (A1) of the A/D module upon a trigger
-input into the first channel (X1) of the digital input module. (The
-INP field format takes the form of
-"@I/O\_data\_channel:interrupt\_source".)
-
-```
-record(ai, "f3rp61_example_46") {
-    field(DTYP, "F3RP61")
-    field(SCAN, "I/O Intr")
-    field(INP, "@U0,S3,A1:U0,S2,X1")
-}
-```
-
-If you have a D/A module in slot 4, in addition to the module
-configuration mentioned above, you can write an output value into the
-first data register (A1) of the D/A module upon the same trigger input
-by using the following record.
-
-```
-record(ao, "f3rp61_example_47") {
-    field(DTYP, "F3RP61")
-    field(SCAN, "I/O Intr")
-    field(OUT, "@U0,S4,A1:U0,S2,X1")
-}
-```
-
-The following example might seem a little bit strange, but it helps
-you see how quick the Linux CPU can respond to interrupts.
-
-```
-record(bi, "f3rp61_example_48") {
-    field(DTYP, "F3RP61")
-    field(SCAN, "I/O Intr")
-    field(INP, "@U0,S2,X1:U0,S2,X1")
-}
-```
-
-The bi record reads the status (level) of the relay for the trigger
-input. Suppose the trigger signal is a pulse and the digital module
-generates an interrupt at the rising edge. If the bi record reads the
-status before the signal level falls down, the record reads the status
-of "on" (1). Otherwise, it reads the status of "off" (0). By changing
-the pulse duration with checking the record value, you can roughly
-measure the time required for the record to get processed with the
-rising edge of the trigger signal as the starting point.
 
 
 # FL-net Support
@@ -1254,9 +1413,9 @@ following IOC command in the startup script for the Linux CPU to
 specify how many link relays and link registers are allocated to each
 of the links.
 
-```c
-f3rp61LinkDeviceConfigure(0, 512, 256)
-f3rp61LinkDeviceConfigure(1, 512, 256)
+```shell
+f3rp61SetLinkDeviceConfig 0 512 256
+f3rp61SetLinkDeviceConfig 1 512 256
 ```
 
 The command needs to be executed prior to the call to iocInit(). The
@@ -1266,6 +1425,13 @@ same numbers of link relays and link registers are allocated to
 Link2(1 + 1). The Linux CPU can handle up to two FL-net interface
 modules, i.e., up to two links though the author have tested only one
 link so far.
+
+The former name of `f3rpSetLinkDeviceConfig`,
+`f3rp61LinkDeviceConfigure` has also been retained for backward
+compatibility.
+
+The `f3rp61GetLinkDeviceConfig` command will read back the shared
+device configuration from all nodes.
 
 Allocation of the link relays and link registers to each of the nodes
 on a link needs to be done on a sequence CPU-side by using WideField3
@@ -1288,10 +1454,10 @@ record(bi, "f3rp61_example_49") {
 ```
 
 The bi record can be used to read the first link relay allocated to a
-node on the Link1(0 + 1). The first zero of "L00001" subsequent to the
-leading "L" specifies the link1(0 + 1) and the trailing "0001"
+node on the Link1(0 + 1). The first zero of `L00001` subsequent to the
+leading `L` specifies the link1(0 + 1) and the trailing `0001`
 specifies the address of the link relay on the link. (The first link
-relay of the Link2(1 + 1) can be addressed by "L10001".) In this case,
+relay of the Link2(1 + 1) can be addressed by `L10001`.) In this case,
 since it is a read access, the link relay can be allocated to any of
 the nodes on the link.
 
@@ -1318,11 +1484,11 @@ record(longin, "f3rp61_example_51") {
 ```
 
 The longin record can be used to read the first link register
-allocated to a node on the Link1(0 + 1). The first zero of "W00001"
-subsequent to the leading "W" specifies the link1(0 + 1) and the
-trailing "0001" specifies the address of the link register on the
+allocated to a node on the Link1(0 + 1). The first zero of `W00001`
+subsequent to the leading `W` specifies the link1(0 + 1) and the
+trailing `0001` specifies the address of the link register on the
 link. (The first link register of the Link2(1 + 1) can be addressed by
-"W10001".) In this case, since it is a read access, the link register
+`W10001`.) In this case, since it is a read access, the link register
 can be allocated to any of the nodes on the link.
 
 The following example shows how to write a link register.
@@ -1339,19 +1505,22 @@ allocated to a node on the Link1(0 + 1). In this case, since it is a
 write access, the register must be allocated to the Linux CPU as a
 node on the link.
 
+<!--
 In order to read / write long word (32-bits) values by using longin /
-longout records, "&L"-option can be used as explained in 6.1.1 in the
-case of shared registers. The rule also applies to link registers with
-replacing "R" with "W".
+longout records, `&L` conversion specifier can be used as explained in
+6.1.1 in the case of shared registers. The rule also applies to link
+registers with replacing `R` with `W`.
 
-Ai / ao record types are also supported to read / write link
-registers. The options to read / write a long word (32-bits) value, a
-float type (32-bits) value, and a double type (64-bits) value are
-available as in the case of reading / writing shared registers.
+`ai` / `ao` record types are also supported to read / write link
+registers. The conversion specifier to read / write a long word
+(32-bits) value, a float type (32-bits) value, and a double type
+(64-bits) value are available as in the case of reading / writing
+shared registers.
 
 Waveform type records are supported to read out an array of data from
-link registers. The value of FTVL (Field Type of VaLue) must match
-with the type of the data written by the Sequence CPU.
+link registers.  The `FTVL` field and conversion specifier in the
+`INP`/`OUT` can be specified independently.
+-->
 
 The following example shows how to read successive 256 float values
 (on 512 words of registers). The address, W00001, specifies the first
@@ -1378,7 +1547,7 @@ an rotary switch that is used to control boot option for the Linux
 CPU. Device support provides functionality to control those LEDs, read
 position of the rotary switch and read the status register (battery
 status) using EPICS database records. In that case, DTYP of the record
-must be set to "F3RP61SysCtl". Additionally, there is iocsh command
+must be set to `F3RP61SysCtl`. Additionally, there is iocsh command
 available to control status LEDs.
 
 
@@ -1405,7 +1574,7 @@ f3rp61SetLED Run 1
 ```
 
 This command only reads first letter of the string. Thus, **R**, **A**,
-and **E** are interpreted as "Run", "Alarm" and "Error" respectively.
+and **E** are interpreted as **Run**, **Alarm** and **Error** respectively.
 
 The usage of bo records to set status LEDs is shown in the following
 example for **Run** LED:
@@ -1417,7 +1586,7 @@ record(bo, "f3rp61_example_54") {
 }
 ```
 
-To control **U1** LED change to OUT field to "@SYS,L1" as shown below:
+To control **U1** LED change to OUT field to `@SYS,L1` as shown below:
 
 ```
 record(bo, "f3rp61_example_55") {
@@ -1426,7 +1595,7 @@ record(bo, "f3rp61_example_55") {
 }
 ```
 
-Set OUT field to "@SYS,LA", "@SYS,LE", "@SYS,L2", "@SYS,L3" to control
+Set OUT field to `@SYS,LA`, `@SYS,LE`, `@SYS,L2`, @SYS,L3` to control
 **Alarm**, **Error**, **U2**, **U3** LEDs, respectively.
 
 The following example shows how to read status of **Run** LED:
@@ -1438,7 +1607,7 @@ record(bi, "f3rp61_example_56") {
 }
 ```
 
-Set INP field to "@SYS,LA", "@SYS,LE", "@SYS,L2", "@SYS,L3" to read
+Set INP field to `@SYS,LA`, `@SYS,LE`, `@SYS,L2`, `@SYS,L3` to read
 status of **Alarm**, **Error**, **U2**, **U3** LEDs, respectively.
 
 

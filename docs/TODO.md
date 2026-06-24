@@ -8,6 +8,7 @@ TODO list for F3RP70/F3RP71/F3RP61 support
 
 F3RP61Seq devices
 ====
+- [ ] Set proper sevr/stat on I/O error.
 - [x] Add cache register (F register) support.
 - [x] Add special register (Z register) support.
 - [x] Add special relay (M relay) support.
@@ -36,6 +37,7 @@ F3RP61Seq devices
 
 F3RP61 devices
 ====
+- [x] Set proper sevr/stat on I/O error.
 - [ ] Control debug print via IOC shell variable
 - [ ] Add F3RPxx internal relay/register support
 - [x] Reorganize input relay interrupts
@@ -50,8 +52,8 @@ F3RP61 devices
   - [x] longin/longout records.
   - [x] ai/ao records.
   - [ ] stringin/stringout records.
-- [ ] Revise I/O registers (A) support:
-  - [ ] Add &L, &F and &D option for ai/ao records (do we need this?).
+- [x] Revise I/O registers (A) support:
+  - [x] Add &L, &F and &D option for ai/ao records (do we need this?).
 - [x] Revise input relays (X):
   - [x] Add &F and &D options for ai/ao records.
 - [x] Revise Shared memory (r) support for F3RP7x.
@@ -61,14 +63,16 @@ F3RP61 devices
   - [x] ai/ao records.
     - [x] Add &L, &F and &D option for ai/ao records.
   - [ ] stringin/stringout records.
-- [ ] Revise waveform records.
-  - [ ] Type of FTVL field (such as DBF_LONG/DBF_FLOAT/DBF_DOUBLE) implies &U/&L/&F/&D option. FTVL and option shall be independent.
+- [ x Revise waveform records.
+  - [x] FTVL field (such as LONG/FLOAT/DOUBLE) and conversion specifier (&U/&L/&F/&D) are now independent.
   - [ ] Add &B option support.
   - [ ] for Shared memory (r).
-  - [ ] for I/O registers on special devices (A).
-  - [ ] DOUBLE and FLOAT were unexpectedly rejected.
+  - [x] for I/O registers on special modules (A).
+  - [x] for relays on I/O modules (X/Y).
+  - [x] support DOUBLE and FLOAT
+  - [x] support for LONG and ULONG.
+  - [x] support for SHORT and USHORT.
   - [ ] support for CHAR and UCHAR.
-  - [ ] support for LONG.
 - [ ] Revise mbbi/mbbo records
   - [x] Add &U option
   - [x] Add &L option
@@ -96,7 +100,7 @@ F3RP61 devices
   - [ ] Drop mode register (M) support from Mbbi/Mbbo records (?).
 - [ ] Consider ASLO/AOFF and SMOO fields for ai records.
 - [ ] Consider ASLO/AOFF fields for ao records.
-- [ ] Add support for aai/aao records.
+- [x] Add support for aai/aao records.
 - [ ] Add support for lsi/lso records.
 - [ ] Add int64in/int64out record support.
 - [ ] Secure against reading waveform larger than 4kB.
@@ -108,4 +112,5 @@ F3RP61 devices
 
 F3RP61Sysctl devices
 ====
+- [ ] Set proper sevr/stat on I/O error.
 - [ ] Add rotary-switch support for longin devices.

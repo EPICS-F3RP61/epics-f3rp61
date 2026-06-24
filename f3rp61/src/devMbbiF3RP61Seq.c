@@ -103,21 +103,17 @@ static long read_mbbi(mbbiRecord *prec)
 
     if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
-            errlogPrintf("devMbbiF3RP61Seq: %s : read_mbbi failed\n", prec->name);
-            return -1;
-        }
-
-        MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
-        MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
-        uint16_t *wdata = pmcmdResponse->dataBuff.wData;
-
-        if (pmcmdResponse->errorCode) {
-            errlogPrintf("devMbbiF3RP61Seq: %s : errorCode 0x%04x returned\n", prec->name, pmcmdResponse->errorCode);
+            recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
             return -1;
         }
 
         //
         prec->udf = FALSE;
+
+        //
+        MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
+        MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
+        uint16_t *wdata = pmcmdResponse->dataBuff.wData;
 
         // fill VAL field
         const char conv = dpvt->conv;
@@ -135,6 +131,7 @@ static long read_mbbi(mbbiRecord *prec)
         // Issue read request
         if (f3rp61seqQueueRequest(dpvt) < 0) {
             errlogPrintf("devMbbiF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", prec->name);
+            recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
             return -1;
         }
 

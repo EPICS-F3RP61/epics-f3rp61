@@ -8,7 +8,7 @@ TODO list for F3RP70/F3RP71/F3RP61 support
 
 F3RP61Seq devices
 ====
-- [ ] Set proper sevr/stat on I/O error.
+- [x] Set proper sevr/stat on I/O error.
 - [x] Add cache register (F register) support.
 - [x] Add special register (Z register) support.
 - [x] Add special relay (M relay) support.

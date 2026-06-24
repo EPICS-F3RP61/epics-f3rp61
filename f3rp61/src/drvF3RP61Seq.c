@@ -39,7 +39,7 @@ static const iocshFuncDef showreqDef = {"showreq", 0, NULL};
 static const iocshFuncDef stopshowDef = {"stopshow", 0, NULL};
 
 static int debug_flag;
-static unsigned short request_id;
+static unsigned long request_id;
 
 static void mcmd_thread(void *);
 static void dump_mcmd_request(MCMD_STRUCT *);
@@ -281,19 +281,24 @@ static void mcmd_thread(void *arg)
                 dump_mcmd_request(pmcmdStruct);
             }
 
-            if (ioctl(f3rp61seqFd, M3CPU_ACCS_CMD, pmcmdStruct) < 0) {
-                errlogPrintf("drvF3RP61Seq: ioctl failed [%d] : %s\n", errno, strerror(errno));
-                dpvt->ret = -1;
-            }
-
-            if (pmcmdStruct->mcmdResponse.comId != request_id) {
-                errlogPrintf("drvF3RP61Seq: comId does not match\n");
-                dpvt->ret = -1;
-            }
-
             CALLBACK *pcallback = &dpvt->callback;
             dbCommon *prec;
             callbackGetUser(prec, pcallback);
+
+            if (ioctl(f3rp61seqFd, M3CPU_ACCS_CMD, pmcmdStruct) < 0) {
+                MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
+                uint16_t errorCode = pmcmdResponse->errorCode;
+                if (errno == EIO) {
+                    errlogPrintf("drvF3RP61Seq: %s : ioctl failed [%d] : %s : errorCode 0x%04x\n", prec->name, errno, strerror(errno), errorCode);
+                } else {
+                    errlogPrintf("drvF3RP61Seq: %s : ioctl failed [%d] : %s\n", prec->name, errno, strerror(errno));
+                }
+                dpvt->ret = -1;
+            } else if (pmcmdStruct->mcmdResponse.comId != request_id) {
+                errlogPrintf("drvF3RP61Seq: %s : comId does not match : expected=0x%08lx received=0x%08lx\n", prec->name, request_id, pmcmdStruct->mcmdResponse.comId);
+                dpvt->ret = -1;
+            }
+
             callbackRequestProcessCallback(pcallback, priorityLow, prec);
         }
     }

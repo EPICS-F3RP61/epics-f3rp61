@@ -103,15 +103,7 @@ static long write_mbbo(mbboRecord *prec)
 
     if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
-            errlogPrintf("devMbboF3RP61Seq: %s : write_mbbo failed\n", prec->name);
-            return -1;
-        }
-
-        MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
-        MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
-
-        if (pmcmdResponse->errorCode) {
-            errlogPrintf("devMbboF3RP61Seq: %s : errorCode 0x%04x returned\n", prec->name, pmcmdResponse->errorCode);
+            recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
             return -1;
         }
 
@@ -141,6 +133,7 @@ static long write_mbbo(mbboRecord *prec)
         // Issue write request
         if (f3rp61seqQueueRequest(dpvt) < 0) {
             errlogPrintf("devMbboF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", prec->name);
+            recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
             return -1;
         }
 

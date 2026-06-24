@@ -106,9 +106,6 @@ static long init_record(stringoutRecord *prec)
 static long write_so(stringoutRecord *prec)
 {
     F3RP61_DPVT  *dpvt = prec->dpvt;
-    //const int8_t  device = dpvt->device;
-    //const int8_t  conv   = dpvt->conv;
-    //const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
     const int32_t count  = dpvt->count;
 
     // Compose data to write
@@ -126,6 +123,7 @@ static long write_so(stringoutRecord *prec)
 
     if (ioctl(f3rp61_fd, M3IO_WRITE_REG, drly) < 0) {
         errlogPrintf("devSoF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
+        recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
         return -1;
     }
 

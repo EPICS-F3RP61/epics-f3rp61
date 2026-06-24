@@ -107,12 +107,9 @@ static long init_record(stringinRecord *prec)
 static long read_si(stringinRecord *prec)
 {
     F3RP61_DPVT  *dpvt = prec->dpvt;
-    //const int8_t  device = dpvt->device;
-    //const int8_t  conv   = dpvt->conv;
-    //const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
     const int32_t count  = dpvt->count;
 
-    // Buffers for data read
+    // Buffer for data read
     void *bdata = dpvt->buf;
 
     // Issue API function
@@ -125,6 +122,7 @@ static long read_si(stringinRecord *prec)
     };
     if (ioctl(f3rp61_fd, M3IO_READ_REG, drly) < 0) {
         errlogPrintf("devSiF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
+        recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
         return -1;
     }
 

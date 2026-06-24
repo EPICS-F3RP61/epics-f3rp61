@@ -92,16 +92,8 @@ static long init_record(boRecord *prec)
 // When called, it sends the value from the VAL field to the driver.
 static long write_bo(boRecord *prec)
 {
-    // debug
-    //if (prec->scan == SCAN_IO_EVENT) {
-    //    errlogPrintf("devBoF3RP61: %s : SCAN by I/O intr\n", prec->name);
-    //}
-
     F3RP61_DPVT  *dpvt = prec->dpvt;
     const int8_t  device = dpvt->device;
-    //const int8_t  conv   = dpvt->conv;
-    //const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
-    //const int32_t count  = dpvt->count;
 
     // Compose data to write
     uint8_t cdata = prec->rval;
@@ -113,6 +105,7 @@ static long write_bo(boRecord *prec)
         const int32_t addr = dpvt->addr;
         if (writeM3ComRelayB(addr, 1, &cdata) < 0) {
             errlogPrintf("devBoF3RP61: %s : writeM3ComRelayB failed [%d]n", prec->name, errno);
+            recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
             return -1;
         }
 
@@ -120,6 +113,7 @@ static long write_bo(boRecord *prec)
         const int32_t addr = dpvt->addr;
         if (writeM3LinkRelayB(addr, 1, &cdata) < 0) {
             errlogPrintf("devBoF3RP61: %s : writeM3LinkRelayB failed [%d]\n", prec->name, errno);
+            recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
             return -1;
         }
 
@@ -132,6 +126,7 @@ static long write_bo(boRecord *prec)
         };
         if (ioctl(f3rp61_fd, M3IO_WRITE_OUTRELAY_POINT, &outrlyp) < 0) {
             errlogPrintf("devBoF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
+            recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
             return -1;
         }
     } else {

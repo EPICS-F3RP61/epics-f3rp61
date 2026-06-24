@@ -19,7 +19,7 @@
 #include <sys/utsname.h>
 
 //
-//#include <alarm.h>
+#include <alarm.h>
 //#include <callback.h>
 #include <cantProceed.h>
 #include <dbAccess.h>
@@ -87,7 +87,9 @@ long f3rp61Init(int after);
 long f3rp61GetIoIntInfo(int, dbCommon *, IOSCANPVT *);
 
 // helper function(s)
-int f3rp61ParseLink(const struct link *, F3RP61_RW, F3RP61_ACCESS_TYPE, const dbCommon *, const uint32_t);
+int     f3rp61ParseLink(const struct link *, F3RP61_RW, F3RP61_ACCESS_TYPE, const dbCommon *, const uint32_t);
+int32_t f3rp61Read(const dbCommon *, const uint32_t);
+int32_t f3rp61Write(const dbCommon *, const uint32_t);
 
 //
 extern int f3rp61_fd;

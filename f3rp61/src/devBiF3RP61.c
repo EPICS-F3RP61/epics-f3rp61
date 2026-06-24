@@ -93,18 +93,10 @@ static long init_record(biRecord *prec)
 // VAL field.
 static long read_bi(biRecord *prec)
 {
-    // debug
-    //if (prec->scan == SCAN_IO_EVENT) {
-    //    errlogPrintf("devBiF3RP61: %s : SCAN by I/O intr\n", prec->name);
-    //}
-
     F3RP61_DPVT  *dpvt = prec->dpvt;
     const int8_t  device = dpvt->device;
-    //const int8_t  conv   = dpvt->conv;
-    //const int32_t cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
-    //const int32_t count  = dpvt->count;
 
-    // Buffers for data read
+    // Buffer for data read
     uint8_t cdata = 0;
 
     // Issue API function
@@ -114,6 +106,7 @@ static long read_bi(biRecord *prec)
         const int32_t addr = dpvt->addr;
         if (readM3ComRelayB(addr, 1, &cdata) < 0) {
             errlogPrintf("devBiF3RP61: %s : readM3ComRelayB failed [%d]\n", prec->name, errno);
+            recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
             return -1;
         }
         prec->rval = cdata;
@@ -122,6 +115,7 @@ static long read_bi(biRecord *prec)
         const int32_t addr = dpvt->addr;
         if (readM3LinkRelayB(addr, 1, &cdata) < 0) {
             errlogPrintf("devBiF3RP61: %s : readM3LinkRelayB failed [%d]\n", prec->name, errno);
+            recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
             return -1;
         }
         prec->rval = cdata;
@@ -134,6 +128,7 @@ static long read_bi(biRecord *prec)
         };
         if (ioctl(f3rp61_fd, M3IO_READ_INRELAY_POINT, &inrlyp) < 0) {
             errlogPrintf("devBiF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
+            recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
             return -1;
         }
         prec->rval = inrlyp.data;
@@ -149,6 +144,7 @@ static long read_bi(biRecord *prec)
         };
         if (ioctl(f3rp61_fd, M3IO_READ_OUTRELAY, &drly) < 0) {
             errlogPrintf("devBiF3RP61: %s : ioctl failed [%d]\n", prec->name, errno);
+            recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
             return -1;
         }
         cdata = drly.u.outrly[0].data;

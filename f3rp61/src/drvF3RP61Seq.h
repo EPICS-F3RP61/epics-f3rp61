@@ -77,7 +77,6 @@ typedef enum {
 typedef struct {
     ELLNODE      node;
     MCMD_STRUCT  mcmdStruct;
-    dbCommon    *prec;
     CALLBACK     callback;
     int          ret;
     int8_t       conv;

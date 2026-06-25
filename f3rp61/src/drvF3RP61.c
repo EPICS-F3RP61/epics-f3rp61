@@ -446,10 +446,9 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
     // Parse slot, device and register number
     uint8_t device = 0;
     uint32_t unit = 0, slot = 0, addr = 0;
-    uint32_t cpuno = 0; // for Shared memory (or 'Old interface' for shared registers/relays)
     if (0) {
         //
-    } else if (sscanf(buf, "CPU%d,R%d", &cpuno, &addr) == 2) {
+    } else if (sscanf(buf, "CPU%d,R%d", &slot, &addr) == 2) {
         device = 'r'; // Shared memory (or 'Old interface' for shared registers/relays)
     } else if (sscanf(buf, "U%d,S%d,%c%d", &unit, &slot, &device, &addr) == 4) {
         //
@@ -566,7 +565,6 @@ int32_t f3rp61Read(const dbCommon *prec, const uint32_t nelm)
     F3RP61_DPVT   *dpvt   = prec->dpvt;
     const int8_t   device = dpvt->device;
     const int8_t   conv   = dpvt->conv;
-    const int32_t  cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
     int32_t        count  = dpvt->count * nelm;
 
     // debug
@@ -610,7 +608,7 @@ int32_t f3rp61Read(const dbCommon *prec, const uint32_t nelm)
     } else if (device == 'r') { // Shared memory
 #if defined(__powerpc__)
         M3IO_ACCESS_COM acom = {
-            .cpuno = cpuno,
+            .cpuno = dpvt->slot,
             .start = dpvt->addr,
             .count = count,
             .pdata = dpvt->buf,
@@ -620,6 +618,7 @@ int32_t f3rp61Read(const dbCommon *prec, const uint32_t nelm)
             return -1;
         }
 #else
+        const int32_t  cpuno = dpvt->slot;
         const int32_t  addr  = dpvt->addr;
         uint16_t      *wdata = dpvt->buf;
         if (readM3CpuMemory(cpuno, addr, count, wdata) < 0) {
@@ -756,7 +755,6 @@ int32_t f3rp61Write(const dbCommon *prec, const uint32_t nelm)
     F3RP61_DPVT   *dpvt = prec->dpvt;
     const int8_t   device = dpvt->device;
     const int8_t   conv   = dpvt->conv;
-    const int32_t  cpuno  = dpvt->cpuno; // for Shared memory (or 'Old interface' for shared registers/relays)
     int32_t        count  = dpvt->count * nelm;
 
     // Issue API function
@@ -797,7 +795,7 @@ int32_t f3rp61Write(const dbCommon *prec, const uint32_t nelm)
     } else if (device == 'r') { // Shared memory
 #if defined(__powerpc__)
         M3IO_ACCESS_COM acom = {
-            .cpuno = cpuno,
+            .cpuno = dpvt->slot,
             .start = dpvt->addr,
             .count = count,
             .pdata = dpvt->buf,
@@ -807,6 +805,7 @@ int32_t f3rp61Write(const dbCommon *prec, const uint32_t nelm)
             return -1;
         }
 #else
+        const int32_t  cpuno = dpvt->slot;
         const int32_t  addr  = dpvt->addr;
         uint16_t      *wdata = dpvt->buf;
         if (writeM3CpuMemory(cpuno, addr, count, wdata) < 0) {

@@ -67,9 +67,9 @@ typedef struct {
     uint8_t   device;  // device type
     uint8_t   unit;    // unit number     (0, 1, ..., 7)
     uint8_t   slot;    // slot number     (1, 2, ..., 16)
+                       // or CPU number   (1, 2, 3, 4) for shared memory('r')
     uint32_t  addr;    // position number (0, ....)
     uint8_t   count;   // data width      (1, 2, or 4)
-    uint8_t   cpuno;   // for Shared memory (or 'Old interface' for shared registers/relays)
     // Source of I/O interrupt
     uint8_t   irqunit; // unit number     (0, 1, ..., 7)
     uint8_t   irqslot; // slot number     (1, 2, ..., 16)

@@ -67,35 +67,27 @@ static long init_record(mbbiRecord *prec)
 
     // Allocate private data storage area
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    const uint32_t nelm = 1;
     prec->dpvt = dpvt;
+    const uint32_t nelm = 1;
 
     //
-    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, nelm);
+    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, DBF_LONG, nelm);
     if (ret < 0) {
         //errlogPrintf("devMbbiF3RP61: %s : syntax error in INP field\n", prec->name);
         prec->pact = 1;
         return -1;
     }
 
-    // Check conversion specifier
+    // Set MASK, NOBT, and MASK
     const int8_t conv = dpvt->conv;
-    if (conv == 'W') {        // Dummy conv for Word access
-        prec->nobt = 16;
-        prec->mask = 0xffff;
-        prec->shft = 0;
-    } else if (conv == 'U') { // Unsigned integer
-        prec->nobt = 16;
-        prec->mask = 0xffff;
-        prec->shft = 0;
-    } else if (conv == 'L') { // Long word
+    if (conv == 'L' || conv == 'X') { // 'X' conversion may not make sense for mbbiDirect
         prec->nobt = 32;
         prec->mask = 0xffffffff;
         prec->shft = 0;
     } else {
-        errlogPrintf("devMbbiF3RP61: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
-        prec->pact = 1;
-        return -1;
+        prec->nobt = 16;
+        prec->mask = 0xffff;
+        prec->shft = 0;
     }
 
     //
@@ -107,8 +99,11 @@ static long init_record(mbbiRecord *prec)
 // VAL field.
 static long read_mbbi(mbbiRecord *prec)
 {
+    F3RP61_DPVT   *dpvt = prec->dpvt;
+    const uint32_t nelm = 1;
+
     // Issue API function
-    const int32_t nord = f3rp61Read((dbCommon*)prec, 1);
+    const int32_t nord = f3rp61Read((dbCommon*)prec, nelm);
     if (nord < 0) {
         recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
         return -1;
@@ -118,16 +113,10 @@ static long read_mbbi(mbbiRecord *prec)
     prec->udf = FALSE;
 
     // fill VAL field
-    F3RP61_DPVT  *dpvt  = prec->dpvt;
-    uint16_t     *wdata = dpvt->buf;
-    const int8_t  conv  = dpvt->conv;
-
-    if (conv == 'L') {
-        prec->rval = (wdata[1]<<16) | wdata[0];
-    } else if (conv == 'U') {
-        prec->rval = (uint16_t)wdata[0];
-    } else {
-        prec->rval = (int16_t)wdata[0];
+    int ret = devF3RP61buf2uint(dpvt->buf, &prec->rval, dpvt->conv, nelm);
+    if (ret < 0) {
+        // overflow happend in bcd2int
+        recGblSetSevr(prec, HIGH_ALARM, INVALID_ALARM);
     }
 
     //

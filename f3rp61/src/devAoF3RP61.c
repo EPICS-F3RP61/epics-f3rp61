@@ -69,26 +69,13 @@ static long init_record(aoRecord *prec)
 
     // Allocate private data storage area
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    const uint32_t nelm = 1;
     prec->dpvt = dpvt;
+    const uint32_t nelm = 1;
 
     //
-    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, nelm);
+    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, DBF_DOUBLE, nelm);
     if (ret < 0) {
         //errlogPrintf("devAoF3RP61: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
-    }
-
-    // Check conversion specifier
-    const int8_t conv = dpvt->conv;
-    if (conv == 'W') {        // Dummy for Word access
-    } else if (conv == 'U') { // Unsigned integer, perhaps we'd better disable this
-    } else if (conv == 'L') { // Long word
-    } else if (conv == 'F') { // Single precision floating point
-    } else if (conv == 'D') { // Double precision floating point
-    } else {
-        errlogPrintf("devAoF3RP61: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
         prec->pact = 1;
         return -1;
     }
@@ -101,40 +88,15 @@ static long init_record(aoRecord *prec)
 // When called, it sends the value from the VAL field to the driver.
 static long write_ao(aoRecord *prec)
 {
-    F3RP61_DPVT  *dpvt   = prec->dpvt;
-    uint16_t     *wdata  = dpvt->buf;
-    const int8_t  conv   = dpvt->conv;
+    F3RP61_DPVT   *dpvt = prec->dpvt;
+    const uint32_t nelm = 1;
 
     // Compose data to write
-    if (conv == 'D') {
-        double val = prec->val;
-        // todo : consider ASLO and AOFF field
-
-        int64_t lval;
-        memcpy(&lval, &val, sizeof(double));
-
-        wdata[0] = (uint16_t)(lval>> 0);
-        wdata[1] = (uint16_t)(lval>>16);
-        wdata[2] = (uint16_t)(lval>>32);
-        wdata[3] = (uint16_t)(lval>>48);
-    } else if (conv == 'F') {
-        float val = prec->val;
-        // todo : consider ASLO and AOFF field
-
-        int32_t lval;
-        memcpy(&lval, &val, sizeof(float));
-
-        wdata[0] = (uint16_t)(lval>> 0);
-        wdata[1] = (uint16_t)(lval>>16);
-    } else if (conv == 'L') {
-        wdata[0] = (uint16_t)(prec->rval>> 0);
-        wdata[1] = (uint16_t)(prec->rval>>16);
-    } else {
-        wdata[0] = (uint16_t)prec->rval;
-    }
+    devF3RP61double2buf(&prec->val, dpvt->buf, dpvt->conv, nelm);
+    // todo : consider ASLO and AOFF field
 
     // Issue API function
-    const int32_t nord = f3rp61Write((dbCommon*)prec, 1);
+    const int32_t nord = f3rp61Write((dbCommon*)prec, nelm);
     if (nord < 0) {
         recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
         return -1;

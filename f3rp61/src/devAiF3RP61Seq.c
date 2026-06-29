@@ -63,26 +63,14 @@ static long init_record(aiRecord *prec)
     // Allocate private data storage area
     F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
     prec->dpvt = dpvt;
+    const uint32_t nelm = 1;
 
     //
-    const int ret = f3rp61seqParseLink(plink, kRead, kWord, (dbCommon *)prec);
+    const int ret = f3rp61seqParseLink(plink, kRead, kWord, (dbCommon *)prec, DBF_DOUBLE, nelm);
     if (ret < 0) {
         //errlogPrintf("devAiF3RP61Seq: %s : syntax error in INP field\n", prec->name);
         prec->pact = 1;
         return -1;
-    }
-
-    // Check conversion specifier
-    const int8_t conv = dpvt->conv;
-    if (conv == 'W') {        // Dummy for Word access
-    } else if (conv == 'U') { // Unsigned integer
-    } else if (conv == 'L') { // Long word
-    } else if (conv == 'F') { // Single precision floating point
-    } else if (conv == 'D') { // Double precision floating point
-    } else {
-        errlogPrintf("devAiF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
-        prec->pact = 1;
-            return -1;
     }
 
     //
@@ -97,6 +85,7 @@ static long init_record(aiRecord *prec)
 static long read_ai(aiRecord *prec)
 {
     F3RP61SEQ_DPVT *dpvt = prec->dpvt;
+    const uint32_t nelm = 1;
 
     if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
@@ -113,47 +102,12 @@ static long read_ai(aiRecord *prec)
         uint16_t *wdata = pmcmdResponse->dataBuff.wData;
 
         // fill VAL field
-        const char conv = dpvt->conv;
-        if (conv == 'D') {
-            const uint64_t l0 = wdata[0];
-            const uint64_t l1 = wdata[1];
-            const uint64_t l2 = wdata[2];
-            const uint64_t l3 = wdata[3];
-            const uint64_t lval = (l3<<48) | (l2<<32) | (l1<<16) | l0;
-            double val;
-            memcpy(&val, &lval, sizeof(double));
+        int ret = devF3RP61buf2double(wdata, &prec->val, dpvt->conv, nelm);
+        prec->udf = isnan(prec->val);
+        // todo : consider ASLO and AOFF field
+        // todo : consider SMOO field
 
-            // todo : consider ASLO and AOFF field
-            // todo : consider SMOO field
-            prec->val = val;
-            prec->udf = isnan(val);
-            return 2; // no conversion
-
-        } else if (conv == 'F') {
-            const uint32_t l0 = wdata[0];
-            const uint32_t l1 = wdata[1];
-            const uint32_t lval = (l1<<16) | l0;
-            float val;
-            memcpy(&val, &lval, sizeof(float));
-
-            // todo : consider ASLO and AOFF field
-            // todo : consider SMOO field
-            prec->val = val;
-            prec->udf = isnan(val);
-            return 2; // no conversion
-
-        } else if (conv == 'L') {
-            const uint32_t l0 = wdata[0];
-            const uint32_t l1 = wdata[1];
-            prec->rval = l1<<16 | l0;
-
-        } else if (conv == 'U') {
-            prec->rval = (uint16_t)wdata[0];
-
-        } else {
-            prec->rval = (int16_t)wdata[0];
-
-        }
+        return ret;
 
     } else { // First call (PACT is still FALSE)
         // Issue read request

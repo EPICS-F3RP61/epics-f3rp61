@@ -59,33 +59,26 @@ static long init_record(mbbiDirectRecord *prec)
     // Allocate private data storage area
     F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
     prec->dpvt = dpvt;
+    const uint32_t nelm = 1;
 
     //
-    const int ret = f3rp61seqParseLink(plink, kRead, kWord, (dbCommon *)prec);
+    const int ret = f3rp61seqParseLink(plink, kRead, kWord, (dbCommon *)prec, DBF_LONG, nelm);
     if (ret < 0) {
         //errlogPrintf("devMbbiF3RP61Seq: %s : syntax error in INP field\n", prec->name);
         prec->pact = 1;
         return -1;
     }
 
-    // Check conversion specifier
+    // Set MASK, NOBT, and MASK
     const int8_t conv = dpvt->conv;
-    if (conv == 'W') {        // Dummy for Word access
-        prec->nobt = 16;
-        prec->mask = 0xffff;
-        prec->shft = 0;
-    } else if (conv == 'U') { // Unsigned integer
-        prec->nobt = 16;
-        prec->mask = 0xffff;
-        prec->shft = 0;
-    } else if (conv == 'L') { // Long word
+    if (conv == 'L' || conv == 'X') { // 'X' conversion may not make sense for mbbiDirect
         prec->nobt = 32;
         prec->mask = 0xffffffff;
         prec->shft = 0;
     } else {
-        errlogPrintf("devMbbiDirectF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
-        prec->pact = 1;
-        return -1;
+        prec->nobt = 16;
+        prec->mask = 0xffff;
+        prec->shft = 0;
     }
 
     //
@@ -100,6 +93,7 @@ static long init_record(mbbiDirectRecord *prec)
 static long read_mbbiDirect(mbbiDirectRecord *prec)
 {
     F3RP61SEQ_DPVT *dpvt = prec->dpvt;
+    const uint32_t nelm = 1;
 
     if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
@@ -116,15 +110,10 @@ static long read_mbbiDirect(mbbiDirectRecord *prec)
         uint16_t *wdata = pmcmdResponse->dataBuff.wData;
 
         // fill VAL field
-        const char conv = dpvt->conv;
-        if (conv == 'L') {
-            prec->rval = wdata[1]<<16 | wdata[0];
-
-        } else if (conv == 'U') {
-            prec->rval = (uint16_t)wdata[0];
-
-        } else {
-            prec->rval = (int16_t)wdata[0];
+        int ret = devF3RP61buf2uint(wdata, &prec->rval, dpvt->conv, nelm);
+        if (ret < 0) {
+            // overflow happend in bcd2int
+            recGblSetSevr(prec, HIGH_ALARM, INVALID_ALARM);
         }
 
     } else { // First call (PACT is still FALSE)

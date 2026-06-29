@@ -379,7 +379,7 @@ long f3rp61Init(int after)
 // Parses INP or OUT link and initializes F3RP61_DPVT structure.
 // Registeres IO as well, if specified.
 //
-int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE type, const dbCommon *prec, const uint32_t nelm)
+int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE type, dbCommon *prec, const dbfType ftvl, const uint32_t nelm)
 {
     const size_t len = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     //char *buf  = callocMustSucceed(len, sizeof(char), "calloc failed");
@@ -399,6 +399,14 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
             errlogPrintf("%s: %s : can't get conversion specifier\n", __func__, prec->name);
             return -1;
         }
+    }
+
+    // Check conversion specifier
+    const char *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
+    if (f3rp61CheckConversion(type, ftvl, dpvt->conv) < 0) {
+        errlogPrintf("%s: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", __func__, prec->name, dpvt->conv, ftvlstr);
+        prec->pact = 1;
+        return -1;
     }
 
     // Parse for possible IO interrupt source
@@ -521,12 +529,12 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
 
     // Consider I/O data length
     dpvt->count = 1;
-    if (dpvt->conv == 'F' || dpvt->conv == 'L') {
+    if (dpvt->conv == 'D') {
+        dpvt->count = 4;
+    } else if (dpvt->conv == 'F' || dpvt->conv == 'L') {
         dpvt->count = 2;
     } else if (dpvt->conv == 'X') {
         dpvt->count = 2;
-    } else if (dpvt->conv == 'D') {
-        dpvt->count = 4;
     }
 
     // Allocate buffer for I/O

@@ -19,7 +19,6 @@
 
 //
 #include <drvF3RP61Seq.h>
-#include <devF3RP61bcd.h>
 
 // Create the dset for devLiF3RP61Seq
 static long init_record();
@@ -62,23 +61,12 @@ static long init_record(longinRecord *prec)
     // Allocate private data storage area
     F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
     prec->dpvt = dpvt;
+    const uint32_t nelm = 1;
 
     //
-    const int ret = f3rp61seqParseLink(plink, kRead, kWord, (dbCommon *)prec);
+    const int ret = f3rp61seqParseLink(plink, kRead, kWord, (dbCommon *)prec, DBF_LONG, nelm);
     if (ret < 0) {
         //errlogPrintf("devLiF3RP61Seq: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
-    }
-
-    // Check conversion specifier
-    const int8_t conv = dpvt->conv;
-    if (conv == 'W') {        // Dummy for Word access
-    } else if (conv == 'B') { // Binary Coded Decimal format
-    } else if (conv == 'U') { // Unsigned integer
-    } else if (conv == 'L') { // Long word
-    } else {
-        errlogPrintf("devLiF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
         prec->pact = 1;
         return -1;
     }
@@ -95,6 +83,7 @@ static long init_record(longinRecord *prec)
 static long read_longin(longinRecord *prec)
 {
     F3RP61SEQ_DPVT *dpvt = prec->dpvt;
+    const uint32_t nelm = 1;
 
     if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
@@ -111,18 +100,10 @@ static long read_longin(longinRecord *prec)
         uint16_t *wdata = pmcmdResponse->dataBuff.wData;
 
         // fill VAL field
-        const char conv = dpvt->conv;
-        if (conv == 'B') {
-            prec->val = devF3RP61bcd2int(wdata[0], prec);
-
-        } else if (conv == 'L') {
-            prec->val = wdata[1]<<16 | wdata[0];
-
-        } else if (conv == 'U') {
-            prec->val = (uint16_t)wdata[0];
-
-        } else {
-            prec->val = (int16_t)wdata[0];
+        int ret = devF3RP61buf2int(wdata, &prec->val, dpvt->conv, nelm);
+        if (ret < 0) {
+            // overflow happend in bcd2int
+            recGblSetSevr(prec, HIGH_ALARM, INVALID_ALARM);
         }
 
     } else { // First call (PACT is still FALSE)

@@ -59,33 +59,26 @@ static long init_record(mbboRecord *prec)
     // Allocate private data storage area
     F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
     prec->dpvt = dpvt;
+    const uint32_t nelm = 1;
 
     //
-    const int ret = f3rp61seqParseLink(plink, kWrite, kWord, (dbCommon *)prec);
+    const int ret = f3rp61seqParseLink(plink, kWrite, kWord, (dbCommon *)prec, DBF_LONG, nelm);
     if (ret < 0) {
         //errlogPrintf("devMbbiF3RP61Seq: %s : syntax error in INP field\n", prec->name);
         prec->pact = 1;
         return -1;
     }
 
-    // Check conversion specifier
+    // Set MASK, NOBT, and MASK
     const int8_t conv = dpvt->conv;
-    if (conv == 'W') {        // Dummy for Word access
-        prec->nobt = 16;
-        prec->mask = 0xffff;
-        prec->shft = 0;
-    } else if (conv == 'U') { // Unsigned integer
-        prec->nobt = 16;
-        prec->mask = 0xffff;
-        prec->shft = 0;
-    } else if (conv == 'L') { // Long word
+    if (conv == 'L' || conv == 'X') { // 'X' conversion may not make sense for mbbiDirect
         prec->nobt = 32;
         prec->mask = 0xffffffff;
         prec->shft = 0;
     } else {
-        errlogPrintf("devMbboF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
-        prec->pact = 1;
-        return -1;
+        prec->nobt = 16;
+        prec->mask = 0xffff;
+        prec->shft = 0;
     }
 
     //
@@ -100,6 +93,7 @@ static long init_record(mbboRecord *prec)
 static long write_mbbo(mbboRecord *prec)
 {
     F3RP61SEQ_DPVT *dpvt = prec->dpvt;
+    const uint32_t nelm = 1;
 
     if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
@@ -116,18 +110,11 @@ static long write_mbbo(mbboRecord *prec)
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
         uint16_t *wdata = pM3WriteSeqdev->dataBuff.wData;
 
-        //
-        const char conv = dpvt->conv;
-        if (conv == 'L') {
-            wdata[0] = (uint16_t)(prec->rval>> 0);
-            wdata[1] = (uint16_t)(prec->rval>>16);
-
-        } else if (conv == 'U') {
-            wdata[0] = (uint16_t)prec->rval;
-
-        } else {
-            wdata[0] = (int16_t)prec->rval;
-
+        // Compose data to write
+        int ret = devF3RP61uint2buf(&prec->rval, wdata, dpvt->conv, nelm);
+        if (!ret) {
+            // overflow happend in int2bcd
+            recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
         }
 
         // Issue write request

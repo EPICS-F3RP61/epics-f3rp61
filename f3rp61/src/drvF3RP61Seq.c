@@ -107,7 +107,7 @@ static long init(void)
 //
 // Parses INP or OUT link and initializes F3RP61SEQ_DPVT structure.
 //
-int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_RW rw, F3RP61SEQ_ACCESS_TYPE type, const dbCommon *prec)
+int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE type, dbCommon *prec, const dbfType ftvl, const uint32_t nelm)
 {
     const size_t size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
     //char *buf  = callocMustSucceed(size, sizeof(char), "calloc failed");
@@ -129,17 +129,21 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61SEQ_RW rw, F3RP61SEQ_ACCE
         }
     }
 
+    // Check conversion specifier
+    const char *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
+    if (f3rp61CheckConversion(type, ftvl, dpvt->conv) < 0) {
+        errlogPrintf("%s: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", __func__, prec->name, dpvt->conv, ftvlstr);
+        prec->pact = 1;
+        return -1;
+    }
+
     // Consider I/O data length
+    const int width = 2; // We don't use long-word access, so width is fixed to 2
     int num = 1;
-    int width = 2; // We don't use long-word access, so width is fixed to 2
-    if (type == kBit) {
-        //
-    } else { // kWord
-        if (dpvt->conv == 'D') {
-            num = 4;
-        } else if (dpvt->conv == 'F' || dpvt->conv == 'L') {
-            num = 2;
-        }
+    if (dpvt->conv == 'D') {
+        num = 4;
+    } else if (dpvt->conv == 'F' || dpvt->conv == 'L') {
+        num = 2;
     }
 
     // Parse for possible IO interrupt source

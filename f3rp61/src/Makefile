@@ -65,11 +65,10 @@ f3rp61_SRCS += devBiF3RP61SysCtl.c
 f3rp61_SRCS += devBoF3RP61SysCtl.c
 f3rp61_SRCS += devMbbiF3RP61SysCtl.c
 f3rp61_SRCS += drvF3RP61SysCtl.c
-f3rp61_SRCS += devF3RP61bcd.c
+f3rp61_SRCS += devF3RP61util.c
 
 #===========================
 
 include $(TOP)/configure/RULES
 #----------------------------------------
 #  ADD RULES AFTER THIS LINE
-

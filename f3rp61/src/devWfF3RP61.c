@@ -66,68 +66,14 @@ static long init_record(waveformRecord *prec)
 
     // Allocate private data storage area
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    const uint32_t nelm = prec->nelm;
     prec->dpvt = dpvt;
+    const dbfType  ftvl = prec->ftvl;
+    const uint32_t nelm = prec->nelm;
 
     //
-    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, nelm);
+    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, ftvl, nelm);
     if (ret < 0) {
         //errlogPrintf("devWfF3RP61: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
-    }
-
-    // Check conversion specifier
-    const dbfType  ftvl = prec->ftvl;
-    const char    *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
-    const int8_t   conv = dpvt->conv;
-    if (0) {
-    } else if (ftvl == DBF_DOUBLE) {
-        if (conv == 'W') {        // Dummy for Word access
-        } else if (conv == 'U') { // Unsigned integer
-        } else if (conv == 'L') { // Long word
-        } else if (conv == 'F') { // Single precision floating point
-        } else if (conv == 'D') { // Double precision floating point
-        } else {
-            errlogPrintf("devWfF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
-            prec->pact = 1;
-            return -1;
-        }
-    } else if (ftvl == DBF_FLOAT) {
-        if (conv == 'W') {        // Dummy for Word access
-        } else if (conv == 'U') { // Unsigned integer
-        } else if (conv == 'L') { // Long word
-        } else if (conv == 'F') { // Single precision floating point
-        //} else if (conv == 'D') { // Double precision floating point
-        } else {
-            errlogPrintf("devWfF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
-            prec->pact = 1;
-            return -1;
-        }
-    } else if (ftvl == DBF_LONG || ftvl == DBF_ULONG) {
-        if (conv == 'W') {        // Dummy for Word access
-        } else if (conv == 'U') { // Unsigned integer
-        } else if (conv == 'L') { // Long word
-        //} else if (conv == 'F') { // Single precision floating point
-        //} else if (conv == 'D') { // Double precision floating point
-        } else {
-            errlogPrintf("devWfF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
-            prec->pact = 1;
-            return -1;
-        }
-    } else if (ftvl == DBF_SHORT || ftvl == DBF_USHORT) {
-        if (conv == 'W') {        // Dummy for Word access
-        } else if (conv == 'U') { // Unsigned integer
-        //} else if (conv == 'L') { // Long word
-        //} else if (conv == 'F') { // Single precision floating point
-        //} else if (conv == 'D') { // Double precision floating point
-        } else {
-            errlogPrintf("devWfF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
-            prec->pact = 1;
-            return -1;
-        }
-    } else {
-        errlogPrintf("devWfF3RP61: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
         prec->pact = 1;
         return -1;
     }
@@ -141,8 +87,10 @@ static long init_record(waveformRecord *prec)
 // VAL field.
 static long read_wf(waveformRecord *prec)
 {
-    //
+    F3RP61_DPVT   *dpvt = prec->dpvt;
     const uint32_t nelm = prec->nelm;
+    const dbfType  ftvl = prec->ftvl;
+    //const int8_t   conv = dpvt->conv;
 
     // Issue API function
     const int32_t nord = f3rp61Read((dbCommon*)prec, nelm);
@@ -155,103 +103,20 @@ static long read_wf(waveformRecord *prec)
     prec->udf = FALSE;
 
     // fill VAL field
-    const dbfType  ftvl   = prec->ftvl;
-    F3RP61_DPVT   *dpvt   = prec->dpvt;
-    const int8_t   conv   = dpvt->conv;
-    uint16_t      *wdata  = dpvt->buf;
-
     if (0) {
     } else if (ftvl == DBF_DOUBLE) {
-        double *bptr = prec->bptr;
-        if (0) {
-        } else if (conv == 'D') {
-            for (uint32_t i=0; i<nord; i++) {
-                double val;
-                uint64_t w0 = wdata[4*i + 0];
-                uint64_t w1 = wdata[4*i + 1];
-                uint64_t w2 = wdata[4*i + 2];
-                uint64_t w3 = wdata[4*i + 3];
-                uint64_t lval = (w3<<48) | (w2<<32) | (w1<<16) | w0;
-                memcpy(&val, &lval, sizeof(double));
-                bptr[i] = val;
-            }
-        } else if (conv == 'F') {
-            for (uint32_t i=0; i<nord; i++) {
-                float val;
-                uint32_t w0 = wdata[2*i + 0];
-                uint32_t w1 = wdata[2*i + 1];
-                uint32_t lval = (w1<<16) | w0;
-                memcpy(&val, &lval, sizeof(float));
-                bptr[i] = val;
-            }
-        } else if (conv == 'L') {
-            for (uint32_t i=0; i<nord; i++) {
-                uint32_t w0 = wdata[2*i + 0];
-                uint32_t w1 = wdata[2*i + 1];
-                int32_t lval = (w1<<16) | w0; // 'L' is signed
-                bptr[i] = lval;
-            }
-        } else if (conv == 'U') {
-            for (uint32_t i=0; i<nord; i++) {
-                bptr[i] = (uint16_t)wdata[i];
-            }
-        } else {// conv == 'W'
-            for (uint32_t i=0; i<nord; i++) {
-                bptr[i] = (int16_t)wdata[i];
-            }
-        }
+        devF3RP61buf2double(dpvt->buf, prec->bptr, dpvt->conv, nord);
     } else if (ftvl == DBF_FLOAT) {
-        float *bptr = prec->bptr;
-        if (0) {
-        //} else if (conv == 'D') {
-        } else if (conv == 'F') {
-            for (uint32_t i=0; i<nord; i++) {
-                float val;
-                uint32_t w0 = wdata[2*i + 0];
-                uint32_t w1 = wdata[2*i + 1];
-                uint32_t lval = (w1<<16) | w0;
-                memcpy(&val, &lval, sizeof(float));
-                bptr[i] = val;
-            }
-        } else if (conv == 'L') {
-            for (uint32_t i=0; i<nord; i++) {
-                uint32_t w0 = wdata[2*i + 0];
-                uint32_t w1 = wdata[2*i + 1];
-                int32_t lval = (w1<<16) | w0; // 'L' is signed
-                bptr[i] = lval;
-            }
-        } else if (conv == 'U') {
-            for (uint32_t i=0; i<nord; i++) {
-                bptr[i] = (uint16_t)wdata[i];
-            }
-        } else {// conv == 'W'
-            for (uint32_t i=0; i<nord; i++) {
-                bptr[i] = (int16_t)wdata[i];
-            }
-        }
+        devF3RP61buf2float(dpvt->buf, prec->bptr, dpvt->conv, nord);
     } else if (ftvl == DBF_LONG || ftvl == DBF_ULONG) {
-        uint32_t *bptr = prec->bptr;
-        if (0) {
-        //} else if (conv == 'D') {
-        //} else if (conv == 'F') {
-        } else if (conv == 'L') {
-            for (uint32_t i=0; i<nord; i++) {
-                uint32_t w0 = wdata[2*i + 0];
-                uint32_t w1 = wdata[2*i + 1];
-                uint32_t lval = (w1<<16) | w0;
-                bptr[i] = lval;
-            }
-        } else if (conv == 'U') {
-            for (uint32_t i=0; i<nord; i++) {
-                bptr[i] = (uint16_t)wdata[i];
-            }
-        } else {// conv == 'W'
-            for (uint32_t i=0; i<nord; i++) {
-                bptr[i] = (int16_t)wdata[i];
-            }
+        int ret = devF3RP61buf2int(dpvt->buf, prec->bptr, dpvt->conv, nord);
+        if (ret < 0) {
+            // overflow happend in bcd2int
+            recGblSetSevr(prec, HIGH_ALARM, INVALID_ALARM);
         }
     } else {//(ftvl == DBF_SHORT || ftvl == DBF_USHORT)
-        uint16_t *bptr = prec->bptr;
+        uint16_t *bptr  = prec->bptr;
+        uint16_t *wdata = dpvt->buf;
         if (0) {
         //} else if (conv == 'D') {
         //} else if (conv == 'F') {

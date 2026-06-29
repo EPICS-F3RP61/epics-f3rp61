@@ -66,22 +66,13 @@ static long init_record(stringinRecord *prec)
 
     // Allocate private data storage area
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    const uint32_t nelm = 20;
     prec->dpvt = dpvt;
+    const uint32_t nelm = 20;
 
     //
-    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, nelm);
+    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, DBF_STRING, nelm);
     if (ret < 0) {
         //errlogPrintf("devSiF3RP61: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
-    }
-
-    // Check conversion specifier
-    const int8_t conv = dpvt->conv;
-    if (conv == 'W') {        // Dummy for Word access
-    } else {
-        errlogPrintf("devSiF3RP61: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
         prec->pact = 1;
         return -1;
     }

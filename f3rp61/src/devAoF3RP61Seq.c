@@ -63,25 +63,12 @@ static long init_record(aoRecord *prec)
     // Allocate private data storage area
     F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
     prec->dpvt = dpvt;
+    const uint32_t nelm = 1;
 
     //
-    const int ret = f3rp61seqParseLink(plink, kWrite, kWord, (dbCommon *)prec);
+    const int ret = f3rp61seqParseLink(plink, kWrite, kWord, (dbCommon *)prec, DBF_DOUBLE, nelm);
     if (ret < 0) {
         //errlogPrintf("devAoF3RP61Seq: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
-    }
-
-
-    // Check conversion specifier
-    const int8_t conv = dpvt->conv;
-    if (conv == 'W') {        // Dummy for Word access
-    } else if (conv == 'U') { // Unsigned integer, perhaps we'd better disable this
-    } else if (conv == 'L') { // Long word
-    } else if (conv == 'F') { // Single precision floating point
-    } else if (conv == 'D') { // Double precision floating point
-    } else {
-        errlogPrintf("devAoF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
         prec->pact = 1;
         return -1;
     }
@@ -98,7 +85,9 @@ static long init_record(aoRecord *prec)
 static long write_ao(aoRecord *prec)
 {
     F3RP61SEQ_DPVT *dpvt = prec->dpvt;
-    int retval = 0; // with conversion
+    const uint32_t nelm = 1;
+
+    int ret = 0; // with conversion
 
     if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
@@ -115,47 +104,9 @@ static long write_ao(aoRecord *prec)
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
         uint16_t *wdata = pM3WriteSeqdev->dataBuff.wData;
 
-        //
-        const char conv = dpvt->conv;
-        if (conv == 'D') {
-            double val = prec->val;
-            // todo : consider ASLO and AOFF field
-
-            uint64_t lval;
-            memcpy(&lval, &val, sizeof(double));
-            wdata[0] = (uint16_t)(lval>> 0);
-            wdata[1] = (uint16_t)(lval>>16);
-            wdata[2] = (uint16_t)(lval>>32);
-            wdata[3] = (uint16_t)(lval>>48);
-
-            prec->udf = isnan(val); // does this make sense?
-            // it seems that returning 2 (=no conversion) is meaningless
-            //retval = 2; // no conversion
-
-        } else if (conv == 'F') {
-            float val = prec->val;
-            // todo : consider ASLO and AOFF field
-
-            uint32_t lval;
-            memcpy(&lval, &val, sizeof(float));
-            wdata[0] = (uint16_t)(lval>> 0);
-            wdata[1] = (uint16_t)(lval>>16);
-
-            prec->udf = isnan(val); // does this make sense?
-            // it seems that returning 2 (=no conversion) is meaningless
-            //retval = 2; // no conversion
-
-        } else if (conv == 'L') {
-            wdata[0] = (uint16_t)(prec->rval>> 0);
-            wdata[1] = (uint16_t)(prec->rval>>16);
-
-        } else if (conv == 'U') {
-            wdata[0] = (uint16_t)prec->rval;
-
-        } else {
-            wdata[0] = (int16_t)prec->rval;
-
-        }
+        // Compose data to write
+        devF3RP61double2buf(&prec->val, wdata, dpvt->conv, nelm);
+        prec->udf = isnan(prec->val); // does this make sense?
 
         // Issue write request
         if (f3rp61seqQueueRequest(dpvt) < 0) {
@@ -167,5 +118,5 @@ static long write_ao(aoRecord *prec)
         prec->pact = 1;
     }
 
-    return retval;
+    return ret;
 }

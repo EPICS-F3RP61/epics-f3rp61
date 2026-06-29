@@ -69,68 +69,14 @@ static long init_record(aaoRecord *prec)
 
     // Allocate private data storage area
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    const uint32_t nelm = prec->nelm;
     prec->dpvt = dpvt;
+    const dbfType  ftvl = prec->ftvl;
+    const uint32_t nelm = prec->nelm;
 
     //
-    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, nelm);
+    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, ftvl, nelm);
     if (ret < 0) {
         //errlogPrintf("devAaoF3RP61: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
-    }
-
-    // Check conversion specifier
-    const dbfType  ftvl    = prec->ftvl;
-    const char    *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
-    const int8_t   conv    = dpvt->conv;
-    if (0) {
-    } else if (ftvl == DBF_DOUBLE) {
-        if (conv == 'W') {        // Dummy for Word access
-        } else if (conv == 'U') { // Unsigned integer
-        } else if (conv == 'L') { // Long word
-        } else if (conv == 'F') { // Single precision floating point
-        } else if (conv == 'D') { // Double precision floating point
-        } else {
-            errlogPrintf("devAaiF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
-            prec->pact = 1;
-            return -1;
-        }
-    } else if (ftvl == DBF_FLOAT) {
-        if (conv == 'W') {        // Dummy for Word access
-        } else if (conv == 'U') { // Unsigned integer
-        } else if (conv == 'L') { // Long word
-        } else if (conv == 'F') { // Single precision floating point
-        //} else if (conv == 'D') { // Double precision floating point
-        } else {
-            errlogPrintf("devAaiF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
-            prec->pact = 1;
-            return -1;
-        }
-    } else if (ftvl == DBF_LONG || ftvl == DBF_ULONG) {
-        if (conv == 'W') {        // Dummy for Word access
-        } else if (conv == 'U') { // Unsigned integer
-        } else if (conv == 'L') { // Long word
-        //} else if (conv == 'F') { // Single precision floating point
-        //} else if (conv == 'D') { // Double precision floating point
-        } else {
-            errlogPrintf("devAaiF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
-            prec->pact = 1;
-            return -1;
-        }
-    } else if (ftvl == DBF_SHORT || ftvl == DBF_USHORT) {
-        if (conv == 'W') {        // Dummy for Word access
-        } else if (conv == 'U') { // Unsigned integer
-        //} else if (conv == 'L') { // Long word
-        //} else if (conv == 'F') { // Single precision floating point
-        //} else if (conv == 'D') { // Double precision floating point
-        } else {
-            errlogPrintf("devAaiF3RP61: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", prec->name, conv, ftvlstr);
-            prec->pact = 1;
-            return -1;
-        }
-    } else {
-        errlogPrintf("devAaiF3RP61: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
         prec->pact = 1;
         return -1;
     }
@@ -143,99 +89,26 @@ static long init_record(aaoRecord *prec)
 // When called, it sends the value from the VAL field to the driver.
 static long write_aao(aaoRecord *prec)
 {
-    const uint32_t nelm  = prec->nelm;
-    const dbfType  ftvl  = prec->ftvl;
-
-    F3RP61_DPVT   *dpvt  = prec->dpvt;
-    uint16_t      *wdata = dpvt->buf;
-    const int8_t   conv  = dpvt->conv;
+    F3RP61_DPVT   *dpvt = prec->dpvt;
+    const uint32_t nelm = prec->nelm;
+    const dbfType  ftvl = prec->ftvl;
+    //const int8_t   conv = dpvt->conv;
 
     // Compose data to write
     if (0) {
     } else if (ftvl == DBF_DOUBLE) {
-        double *bptr = prec->bptr;
-        if (0) {
-        } else if (conv == 'D') {
-            for (uint32_t i=0; i<nelm; i++) {
-                const double val = bptr[i];
-                int64_t lval;
-                memcpy(&lval, &val, sizeof(double));
-                wdata[4*i + 0] = (uint16_t)(lval>> 0);
-                wdata[4*i + 1] = (uint16_t)(lval>>16);
-                wdata[4*i + 2] = (uint16_t)(lval>>32);
-                wdata[4*i + 3] = (uint16_t)(lval>>48);
-            }
-        } else if (conv == 'F') {
-            for (uint32_t i=0; i<nelm; i++) {
-                float val = bptr[i];
-                int32_t lval;
-                memcpy(&lval, &val, sizeof(float));
-                wdata[2*i + 0] = (uint16_t)(lval>> 0);
-                wdata[2*i + 1] = (uint16_t)(lval>>16);
-            }
-        } else if (conv == 'L') {
-            for (uint32_t i=0; i<nelm; i++) {
-                int32_t lval = bptr[i];
-                wdata[2*i + 0] = (uint16_t)(lval>> 0);
-                wdata[2*i + 1] = (uint16_t)(lval>>16);
-            }
-        } else if (conv == 'U') {
-            for (uint32_t i=0; i<nelm; i++) {
-                wdata[i] = (uint16_t)bptr[i];
-            }
-        } else {// conv == 'W'
-            for (uint32_t i=0; i<nelm; i++) {
-                wdata[i] = (int16_t)bptr[i];
-            }
-        }
+        devF3RP61double2buf(prec->bptr, dpvt->buf, dpvt->conv, nelm);
     } else if (ftvl == DBF_FLOAT) {
-        const float *bptr = prec->bptr;
-        if (0) {
-        } else if (conv == 'F') {
-            for (uint32_t i=0; i<nelm; i++) {
-                float val = bptr[i];
-                int32_t lval;
-                memcpy(&lval, &val, sizeof(float));
-                wdata[2*i + 0] = (uint16_t)(lval>> 0);
-                wdata[2*i + 1] = (uint16_t)(lval>>16);
-            }
-        } else if (conv == 'L') {
-            for (uint32_t i=0; i<nelm; i++) {
-                int32_t lval = bptr[i];
-                wdata[2*i + 0] = (uint16_t)(lval>> 0);
-                wdata[2*i + 1] = (uint16_t)(lval>>16);
-            }
-        } else if (conv == 'U') {
-            for (uint32_t i=0; i<nelm; i++) {
-                wdata[i] = (uint16_t)bptr[i];
-            }
-        } else {// conv == 'W'
-            for (uint32_t i=0; i<nelm; i++) {
-                wdata[i] = (int16_t)bptr[i];
-            }
-        }
+        devF3RP61float2buf(prec->bptr, dpvt->buf, dpvt->conv, nelm);
     } else if (ftvl == DBF_LONG || ftvl == DBF_ULONG) {
-        const int32_t *bptr = prec->bptr;
-        if (0) {
-        //} else if (conv == 'D') {
-        //} else if (conv == 'F') {
-        } else if (conv == 'L') {
-            for (uint32_t i=0; i<nelm; i++) {
-                int32_t lval = bptr[i];
-                wdata[2*i + 0] = (uint16_t)(lval>> 0);
-                wdata[2*i + 1] = (uint16_t)(lval>>16);
-            }
-        } else if (conv == 'U') {
-            for (uint32_t i=0; i<nelm; i++) {
-                wdata[i] = (uint16_t)bptr[i];
-            }
-        } else {// conv == 'W'
-            for (uint32_t i=0; i<nelm; i++) {
-                wdata[i] = (int16_t)bptr[i];
-            }
+        int ret = devF3RP61int2buf(prec->bptr, dpvt->buf, dpvt->conv, nelm); // nord
+        if (!ret) {
+            // overflow happend in int2bcd
+            recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
         }
     } else {//(ftvl == DBF_SHORT || ftvl == DBF_USHORT)
-        const uint16_t *bptr = prec->bptr;
+        const uint16_t *bptr  = prec->bptr;
+        uint16_t       *wdata = dpvt->buf;
         if (0) {
         //} else if (conv == 'D') {
         //} else if (conv == 'F') {

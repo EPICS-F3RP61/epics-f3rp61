@@ -19,7 +19,6 @@
 
 //
 #include <drvF3RP61.h>
-#include <devF3RP61bcd.h>
 
 //
 static const F3RP61_RW rw = kWrite;
@@ -70,26 +69,13 @@ static long init_record(longoutRecord *prec)
 
     // Allocate private data storage area
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    const uint32_t nelm = 1;
     prec->dpvt = dpvt;
+    const uint32_t nelm = 1;
 
     //
-    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, nelm);
+    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, DBF_LONG, nelm);
     if (ret < 0) {
         //errlogPrintf("devLoF3RP61: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
-    }
-
-    // Check conversion specifier
-    const int8_t conv = dpvt->conv;
-    if (conv == 'W') {        // Dummy for Word access
-    } else if (conv == 'B') { // Binary Coded Decimal format
-    } else if (conv == 'U') { // Unsigned integer
-    } else if (conv == 'L') { // Long word
-    //} else if (conv == 'X') { // Long word access for XP01/XP02 modules (might be supported in the future)
-    } else {
-        errlogPrintf("devLoF3RP61: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
         prec->pact = 1;
         return -1;
     }
@@ -102,30 +88,18 @@ static long init_record(longoutRecord *prec)
 // When called, it sends the value from the VAL field to the driver.
 static long write_longout(longoutRecord *prec)
 {
-    F3RP61_DPVT  *dpvt  = prec->dpvt;
-    uint16_t     *wdata = dpvt->buf;
-    const int8_t  conv  = dpvt->conv;
+    F3RP61_DPVT   *dpvt = prec->dpvt;
+    const uint32_t nelm = 1;
 
     // Compose data to write
-    if (conv == 'B') {
-        wdata[0] = devF3RP61int2bcd(prec->val, prec);
-    } else if (conv == 'L') {
-        wdata[0] = (uint16_t)(prec->val>> 0);
-        wdata[1] = (uint16_t)(prec->val>>16);
-    } else if (conv == 'X') { // long word access for XP01/XP02 modules (might be supported in the future)
-        ulong *ldata = dpvt->buf;
-#if defined(__powerpc__)
-        ulong val = (ulong)prec->val;
-        ldata[0] = (val >> 16) | (val << 16); // we need word-swap for F3RP61
-#else
-        ldata[0] = (uint32_t)prec->val;
-#endif
-    } else {// conv == 'W'
-        wdata[0] = (uint16_t)prec->val;
+    int ret = devF3RP61int2buf(&prec->val, dpvt->buf, dpvt->conv, nelm);
+    if (!ret) {
+        // overflow happend in int2bcd
+        recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
     }
 
     // Issue API function
-    const int32_t nord = f3rp61Write((dbCommon*)prec, 1);
+    const int32_t nord = f3rp61Write((dbCommon*)prec, nelm);
     if (nord < 0) {
         recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
         return -1;

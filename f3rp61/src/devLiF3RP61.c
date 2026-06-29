@@ -19,7 +19,6 @@
 
 //
 #include <drvF3RP61.h>
-#include <devF3RP61bcd.h>
 
 //
 static const F3RP61_RW rw = kRead;
@@ -70,26 +69,13 @@ static long init_record(longinRecord *prec)
 
     // Allocate private data storage area
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    const uint32_t nelm = 1;
     prec->dpvt = dpvt;
+    const uint32_t nelm = 1;
 
     //
-    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, nelm);
+    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, DBF_LONG, nelm);
     if (ret < 0) {
         //errlogPrintf("devLiF3RP61: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
-    }
-
-    // Check conversion specifier
-    const int8_t conv = dpvt->conv;
-    if (conv == 'W') {        // Dummy for Word access
-    } else if (conv == 'B') { // Binary Coded Decimal format
-    } else if (conv == 'U') { // Unsigned integer
-    } else if (conv == 'L') { // Long word
-    //} else if (conv == 'X') { // Long word access for XP01/XP02 modules (might be supported in the future)
-    } else {
-        errlogPrintf("devLiF3RP61: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
         prec->pact = 1;
         return -1;
     }
@@ -103,8 +89,11 @@ static long init_record(longinRecord *prec)
 // VAL field.
 static long read_longin(longinRecord *prec)
 {
+    F3RP61_DPVT  *dpvt  = prec->dpvt;
+    const uint32_t nelm = 1;
+
     // Issue API function
-    const int32_t nord = f3rp61Read((dbCommon*)prec, 1);
+    const int32_t nord = f3rp61Read((dbCommon*)prec, nelm);
     if (nord < 0) {
         recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
         return -1;
@@ -114,26 +103,10 @@ static long read_longin(longinRecord *prec)
     prec->udf = FALSE;
 
     // fill VAL field
-    F3RP61_DPVT  *dpvt  = prec->dpvt;
-    uint16_t     *wdata = dpvt->buf;
-    const int8_t  conv  = dpvt->conv;
-
-    if (conv == 'B') {
-        prec->val = devF3RP61bcd2int(wdata[0], prec);
-    } else if (conv == 'X') { // long word access for XP01/XP02 modules (might be supported in the future)
-        ulong *ldata = dpvt->buf;
-#if defined(__powerpc__)
-        ulong val = ldata[0];
-        prec->val = (val >> 16) | (val << 16); // we need word-swap for F3RP61
-#else
-        prec->val = ldata[0];
-#endif
-    } else if (conv == 'L') {
-        prec->val = (wdata[1]<<16) | wdata[0];
-    } else if (conv == 'U') {
-        prec->val = (uint16_t)wdata[0];
-    } else {
-        prec->val = (int16_t)wdata[0];
+    int ret = devF3RP61buf2int(dpvt->buf, &prec->val, dpvt->conv, nelm);
+    if (ret < 0) {
+        // overflow happend in bcd2int
+        recGblSetSevr(prec, HIGH_ALARM, INVALID_ALARM);
     }
 
     //

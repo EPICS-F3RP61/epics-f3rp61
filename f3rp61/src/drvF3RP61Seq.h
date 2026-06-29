@@ -47,6 +47,9 @@
 #endif
 
 //
+#include "devF3RP61util.h"
+
+//
 #if defined(__powerpc__)
 #  define M3CPU_ACCS_CMD        MCMD_ACCS
 #  define M3CPU_SEND_SIG_EVENT  M3IO_SEND_SIG_EVENT
@@ -55,24 +58,6 @@
 #  define M3CPU_READ_COM        M3IO_READ_COM
 #  define M3CPU_WRITE_COM       M3IO_WRITE_COM
 #endif
-
-//
-typedef enum {
-    // These value are defined appropriately for as value of the
-    // subCode member of the MCMD_REQUEST structure.
-    kRead  = 0x01,
-    kWrite = 0x02,
-} F3RP61SEQ_RW;
-
-// Access type for sequence CPU device
-typedef enum {
-    // These value are defined appropriately for as value of the
-    // accessType member of the M3_READ_SEQDEV and the M3_WRITE_SEQDEV
-    // structure.
-    kBit   = 0x00,
-    kWord  = 0x02,
-    // kLong = 0x04, // F3RP71 native API does not suport long-word access
-} F3RP61SEQ_ACCESS_TYPE;
 
 //
 typedef struct {
@@ -87,7 +72,7 @@ typedef struct {
 int f3rp61seqQueueRequest();
 
 // helper function(s)
-int    f3rp61seqParseLink(const struct link *, F3RP61SEQ_RW, F3RP61SEQ_ACCESS_TYPE, const dbCommon *);
+int    f3rp61seqParseLink(const struct link *, F3RP61_RW, F3RP61_ACCESS_TYPE, dbCommon *, const dbfType, const uint32_t);
 int8_t f3rp61seqGetDevice(F3RP61SEQ_DPVT *);
 
 //

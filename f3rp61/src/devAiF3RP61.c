@@ -69,26 +69,13 @@ static long init_record(aiRecord *prec)
 
     // Allocate private data storage area
     F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    const uint32_t nelm = 1;
     prec->dpvt = dpvt;
+    const uint32_t nelm = 1;
 
     //
-    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, nelm);
+    const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, DBF_DOUBLE, nelm);
     if (ret < 0) {
         //errlogPrintf("devAiF3RP61: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
-    }
-
-    // Check conversion specifier
-    const int8_t conv = dpvt->conv;
-    if (conv == 'W') {        // Dummy for Word access
-    } else if (conv == 'U') { // Unsigned integer
-    } else if (conv == 'L') { // Long word
-    } else if (conv == 'F') { // Single precision floating point
-    } else if (conv == 'D') { // Double precision floating point
-    } else {
-        errlogPrintf("devAiF3RP61: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
         prec->pact = 1;
         return -1;
     }
@@ -102,8 +89,11 @@ static long init_record(aiRecord *prec)
 // VAL field.
 static long read_ai(aiRecord *prec)
 {
+    F3RP61_DPVT   *dpvt = prec->dpvt;
+    const uint32_t nelm = 1;
+
     // Issue API function
-    const int32_t nord = f3rp61Read((dbCommon*)prec, 1);
+    const int32_t nord = f3rp61Read((dbCommon*)prec, nelm);
     if (nord < 0) {
         recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
         return -1;
@@ -113,41 +103,11 @@ static long read_ai(aiRecord *prec)
     prec->udf = FALSE;
 
     // fill VAL field
-    F3RP61_DPVT  *dpvt  = prec->dpvt;
-    uint16_t     *wdata = dpvt->buf;
-    const int8_t  conv  = dpvt->conv;
-
-    if (conv == 'D') {
-        double val;
-        uint64_t w0 = wdata[0];
-        uint64_t w1 = wdata[1];
-        uint64_t w2 = wdata[2];
-        uint64_t w3 = wdata[3];
-        uint64_t lval = (w3<<48) | (w2<<32) | (w1<<16) | w0;
-
-        memcpy(&val, &lval, sizeof(double));
-        // todo : consider ASLO and AOFF field
-        // todo : consider SMOO field
-        prec->val = val;
-        prec->udf = isnan(prec->val);
-        return 2; // no conversion
-    } else if (conv == 'F') {
-        float val;
-        uint32_t lval = (wdata[1]<<16) | wdata[0];
-        memcpy(&val, &lval, sizeof(float));
-        // todo : consider ASLO and AOFF field
-        // todo : consider SMOO field
-        prec->val = val;
-        prec->udf = isnan(prec->val);
-        return 2; // no conversion
-    } else if (conv == 'L') {
-        prec->rval = wdata[1]<<16 | wdata[0];
-    } else if (conv == 'U') {
-        prec->rval = (uint16_t)wdata[0];
-    } else {
-        prec->rval = (int16_t)wdata[0];
-    }
+    int ret = devF3RP61buf2double(dpvt->buf, &prec->val, dpvt->conv, nelm);
+    prec->udf = isnan(prec->val);
+    // todo : consider ASLO and AOFF field
+    // todo : consider SMOO field
 
     //
-    return 0;
+    return ret;
 }

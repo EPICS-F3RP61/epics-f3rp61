@@ -45,20 +45,7 @@
 #endif
 
 //
-typedef enum {
-    // Thse values have no significance, yet they are kept consistent
-    // with drvF3RP61Seq.h
-    kRead  = 0x01,
-    kWrite = 0x02,
-} F3RP61_RW;
-
-// Access type for module access
-typedef enum {
-    // Thse values have no significance, yet they are kept consistent
-    // with drvF3RP61Seq.h
-    kBit  = 0x00,
-    kWord = 0x02,
-} F3RP61_ACCESS_TYPE;
+#include "devF3RP61util.h"
 
 //
 typedef struct {
@@ -87,7 +74,7 @@ long f3rp61Init(int after);
 long f3rp61GetIoIntInfo(int, dbCommon *, IOSCANPVT *);
 
 // helper function(s)
-int     f3rp61ParseLink(const struct link *, F3RP61_RW, F3RP61_ACCESS_TYPE, const dbCommon *, const uint32_t);
+int     f3rp61ParseLink(const struct link *, F3RP61_RW, F3RP61_ACCESS_TYPE, dbCommon *, const dbfType, const uint32_t);
 int32_t f3rp61Read(const dbCommon *, const uint32_t);
 int32_t f3rp61Write(const dbCommon *, const uint32_t);
 

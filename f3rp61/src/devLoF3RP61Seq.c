@@ -19,7 +19,6 @@
 
 //
 #include <drvF3RP61Seq.h>
-#include <devF3RP61bcd.h>
 
 // Create the dset for devLoF3RP61Seq
 static long init_record();
@@ -62,23 +61,12 @@ static long init_record(longoutRecord *prec)
     // Allocate private data storage area
     F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
     prec->dpvt = dpvt;
+    const uint32_t nelm = 1;
 
     //
-    const int ret = f3rp61seqParseLink(plink, kWrite, kWord, (dbCommon *)prec);
+    const int ret = f3rp61seqParseLink(plink, kWrite, kWord, (dbCommon *)prec, DBF_LONG, nelm);
     if (ret < 0) {
         //errlogPrintf("devLoF3RP61Seq: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
-    }
-
-    // Check conversion specifier
-    const int8_t conv = dpvt->conv;
-    if (conv == 'W') {        // Dummy for Word access
-    } else if (conv == 'B') { // Binary Coded Decimal format
-    } else if (conv == 'U') { // Unsigned integer
-    } else if (conv == 'L') { // Long word
-    } else {
-        errlogPrintf("devLoF3RP61Seq: %s : unsupported conversion specifier \'%c\'\n", prec->name, conv);
         prec->pact = 1;
         return -1;
     }
@@ -95,6 +83,7 @@ static long init_record(longoutRecord *prec)
 static long write_longout(longoutRecord *prec)
 {
     F3RP61SEQ_DPVT *dpvt = prec->dpvt;
+    const uint32_t nelm = 1;
 
     if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
@@ -111,21 +100,11 @@ static long write_longout(longoutRecord *prec)
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
         uint16_t *wdata = pM3WriteSeqdev->dataBuff.wData;
 
-        //
-        const char conv = dpvt->conv;
-        if (conv == 'B') {
-            wdata[0] = devF3RP61int2bcd(prec->val, prec);
-
-        } else if (conv == 'L') {
-            wdata[0] = (uint16_t)(prec->val>> 0);
-            wdata[1] = (uint16_t)(prec->val>>16);
-
-        } else if (conv == 'U') {
-            wdata[0] = (uint16_t)prec->val;
-
-        } else {
-            wdata[0] = (int16_t)prec->val;
-
+        // Compose data to write
+        int ret = devF3RP61int2buf(&prec->val, wdata, dpvt->conv, nelm);
+        if (!ret) {
+            // overflow happend in int2bcd
+            recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
         }
 
         // Issue write request

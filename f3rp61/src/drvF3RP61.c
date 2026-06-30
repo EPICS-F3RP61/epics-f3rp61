@@ -537,6 +537,16 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
         dpvt->count = 2;
     }
 
+    // Check if something is installed in the slot specified.
+    M3IO_MODULE_INFORMATION module_info = {
+        .unitno = unit,
+        .slotno = slot,
+    };
+    if (ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info)<0) {
+        errlogPrintf("%s: %s : unit %d slot %d is empty\n", __func__, prec->name, unit, slot);
+        return -1;
+    }
+
     //
     int32_t nord = nelm;
 

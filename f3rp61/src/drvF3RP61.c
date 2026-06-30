@@ -521,6 +521,25 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
         break;
     }
 
+    // Check address validity when accessing relays in byte-wise
+    if (type == kWord &&
+        (device == 'X' || device == 'Y' || device=='E' || device=='L')) {
+        if (addr%16 != 1) {
+            errlogPrintf("%s: %s : Illegal relay number : %d\n", __func__, prec->name, addr);
+            return -1;
+        }
+    }
+
+    // Check if something is installed in the slot specified.
+    M3IO_MODULE_INFORMATION module_info = {
+        .unitno = unit,
+        .slotno = slot,
+    };
+    if (ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info)<0) {
+        errlogPrintf("%s: %s : unit %d slot %d is empty\n", __func__, prec->name, unit, slot);
+        return -1;
+    }
+
     //
     dpvt->device = device;
     dpvt->unit   = unit;
@@ -535,16 +554,6 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
         dpvt->count = 2;
     } else if (dpvt->conv == 'X') {
         dpvt->count = 2;
-    }
-
-    // Check if something is installed in the slot specified.
-    M3IO_MODULE_INFORMATION module_info = {
-        .unitno = unit,
-        .slotno = slot,
-    };
-    if (ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info)<0) {
-        errlogPrintf("%s: %s : unit %d slot %d is empty\n", __func__, prec->name, unit, slot);
-        return -1;
     }
 
     //

@@ -137,15 +137,6 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
         return -1;
     }
 
-    // Consider I/O data length
-    const int width = 2; // We don't use long-word access, so width is fixed to 2
-    int num = 1;
-    if (dpvt->conv == 'D') {
-        num = 4;
-    } else if (dpvt->conv == 'F' || dpvt->conv == 'L') {
-        num = 2;
-    }
-
     // Parse for possible IO interrupt source
     //
     // Empty
@@ -153,8 +144,8 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
 
     // Parse slot, device and register number
     int8_t device = 0;
-    int srcSlot = 0, destSlot = 0, top = 0;
-    if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &top) < 3) {
+    int srcSlot = 0, destSlot = 0, addr = 0;
+    if (sscanf(buf, "CPU%d,%c%d", &destSlot, &device, &addr) < 3) {
         errlogPrintf("%s: %s : can't get device address\n", __func__, prec->name);
         return -1;
     }
@@ -206,7 +197,7 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
     }
 
     //debug
-    //fprintf(stderr, "%s : %s : srcSlot=%d destSlot=%d device=%c pos=%d\n", __func__, prec->name, srcSlot, destSlot, device, top);
+    //fprintf(stderr, "%s : %s : srcSlot=%d destSlot=%d device=%c pos=%d\n", __func__, prec->name, srcSlot, destSlot, device, addr);
 
     if (destSlot == srcSlot) {
         // Its better to use local device access API rather than sequence CPU device API (when local device access is supported by the device support)
@@ -223,6 +214,24 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
             mcmdsrvmain(10);
             mcmd_done = 1;
         }
+    }
+
+    // Check address validity when accessing relays in byte-wise
+    if (type == kWord &&
+        (device == 'X' || device == 'Y' || device=='I' || device=='M')) {
+        if (addr%16 != 1) {
+            errlogPrintf("%s: %s : Illegal relay number : %d\n", __func__, prec->name, addr);
+            return -1;
+        }
+    }
+
+    // Consider I/O data length
+    const int width = 2; // We don't use long-word access, so width is fixed to 2
+    int num = 1;
+    if (dpvt->conv == 'D') {
+        num = 4;
+    } else if (dpvt->conv == 'F' || dpvt->conv == 'L') {
+        num = 2;
     }
 
     // Compose data structure for I/O request to CPU module
@@ -242,14 +251,14 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
         pM3ReadSeqdev->accessType = type;
         pM3ReadSeqdev->dataNum = num;
         pM3ReadSeqdev->devType = device - '@'; // 'D'=>0x04, 'B'=>0x02, 'F'=>0x06, 'Z'=>0x1A, 'I'=>0x09
-        pM3ReadSeqdev->topDevNo = top;
+        pM3ReadSeqdev->topDevNo = addr;
         pmcmdRequest->dataSize = 10;
     } else {
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
         pM3WriteSeqdev->accessType = type;
         pM3WriteSeqdev->dataNum = num;
         pM3WriteSeqdev->devType = device - '@'; // 'D'=>0x04, 'B'=>0x02, 'F'=>0x06, 'Z'=>0x1A, 'I'=>0x09
-        pM3WriteSeqdev->topDevNo = top;
+        pM3WriteSeqdev->topDevNo = addr;
         pmcmdRequest->dataSize = 10 + num * width;
     }
 

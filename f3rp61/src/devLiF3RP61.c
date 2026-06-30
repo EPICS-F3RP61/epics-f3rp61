@@ -89,11 +89,11 @@ static long init_record(longinRecord *prec)
 // VAL field.
 static long read_longin(longinRecord *prec)
 {
-    F3RP61_DPVT  *dpvt  = prec->dpvt;
-    const uint32_t nelm = 1;
+    F3RP61_DPVT *dpvt  = prec->dpvt;
+    int32_t      nord  = dpvt->nord;
 
     // Issue API function
-    const int32_t nord = f3rp61Read((dbCommon*)prec, nelm);
+    nord = f3rp61Read((dbCommon*)prec, nord); // nord must be identical to dpvt->nord, if no error
     if (nord < 0) {
         recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
         return -1;
@@ -103,7 +103,7 @@ static long read_longin(longinRecord *prec)
     prec->udf = FALSE;
 
     // fill VAL field
-    int ret = devF3RP61buf2int(dpvt->buf, &prec->val, dpvt->conv, nelm);
+    int ret = devF3RP61buf2int(dpvt->buf, &prec->val, dpvt->conv, nord);
     if (ret < 0) {
         // overflow happend in bcd2int
         recGblSetSevr(prec, HIGH_ALARM, INVALID_ALARM);

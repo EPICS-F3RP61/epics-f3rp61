@@ -90,18 +90,26 @@ static long init_record(aaoRecord *prec)
 static long write_aao(aaoRecord *prec)
 {
     F3RP61_DPVT   *dpvt = prec->dpvt;
-    const uint32_t nelm = prec->nelm;
+    int32_t        nord = dpvt->nord;
     const dbfType  ftvl = prec->ftvl;
     //const int8_t   conv = dpvt->conv;
+
+    //debug
+    //fprintf(stderr, "%s : %s : dpvt->nord=%d prec->nord=%d\n", __func__, prec->name, dpvt->nord, prec->nord);
+
+    // Client may put with a smaller number of NORD
+    if (nord > prec->nord) {
+        nord = prec->nord;
+    }
 
     // Compose data to write
     if (0) {
     } else if (ftvl == DBF_DOUBLE) {
-        devF3RP61double2buf(prec->bptr, dpvt->buf, dpvt->conv, nelm);
+        devF3RP61double2buf(prec->bptr, dpvt->buf, dpvt->conv, nord);
     } else if (ftvl == DBF_FLOAT) {
-        devF3RP61float2buf(prec->bptr, dpvt->buf, dpvt->conv, nelm);
+        devF3RP61float2buf(prec->bptr, dpvt->buf, dpvt->conv, nord);
     } else if (ftvl == DBF_LONG || ftvl == DBF_ULONG) {
-        int ret = devF3RP61int2buf(prec->bptr, dpvt->buf, dpvt->conv, nelm); // nord
+        int ret = devF3RP61int2buf(prec->bptr, dpvt->buf, dpvt->conv, nord);
         if (!ret) {
             // overflow happend in int2bcd
             recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
@@ -114,14 +122,14 @@ static long write_aao(aaoRecord *prec)
         //} else if (conv == 'F') {
         //} else if (conv == 'L') {
         } else {// conv == 'U' || conv == 'W'
-            for (uint32_t i=0; i<nelm; i++) {
+            for (int32_t i=0; i<nord; i++) {
                 wdata[i] = (uint16_t)bptr[i];
             }
         }
     }
 
     // Issue API function
-    const int32_t nord = f3rp61Write((dbCommon*)prec, nelm);
+    nord = f3rp61Write((dbCommon*)prec, nord); // nord must be identical to dpvt->nord, if no error
     if (nord < 0) {
         recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
         return -1;

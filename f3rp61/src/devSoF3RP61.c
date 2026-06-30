@@ -96,8 +96,8 @@ static long init_record(stringoutRecord *prec)
 // When called, it sends the value from the VAL field to the driver.
 static long write_so(stringoutRecord *prec)
 {
-    F3RP61_DPVT  *dpvt = prec->dpvt;
-    const int32_t count = dpvt->count;
+    F3RP61_DPVT   *dpvt  = prec->dpvt;
+    const int32_t  count = dpvt->count;
 
     // Compose data to write
     void *bdata = dpvt->buf;
@@ -105,9 +105,9 @@ static long write_so(stringoutRecord *prec)
 
     // Issue API function
     M3IO_ACCESS_REG drly = {
-        .unitno = dpvt->unit,
-        .slotno = dpvt->slot,
-        .start  = dpvt->addr,
+        .unitno   = dpvt->unit,
+        .slotno   = dpvt->slot,
+        .start    = dpvt->addr,
         .count    = count,
         .u.pbdata = bdata,
     };

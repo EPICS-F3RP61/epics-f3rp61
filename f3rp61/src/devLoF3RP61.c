@@ -88,18 +88,18 @@ static long init_record(longoutRecord *prec)
 // When called, it sends the value from the VAL field to the driver.
 static long write_longout(longoutRecord *prec)
 {
-    F3RP61_DPVT   *dpvt = prec->dpvt;
-    const uint32_t nelm = 1;
+    F3RP61_DPVT *dpvt = prec->dpvt;
+    int32_t      nord = dpvt->nord;
 
     // Compose data to write
-    int ret = devF3RP61int2buf(&prec->val, dpvt->buf, dpvt->conv, nelm);
+    int ret = devF3RP61int2buf(&prec->val, dpvt->buf, dpvt->conv, nord);
     if (!ret) {
         // overflow happend in int2bcd
         recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
     }
 
     // Issue API function
-    const int32_t nord = f3rp61Write((dbCommon*)prec, nelm);
+    nord = f3rp61Write((dbCommon*)prec, nord); // nord must be identical to dpvt->nord, if no error
     if (nord < 0) {
         recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
         return -1;

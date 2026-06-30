@@ -62,6 +62,8 @@ typedef struct {
     uint8_t   irqslot; // slot number     (1, 2, ..., 16)
     uint8_t   irqaddr; // position number (1, 2, ..., 32)
     //
+    uint32_t  nord;    // number of elemetns to be read from or written to the PV (within the hardware limitations)
+    //
     void     *buf;     // buffer for I/O
 } F3RP61_DPVT;
 
@@ -75,8 +77,8 @@ long f3rp61GetIoIntInfo(int, dbCommon *, IOSCANPVT *);
 
 // helper function(s)
 int     f3rp61ParseLink(const struct link *, F3RP61_RW, F3RP61_ACCESS_TYPE, dbCommon *, const dbfType, const uint32_t);
-int32_t f3rp61Read(const dbCommon *, const uint32_t);
-int32_t f3rp61Write(const dbCommon *, const uint32_t);
+int32_t f3rp61Read(const dbCommon *, const int32_t);
+int32_t f3rp61Write(const dbCommon *, const int32_t);
 
 //
 extern int f3rp61_fd;

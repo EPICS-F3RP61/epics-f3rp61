@@ -88,12 +88,12 @@ static long init_record(aaiRecord *prec)
 static long read_aai(aaiRecord *prec)
 {
     F3RP61_DPVT   *dpvt = prec->dpvt;
-    const uint32_t nelm = prec->nelm;
+    int32_t        nord = dpvt->nord;
     const dbfType  ftvl = prec->ftvl;
     //const int8_t   conv = dpvt->conv;
 
     // Issue API function
-    const int32_t nord = f3rp61Read((dbCommon*)prec, nelm);
+    nord = f3rp61Read((dbCommon*)prec, nord); // nord must be identical to dpvt->nord, if no error
     if (nord < 0) {
         recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
         return -1;

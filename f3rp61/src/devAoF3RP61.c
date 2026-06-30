@@ -88,15 +88,15 @@ static long init_record(aoRecord *prec)
 // When called, it sends the value from the VAL field to the driver.
 static long write_ao(aoRecord *prec)
 {
-    F3RP61_DPVT   *dpvt = prec->dpvt;
-    const uint32_t nelm = 1;
+    F3RP61_DPVT *dpvt = prec->dpvt;
+    int32_t      nord = dpvt->nord;
 
     // Compose data to write
-    devF3RP61double2buf(&prec->val, dpvt->buf, dpvt->conv, nelm);
+    devF3RP61double2buf(&prec->val, dpvt->buf, dpvt->conv, nord);
     // todo : consider ASLO and AOFF field
 
     // Issue API function
-    const int32_t nord = f3rp61Write((dbCommon*)prec, nelm);
+    nord = f3rp61Write((dbCommon*)prec, nord); // nord must be identical to dpvt->nord, if no error
     if (nord < 0) {
         recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
         return -1;

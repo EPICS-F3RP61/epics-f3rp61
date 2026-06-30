@@ -537,6 +537,12 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
         dpvt->count = 2;
     }
 
+    //
+    int32_t nord = nelm;
+
+    //
+    dpvt->nord   = nord;
+
     // Allocate buffer for I/O
     if (type == kBit) {
         // for bit-device, we'll use local variable
@@ -567,13 +573,13 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
 // Issue API function and read from the module.
 // returns NORD
 //
-int32_t f3rp61Read(const dbCommon *prec, const uint32_t nelm)
+int32_t f3rp61Read(const dbCommon *prec, const int32_t nord)
 {
     //
     F3RP61_DPVT   *dpvt   = prec->dpvt;
     const int8_t   device = dpvt->device;
     const int8_t   conv   = dpvt->conv;
-    int32_t        count  = dpvt->count * nelm;
+    int32_t        count  = dpvt->count * nord;
 
     // debug
     //fprintf(stderr, "%s %s[%d] device:%c unit:%d slot:%d addr:%d count:%d iointr:%d:\n", __func__, prec->name, nelm, dpvt->device, dpvt->unit, dpvt->slot, dpvt->addr, count, (prec->scan)==SCAN_IO_EVENT);
@@ -636,9 +642,6 @@ int32_t f3rp61Read(const dbCommon *prec, const uint32_t nelm)
 #endif
 
     } else if (device == 'X') { // Input relays on I/O modules
-        if (count > 4) { // The maximum number of blocks is 4
-            count = 4;
-        }
         M3IO_ACCESS_REG drly = {
             .unitno = dpvt->unit,
             .slotno = dpvt->slot,
@@ -655,9 +658,6 @@ int32_t f3rp61Read(const dbCommon *prec, const uint32_t nelm)
         }
 
     } else if (device == 'Y') { // Output relays on I/O modules
-        if (count > 4) { // The maximum number of blocks is 4
-            count = 4;
-        }
         M3IO_ACCESS_REG drly = {
             .unitno = dpvt->unit,
             .slotno = dpvt->slot,
@@ -687,9 +687,6 @@ int32_t f3rp61Read(const dbCommon *prec, const uint32_t nelm)
         // accepted. Similary, the count can be 1, 2, or 4. Be aware
         // that writing to the address 4 does not make sense, and may
         // cause problems.
-        if (count > 4) { // The maximum number of blocks is 3, but 4 seems OK
-            count = 4; // 3
-        }
         M3IO_ACCESS_REG drly = {
             .unitno = dpvt->unit,
             .slotno = dpvt->slot,
@@ -707,9 +704,6 @@ int32_t f3rp61Read(const dbCommon *prec, const uint32_t nelm)
             wdata[i] = drly.u.wdata[i];
         }
 #else
-        if (count > 8) { // The maximum number of blocks is 8
-            count = 8;
-        }
         const int32_t  unit  = dpvt->unit;
         const int32_t  slot  = dpvt->slot;
         const int32_t  addr  = dpvt->addr;
@@ -755,15 +749,23 @@ int32_t f3rp61Read(const dbCommon *prec, const uint32_t nelm)
 //////////////////////////////////////////////////////////////////////////
 //
 // Issue API function and write to the module.
-// returns NORD
+// returns NORD on success, -1 on error
 //
-int32_t f3rp61Write(const dbCommon *prec, const uint32_t nelm)
+int32_t f3rp61Write(const dbCommon *prec, const int32_t nord)
 {
     //
     F3RP61_DPVT   *dpvt = prec->dpvt;
     const int8_t   device = dpvt->device;
     const int8_t   conv   = dpvt->conv;
-    int32_t        count  = dpvt->count * nelm;
+    int32_t        count  = dpvt->count * nord;
+
+    //debug
+    //fprintf(stderr, "%s : %s : unit=%d slot=%d device=%c addr=%d count=%d nord=%d\n", __func__, prec->name, dpvt->unit, dpvt->slot, dpvt->device, dpvt->addr, dpvt->count, nord);
+
+    //
+    if (count<=0) {
+        return 0;
+    }
 
     // Issue API function
     if (0) {                    // dummy
@@ -914,7 +916,7 @@ int32_t f3rp61Write(const dbCommon *prec, const uint32_t nelm)
     }
 
     //
-    return count / dpvt->count;
+    return nord;
 }
 
 

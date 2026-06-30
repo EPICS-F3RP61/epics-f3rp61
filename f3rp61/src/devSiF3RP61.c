@@ -97,8 +97,8 @@ static long init_record(stringinRecord *prec)
 // VAL field.
 static long read_si(stringinRecord *prec)
 {
-    F3RP61_DPVT  *dpvt = prec->dpvt;
-    const int32_t count  = dpvt->count;
+    F3RP61_DPVT   *dpvt  = prec->dpvt;
+    const int32_t  count = dpvt->count;
 
     // Buffer for data read
     void *bdata = dpvt->buf;

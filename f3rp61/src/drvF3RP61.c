@@ -391,11 +391,11 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
     F3RP61_DPVT *dpvt = prec->dpvt;
 
     // Parse conversion specifier
-    dpvt->conv = 'W'; // default conversion for Word access
+    char conv = 'W'; // default conversion for Word access
     char *popt = strchr(buf, '&');
     if (popt) {
         *popt++ = '\0';
-        if (sscanf(popt, "%c", &dpvt->conv) < 1) {
+        if (sscanf(popt, "%c", &conv) < 1) {
             errlogPrintf("%s: %s : can't get conversion specifier\n", __func__, prec->name);
             return -1;
         }
@@ -403,57 +403,53 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
 
     // Check conversion specifier
     const char *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
-    if (f3rp61CheckConversion(type, ftvl, dpvt->conv) < 0) {
-        errlogPrintf("%s: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", __func__, prec->name, dpvt->conv, ftvlstr);
+    if (f3rp61CheckConversion(type, ftvl, conv) < 0) {
+        errlogPrintf("%s: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", __func__, prec->name, conv, ftvlstr);
         prec->pact = 1;
         return -1;
     }
 
     // Parse for possible IO interrupt source
-    dpvt->irqunit = 0;
-    dpvt->irqslot = 0;
-    dpvt->irqaddr = 0;
+    int32_t irqunit = 0;
+    int32_t irqslot = 0;
+    int32_t irqaddr = 0;
     char *pint = strchr(buf, ':'); // check if SCAN is interrupt based (example: @U0,S3,Y1:U0,S4,X1)
     if (pint) {
         *pint++ = '\0';
 
-        int unit = 0, slot = 0, addr = 0;
         if (0) {
             //
-        } else if (sscanf(pint, "U%d,S%d,X%d", &unit, &slot, &addr) == 3) {
+        } else if (sscanf(pint, "U%d,S%d,X%d", &irqunit, &irqslot, &irqaddr) == 3) {
             //
-        } else if (sscanf(pint, "S%d,X%d", &slot, &addr) == 2) {
+        } else if (sscanf(pint, "S%d,X%d", &irqslot, &irqaddr) == 2) {
             //
-        } else if (sscanf(pint, "X%d", &addr) == 1) {
+        } else if (sscanf(pint, "X%d", &irqaddr) == 1) {
             //
-            unit =  addr / 10000;
-            slot = (addr % 10000) / 100;
-            addr =  addr % 100;
+            irqunit =  irqaddr / 10000;
+            irqslot = (irqaddr % 10000) / 100;
+            irqaddr =  irqaddr % 100;
         } else {
             errlogPrintf("%s: %s : can't get interrupt source address\n", __func__, prec->name);
             return -1;
         }
 
-        if (unit<0  || unit>=M3IO_NUM_UNIT || // unit : 0,2,..., 7
-            slot<=0 || slot>M3IO_NUM_SLOT  || // slot : 1,2,...,16
-            addr<=0 || addr>NUM_IRQ_CH    ) { // addr : 1,2,...,64 (or 32)
-            errlogPrintf("%s: %s : Invalid interrupt source : U%d,S%d,X%d\n", __func__, prec->name, unit, slot, addr);
+        if (irqunit<0  || irqunit>=M3IO_NUM_UNIT || // unit : 0,2,..., 7
+            irqslot<=0 || irqslot>M3IO_NUM_SLOT  || // slot : 1,2,...,16
+            irqaddr<=0 || irqaddr>NUM_IRQ_CH    ) { // addr : 1,2,...,64 (or 32)
+            errlogPrintf("%s: %s : Invalid interrupt source : U%d,S%d,X%d\n", __func__, prec->name, irqunit, irqslot, irqaddr);
             return -1;
         }
 
         // Register IO Interrupt
-        dpvt->irqunit = unit;
-        dpvt->irqslot = slot;
-        dpvt->irqaddr = addr;
-        if (f3rp61RegisterIoInterrupt(prec, unit, slot, addr) < 0) {
+        if (f3rp61RegisterIoInterrupt(prec, irqunit, irqslot, irqaddr) < 0) {
             errlogPrintf("%s: %s : can't register I/O interrupt\n", __func__, prec->name);
             return -1;
         }
     }
 
     // Parse slot, device and register number
-    uint8_t device = 0;
-    uint32_t unit = 0, slot = 0, addr = 0;
+    char    device = 0;
+    int32_t unit = 0, slot = 0, addr = 0;
     if (0) {
         //
     } else if (sscanf(buf, "CPU%d,R%d", &slot, &addr) == 2) {
@@ -521,7 +517,17 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
         break;
     }
 
-    // Check address validity when accessing relays in byte-wise
+    // Consider I/O data length
+    int count = 1;
+    if (conv == 'D') {
+        count = 4;
+    } else if (conv == 'F' || conv == 'L') {
+        count = 2;
+    } else if (conv == 'X') {
+        count = 2;
+    }
+
+    // Check if start address is valid when accessing relays in byte-wise
     if (type == kWord &&
         (device == 'X' || device == 'Y' || device=='E' || device=='L')) {
         if (addr%16 != 1) {
@@ -540,34 +546,113 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
         return -1;
     }
 
-    //
-    dpvt->device = device;
-    dpvt->unit   = unit;
-    dpvt->slot   = slot;
-    dpvt->addr   = addr;
+    // Make sure that relay/regiester range is suitable for the hardware, if possible.
+    int32_t nord = nelm;
+    if (type == kBit) {
+        if (0) {
+            //
+        } else if (device == 'X') {
+            const int32_t nrly = module_info.num_xreg;
+            if (addr > nrly) {
+                errlogPrintf("%s: %s : Relay number %d exceeds the module limit of %d\n", __func__, prec->name, addr, nrly);
+                return -1;
+            }
+        } else if (device == 'Y') {
+            const int32_t nrly = module_info.num_yreg;
+            if (addr > nrly) {
+                errlogPrintf("%s: %s : Relay number %d exceeds the module limit of %d\n", __func__, prec->name, addr, nrly);
+                return -1;
+            }
+        }
+    } else { // kWord
+        if (0) {
+            //
+        } else if (device == 'X') {
+            const int nrly = module_info.num_xreg;
+            const int end  = addr + (16 * count * nelm) - 1;
+            nord = (nrly - addr + 1) / (16 * count);
+            if (nord <= 0) {
+                errlogPrintf("%s: %s : Relay number %d-%d (%d words x %d) exceeds the module limit of %d\n", __func__, prec->name, addr, end, count, nelm, nrly);
+                return -1;
+            } else if (nord < nelm) {
+                errlogPrintf("%s: %s : Warning: NORD shrinked to %d : Relay number %d-%d (%d words x %d) exceeds the module limif of %d\n", __func__, prec->name, nord, addr, end, count, nelm, nrly);
+            } else {
+                nord = nelm;
+            }
 
-    // Consider I/O data length
-    dpvt->count = 1;
-    if (dpvt->conv == 'D') {
-        dpvt->count = 4;
-    } else if (dpvt->conv == 'F' || dpvt->conv == 'L') {
-        dpvt->count = 2;
-    } else if (dpvt->conv == 'X') {
-        dpvt->count = 2;
+        } else if (device == 'Y') {
+            const int nrly = module_info.num_yreg;
+            const int end  = addr + (16 * count * nelm) - 1;
+            nord = (nrly - addr + 1) / (16 * count);
+            if (nord <= 0) {
+                errlogPrintf("%s: %s : Relay number %d-%d (%d words x %d) exceeds the module limit of %d\n", __func__, prec->name, addr, end, count, nelm, nrly);
+                return -1;
+            } else if (nord < nelm) {
+                errlogPrintf("%s: %s : Warning: NORD shrinked to %d : Relay number %d-%d (%d words x %d) exceeds the module limif of %d\n", __func__, prec->name, nord, addr, end, count, nelm, nrly);
+            } else {
+                nord = nelm;
+            }
+
+        } else if (device == 'M') {
+#if defined(__powerpc__)
+            // The F3RP61 Linux BSP Reference manual states that start
+            // address is fixed at 1 and the count at 3. However it
+            // appears that start address of 2, 3, or 4 are also
+            // accepted. Similary, the count can be 1, 2, or 4. Be aware
+            // that writing to the address 4 does not make sense, and may
+            // cause problems.
+            const int nreg = 4; // The number of Mode registers for F3RP61 is 3, but 4 seems OK
+#else
+            const int nreg = 8; // The number of Mode registers for F3RP7x is 8
+#endif
+            const int end   = addr + (count * nelm) - 1;
+            nord = (nreg - addr + 1) / count;
+            if (nord <= 0) {
+                errlogPrintf("%s: %s : Register number %d-%d (%d words x %d) exceeds the module limit of %d\n", __func__, prec->name, addr, end, count, nelm, nreg);
+                return -1;
+            } else if (nord < nelm) {
+                errlogPrintf("%s: %s : Warning: NORD shrinked to %d : Relay number %d-%d (%d words x %d) exceeds the module limif of %d\n", __func__, prec->name, nord, addr, end, count, nelm, nreg);
+            } else {
+                nord = nelm;
+            }
+
+        } else if (device == 'A') {
+            const int nreg = module_info.num_dreg;
+            const int end = addr + (count * nelm) - 1;
+            //if (conv == 'X') {
+            //    nord = (nreg - addr + 1) / (count/2);
+            //} else {
+            nord = (nreg - addr + 1) / count;
+            //}
+            if (nord <= 0) {
+                errlogPrintf("%s: %s : Register number %d-%d (%d words x %d elem.) exceeds the module limit of %d\n", __func__, prec->name, addr, end, count, nelm, nreg);
+                return -1;
+            } else if (nord < nelm) {
+                errlogPrintf("%s: %s : Warning: NORD shrinked to %d : Relay number %d-%d (%d words x %d) the exceeds module limif of %d\n", __func__, prec->name, nord, addr, end, count, nelm, nreg);
+            } else {
+                nord = nelm;
+            }
+        }
     }
 
     //
-    int32_t nord = nelm;
-
-    //
-    dpvt->nord   = nord;
+    dpvt->conv    = conv;
+    dpvt->device  = device;
+    dpvt->unit    = unit;
+    dpvt->slot    = slot;
+    dpvt->addr    = addr;
+    dpvt->count   = count;
+    dpvt->irqunit = irqunit;
+    dpvt->irqslot = irqslot;
+    dpvt->irqaddr = irqaddr;
+    dpvt->nord    = nord;
 
     // Allocate buffer for I/O
     if (type == kBit) {
         // for bit-device, we'll use local variable
         dpvt->buf = 0;
     } else {
-        size_t bufsiz = nelm * dpvt->count;
+        size_t bufsiz = nelm * count;
         if (device=='M') {
 #if defined(__powerpc__)
 #else

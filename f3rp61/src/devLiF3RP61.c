@@ -92,6 +92,9 @@ static long read_longin(longinRecord *prec)
     F3RP61_DPVT *dpvt  = prec->dpvt;
     int32_t      nord  = dpvt->nord;
 
+    //debug
+    //fprintf(stderr, "%s : %s : dpvt->count=%d dpvt->nord=%d\n", __func__, prec->name, dpvt->count, dpvt->nord);
+
     // Issue API function
     nord = f3rp61Read((dbCommon*)prec, nord); // nord must be identical to dpvt->nord, if no error
     if (nord < 0) {

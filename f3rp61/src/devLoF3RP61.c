@@ -91,6 +91,9 @@ static long write_longout(longoutRecord *prec)
     F3RP61_DPVT *dpvt = prec->dpvt;
     int32_t      nord = dpvt->nord;
 
+    //debug
+    //fprintf(stderr, "%s : %s : dpvt->count=%d dpvt->nord=%d\n", __func__, prec->name, dpvt->count, dpvt->nord);
+
     // Compose data to write
     int ret = devF3RP61int2buf(&prec->val, dpvt->buf, dpvt->conv, nord);
     if (!ret) {

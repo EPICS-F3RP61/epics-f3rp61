@@ -92,6 +92,9 @@ static long read_wf(waveformRecord *prec)
     const dbfType  ftvl = prec->ftvl;
     //const int8_t   conv = dpvt->conv;
 
+    //debug
+    //fprintf(stderr, "%s : %s : dpvt->count=%d dpvt->nord=%d prec->nord=%d\n", __func__, prec->name, dpvt->count, dpvt->nord, prec->nord);
+
     // Issue API function
     nord = f3rp61Read((dbCommon*)prec, nord); // nord must be identical to dpvt->nord, if no error
     if (nord < 0) {

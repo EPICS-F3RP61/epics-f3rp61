@@ -95,7 +95,7 @@ static long write_aao(aaoRecord *prec)
     //const int8_t   conv = dpvt->conv;
 
     //debug
-    //fprintf(stderr, "%s : %s : dpvt->nord=%d prec->nord=%d\n", __func__, prec->name, dpvt->nord, prec->nord);
+    //fprintf(stderr, "%s : %s : dpvt->count=%d dpvt->nord=%d prec->nord=%d\n", __func__, prec->name, dpvt->count, dpvt->nord, prec->nord);
 
     // Client may put with a smaller number of NORD
     if (nord > prec->nord) {

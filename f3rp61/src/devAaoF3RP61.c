@@ -63,23 +63,21 @@ static long init_record(aaoRecord *prec)
     if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, prec,
                           "devAaoF3RP61 (init_record) Illegal OUT field");
-        prec->pact = 1;
         return S_db_badField;
     }
 
-    // Allocate private data storage area
-    F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    prec->dpvt = dpvt;
+    //
     const dbfType  ftvl = prec->ftvl;
     const uint32_t nelm = prec->nelm;
-
-    //
     const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, ftvl, nelm);
     if (ret < 0) {
-        //errlogPrintf("devAaoF3RP61: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
+        recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
+        return 0;
     }
+
+    // Set NORD othrewise it becomes zero for uninitialized Aao record.
+    // The array widget of CSS/Boy will disable elements that exceed NORD, thus prevents value input.
+    prec->nord = ret;
 
     //
     return 0;
@@ -89,18 +87,27 @@ static long init_record(aaoRecord *prec)
 // When called, it sends the value from the VAL field to the driver.
 static long write_aao(aaoRecord *prec)
 {
-    F3RP61_DPVT   *dpvt = prec->dpvt;
-    int32_t        nord = dpvt->nord;
-    const dbfType  ftvl = prec->ftvl;
-    //const int8_t   conv = dpvt->conv;
+    F3RP61_DPVT *dpvt = prec->dpvt;
+    if (!dpvt) { // something was wrong in OUT field and init_record() failed
+        recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
+        return -1;
+    }
 
     //debug
     //fprintf(stderr, "%s : %s : dpvt->count=%d dpvt->nord=%d prec->nord=%d\n", __func__, prec->name, dpvt->count, dpvt->nord, prec->nord);
 
-    // Client may put with a smaller number of NORD
-    if (nord > prec->nord) {
-        nord = prec->nord;
-    }
+    //
+    prec->udf = FALSE;
+
+    //
+    int32_t nord = dpvt->nord;
+    const dbfType ftvl = prec->ftvl;
+
+    // Client may put number of elements smaller than NORD, but NORD should not be made smaller.
+    // The array widget of CSS/Boy will disable elements that exceed NORD, thus prevents value input.
+    //if (nord > prec->nord) {
+    //    nord = prec->nord;
+    //}
 
     // Compose data to write
     if (0) {
@@ -110,7 +117,7 @@ static long write_aao(aaoRecord *prec)
         devF3RP61float2buf(prec->bptr, dpvt->buf, dpvt->conv, nord);
     } else if (ftvl == DBF_LONG || ftvl == DBF_ULONG) {
         int ret = devF3RP61int2buf(prec->bptr, dpvt->buf, dpvt->conv, nord);
-        if (!ret) {
+        if (ret < 0) {
             // overflow happend in int2bcd
             recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
         }
@@ -134,9 +141,6 @@ static long write_aao(aaoRecord *prec)
         recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
         return -1;
     }
-
-    //
-    prec->udf = FALSE;
 
     //
     prec->nord = nord;

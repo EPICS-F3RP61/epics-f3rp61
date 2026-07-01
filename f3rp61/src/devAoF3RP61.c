@@ -63,21 +63,15 @@ static long init_record(aoRecord *prec)
     if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, prec,
                           "devAoF3RP61 (init_record) Illegal OUT field");
-        prec->pact = 1;
         return S_db_badField;
     }
 
-    // Allocate private data storage area
-    F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    prec->dpvt = dpvt;
-    const uint32_t nelm = 1;
-
     //
+    const uint32_t nelm = 1;
     const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, DBF_DOUBLE, nelm);
     if (ret < 0) {
-        //errlogPrintf("devAoF3RP61: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
+        recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
+        return 0;
     }
 
     //
@@ -89,10 +83,19 @@ static long init_record(aoRecord *prec)
 static long write_ao(aoRecord *prec)
 {
     F3RP61_DPVT *dpvt = prec->dpvt;
-    int32_t      nord = dpvt->nord;
+    if (!dpvt) { // something was wrong in OUT field and init_record() failed
+        recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
+        return -1;
+    }
 
     //debug
     //fprintf(stderr, "%s : %s : dpvt->count=%d dpvt->nord=%d\n", __func__, prec->name, dpvt->count, dpvt->nord);
+
+    //
+    prec->udf = FALSE;
+
+    //
+    int32_t nord = dpvt->nord;
 
     // Compose data to write
     devF3RP61double2buf(&prec->val, dpvt->buf, dpvt->conv, nord);

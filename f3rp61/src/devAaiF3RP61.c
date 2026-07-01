@@ -60,7 +60,6 @@ static long init_record(aaiRecord *prec)
     if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, prec,
                           "devAaiF3RP61 (init_record) Illegal INP field");
-        prec->pact = 1;
         return S_db_badField;
     }
 
@@ -73,9 +72,8 @@ static long init_record(aaiRecord *prec)
     //
     const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, ftvl, nelm);
     if (ret < 0) {
-        //errlogPrintf("devAaiF3RP61: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
+        recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
+        return 0;
     }
 
     //
@@ -87,13 +85,21 @@ static long init_record(aaiRecord *prec)
 // VAL field.
 static long read_aai(aaiRecord *prec)
 {
-    F3RP61_DPVT   *dpvt = prec->dpvt;
-    int32_t        nord = dpvt->nord;
-    const dbfType  ftvl = prec->ftvl;
-    //const int8_t   conv = dpvt->conv;
+    F3RP61_DPVT *dpvt = prec->dpvt;
+    if (!dpvt) { // something was wrong in OUT field and init_record() failed
+        recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
+        return -1;
+    }
 
     //debug
     //fprintf(stderr, "%s : %s : dpvt->count=%d dpvt->nord=%d prec->nord=%d\n", __func__, prec->name, dpvt->count, dpvt->nord, prec->nord);
+
+    //
+    prec->udf = FALSE;
+
+    //
+    int32_t nord = dpvt->nord;
+    const dbfType ftvl = prec->ftvl;
 
     // Issue API function
     nord = f3rp61Read((dbCommon*)prec, nord); // nord must be identical to dpvt->nord, if no error
@@ -101,9 +107,6 @@ static long read_aai(aaiRecord *prec)
         recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
         return -1;
     }
-
-    //
-    prec->udf = FALSE;
 
     // fill VAL field
     if (0) {

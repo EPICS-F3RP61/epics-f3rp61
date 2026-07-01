@@ -64,20 +64,16 @@ static long init_record(stringinRecord *prec)
         return S_db_badField;
     }
 
-    // Allocate private data storage area
-    F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    prec->dpvt = dpvt;
-    const uint32_t nelm = 20;
-
     //
+    const uint32_t nelm = 20;
     const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, DBF_STRING, nelm);
     if (ret < 0) {
-        //errlogPrintf("devSiF3RP61: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
+        recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
+        return 0;
     }
 
     // Check device validity
+    F3RP61_DPVT *dpvt = prec->dpvt;
     const int8_t device = dpvt->device;
     if (0) {                                     // dummy
     } else if (device == 'A') {                  // I/O registers on special modules
@@ -97,13 +93,20 @@ static long init_record(stringinRecord *prec)
 // VAL field.
 static long read_si(stringinRecord *prec)
 {
-    F3RP61_DPVT   *dpvt  = prec->dpvt;
-    const int32_t  count = dpvt->count;
+    F3RP61_DPVT *dpvt  = prec->dpvt;
+    if (!dpvt) { // something was wrong in OUT field and init_record() failed
+        recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
+        return -1;
+    }
+
+    //
+    prec->udf = FALSE;
 
     // Buffer for data read
     void *bdata = dpvt->buf;
 
     // Issue API function
+    const int32_t count = dpvt->count;
     M3IO_ACCESS_REG drly = {
         .unitno   = dpvt->unit,
         .slotno   = dpvt->slot,
@@ -116,9 +119,6 @@ static long read_si(stringinRecord *prec)
         recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
         return -1;
     }
-
-    //
-    prec->udf = FALSE;
 
     // fill VAL field
     strncpy(prec->val, bdata, count*sizeof(int16_t));

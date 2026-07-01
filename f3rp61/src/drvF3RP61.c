@@ -377,7 +377,10 @@ long f3rp61Init(int after)
 //////////////////////////////////////////////////////////////////////////
 //
 // Parses INP or OUT link and initializes F3RP61_DPVT structure.
-// Registeres IO as well, if specified.
+// Registeres IO interrupt as well, if specified.
+//
+// Returns: NORD on success (may smaller than NELM due to hardware constraints, such as relay number on the I/O module)
+//          -1 on error
 //
 int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE type, dbCommon *prec, const dbfType ftvl, const uint32_t nelm)
 {
@@ -387,8 +390,8 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
     strncpy(buf, plink->value.instio.string, len);
     buf[len - 1] = '\0';
 
-    //
-    F3RP61_DPVT *dpvt = prec->dpvt;
+    // Clear dpvt so that subsequent failure of init_record() can be detected
+    prec->dpvt = 0;
 
     // Parse conversion specifier
     char conv = 'W'; // default conversion for Word access
@@ -466,7 +469,7 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
             slot = (addr % 10000) / 100;
             addr =  addr % 100;
         } else if (device == 'A') { // Address for 'A' may exceed 1000
-            errlogPrintf("%s: %s : Invalid device : %s\n", __func__, prec->name, buf);
+            errlogPrintf("%s: %s : Invalid device: %s\n", __func__, prec->name, buf);
             return -1;
         }
     } else {
@@ -523,8 +526,16 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
         count = 4;
     } else if (conv == 'F' || conv == 'L') {
         count = 2;
-    } else if (conv == 'X') {
-        count = 2;
+    }
+
+    // Check for unit and slot number. Address number will be checked later
+    if (unit<0  || unit>=M3IO_NUM_UNIT) { // unit : 0,2,..., 7
+        errlogPrintf("%s: %s : Invalid unit number: %d\n", __func__, prec->name, unit);
+        return -1;
+    }
+    if (slot<=0 || slot>M3IO_NUM_SLOT) {  // slot : 1,2,...,16
+        errlogPrintf("%s: %s : Invalid slot number: %d\n", __func__, prec->name, slot);
+        return -1;
     }
 
     // Check if start address is valid when accessing relays in byte-wise
@@ -542,57 +553,34 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
         .slotno = slot,
     };
     if (ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info)<0) {
-        errlogPrintf("%s: %s : unit %d slot %d is empty\n", __func__, prec->name, unit, slot);
+        errlogPrintf("%s: %s : Unit %d Slot %d is empty\n", __func__, prec->name, unit, slot);
         return -1;
     }
 
-    // Make sure that relay/regiester range is suitable for the hardware, if possible.
+    // Make sure that relay/register number is suitable for the hardware, if possible.
     int32_t nord = nelm;
     if (type == kBit) {
+        int32_t nrly;
         if (0) {
             //
         } else if (device == 'X') {
-            const int32_t nrly = module_info.num_xreg;
-            if (addr > nrly) {
-                errlogPrintf("%s: %s : Relay number %d exceeds the module limit of %d\n", __func__, prec->name, addr, nrly);
-                return -1;
-            }
+            nrly = module_info.num_xreg;
         } else if (device == 'Y') {
-            const int32_t nrly = module_info.num_yreg;
-            if (addr > nrly) {
-                errlogPrintf("%s: %s : Relay number %d exceeds the module limit of %d\n", __func__, prec->name, addr, nrly);
-                return -1;
-            }
+            nrly = module_info.num_yreg;
+        } else {
+            nrly = addr; // We don't care devices other than X or Y
+        }
+        if (addr > nrly) {
+            errlogPrintf("%s: %s : Relay number %d exceeds the module limit of %d\n", __func__, prec->name, addr, nrly);
+            return -1;
         }
     } else { // kWord
         if (0) {
             //
         } else if (device == 'X') {
-            const int nrly = module_info.num_xreg;
-            const int end  = addr + (16 * count * nelm) - 1;
-            nord = (nrly - addr + 1) / (16 * count);
-            if (nord <= 0) {
-                errlogPrintf("%s: %s : Relay number %d-%d (%d words x %d) exceeds the module limit of %d\n", __func__, prec->name, addr, end, count, nelm, nrly);
-                return -1;
-            } else if (nord < nelm) {
-                errlogPrintf("%s: %s : Warning: NORD shrinked to %d : Relay number %d-%d (%d words x %d) exceeds the module limif of %d\n", __func__, prec->name, nord, addr, end, count, nelm, nrly);
-            } else {
-                nord = nelm;
-            }
-
+            nord = f3rp61CheckAddrRange(prec, kBit, addr, count, nelm, module_info.num_xreg);
         } else if (device == 'Y') {
-            const int nrly = module_info.num_yreg;
-            const int end  = addr + (16 * count * nelm) - 1;
-            nord = (nrly - addr + 1) / (16 * count);
-            if (nord <= 0) {
-                errlogPrintf("%s: %s : Relay number %d-%d (%d words x %d) exceeds the module limit of %d\n", __func__, prec->name, addr, end, count, nelm, nrly);
-                return -1;
-            } else if (nord < nelm) {
-                errlogPrintf("%s: %s : Warning: NORD shrinked to %d : Relay number %d-%d (%d words x %d) exceeds the module limif of %d\n", __func__, prec->name, nord, addr, end, count, nelm, nrly);
-            } else {
-                nord = nelm;
-            }
-
+            nord = f3rp61CheckAddrRange(prec, kBit, addr, count, nelm, module_info.num_yreg);
         } else if (device == 'M') {
 #if defined(__powerpc__)
             // The F3RP61 Linux BSP Reference manual states that start
@@ -605,37 +593,23 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
 #else
             const int nreg = 8; // The number of Mode registers for F3RP7x is 8
 #endif
-            const int end   = addr + (count * nelm) - 1;
-            nord = (nreg - addr + 1) / count;
-            if (nord <= 0) {
-                errlogPrintf("%s: %s : Register number %d-%d (%d words x %d) exceeds the module limit of %d\n", __func__, prec->name, addr, end, count, nelm, nreg);
-                return -1;
-            } else if (nord < nelm) {
-                errlogPrintf("%s: %s : Warning: NORD shrinked to %d : Relay number %d-%d (%d words x %d) exceeds the module limif of %d\n", __func__, prec->name, nord, addr, end, count, nelm, nreg);
-            } else {
-                nord = nelm;
-            }
-
+            nord = f3rp61CheckAddrRange(prec, kWord, addr, count, nelm, nreg);
         } else if (device == 'A') {
-            const int nreg = module_info.num_dreg;
-            const int end = addr + (count * nelm) - 1;
-            //if (conv == 'X') {
-            //    nord = (nreg - addr + 1) / (count/2);
-            //} else {
-            nord = (nreg - addr + 1) / count;
-            //}
-            if (nord <= 0) {
-                errlogPrintf("%s: %s : Register number %d-%d (%d words x %d elem.) exceeds the module limit of %d\n", __func__, prec->name, addr, end, count, nelm, nreg);
-                return -1;
-            } else if (nord < nelm) {
-                errlogPrintf("%s: %s : Warning: NORD shrinked to %d : Relay number %d-%d (%d words x %d) the exceeds module limif of %d\n", __func__, prec->name, nord, addr, end, count, nelm, nreg);
+            if (conv == 'X') {
+                nord = f3rp61CheckAddrRange(prec, kWord, addr, count, nelm, module_info.num_dreg/2); // We need to check if dreg/2 is correct...
             } else {
-                nord = nelm;
+                nord = f3rp61CheckAddrRange(prec, kWord, addr, count, nelm, module_info.num_dreg);
             }
+        }
+        if (nord == 0) {
+            return -1;
         }
     }
 
-    //
+    // Allocate private data storage area
+    F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
+    prec->dpvt = dpvt;
+
     dpvt->conv    = conv;
     dpvt->device  = device;
     dpvt->unit    = unit;
@@ -662,20 +636,25 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
             //}
 #endif
         }
+        if (device =='A' && conv == 'X') {
+            bufsiz *= 2;
+        }
+
+        //
         dpvt->buf = callocMustSucceed(bufsiz, sizeof(int16_t), "calloc failed");
     }
 
     // debug
     //printf("%s %s[%d] U%d,S%d%c%d,U%d,S%d,X%d\n", __func__, prec->name, nelm, dpvt->unit, dpvt->slot, dpvt->device, dpvt->addr, dpvt->irqunit, dpvt->irqslot, dpvt->irqaddr);
 
-    // success
-    return 0;
+    return nord;
 }
 
 //////////////////////////////////////////////////////////////////////////
 //
 // Issue API function and read from the module.
-// returns NORD
+//
+// Returns: NORD
 //
 int32_t f3rp61Read(const dbCommon *prec, const int32_t nord)
 {
@@ -824,7 +803,7 @@ int32_t f3rp61Read(const dbCommon *prec, const int32_t nord)
                 .unitno   = dpvt->unit,
                 .slotno   = dpvt->slot,
                 .start    = dpvt->addr,
-                .count    = count/2, //
+                .count    = count,
                 .u.pldata = dpvt->buf,
             };
             if (ioctl(f3rp61_fd, M3IO_READ_REG_L, &drly) < 0) {
@@ -853,7 +832,8 @@ int32_t f3rp61Read(const dbCommon *prec, const int32_t nord)
 //////////////////////////////////////////////////////////////////////////
 //
 // Issue API function and write to the module.
-// returns NORD on success, -1 on error
+//
+// Returns: NORD on success, -1 on error
 //
 int32_t f3rp61Write(const dbCommon *prec, const int32_t nord)
 {
@@ -992,12 +972,12 @@ int32_t f3rp61Write(const dbCommon *prec, const int32_t nord)
 #endif
 
     } else {//(device == 'A')   // I/O registers on special modules
-        if (conv == 'X') {  // long word access for XP01/XP02 modules (might be supported in the future)
+        if (conv == 'X') { // long word access for XP01/XP02 modules (might be supported in the future)
             M3IO_ACCESS_REG drly = {
                 .unitno   = dpvt->unit,
                 .slotno   = dpvt->slot,
                 .start    = dpvt->addr,
-                .count    = count/2, //
+                .count    = count,
                 .u.pldata = dpvt->buf,
             };
             if (ioctl(f3rp61_fd, M3IO_WRITE_REG_L, &drly) < 0) {

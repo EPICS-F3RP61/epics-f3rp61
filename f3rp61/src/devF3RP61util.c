@@ -12,15 +12,6 @@
 */
 
 //
-#include <stdint.h>
-#include <stdio.h>
-#include <sys/types.h>
-
-//
-#include <alarm.h>
-#include <recGbl.h>
-
-//
 #include <devF3RP61util.h>
 
 //////////////////////////////////////////////////////////////////////////
@@ -94,6 +85,33 @@ int f3rp61CheckConversion(F3RP61_ACCESS_TYPE type, const dbfType ftvl, const cha
     }
 
     return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// check if address range is suitable for the hardware
+// return: the number of elements tat can be read/written
+//
+int32_t f3rp61CheckAddrRange(dbCommon *prec, F3RP61_ACCESS_TYPE type, const int addr, int32_t count, const int32_t nelm, const int limit)
+{
+    int width = count;
+    if (type == kBit) {
+        width *= 16;
+    }
+
+    const int end = addr + (width * nelm) - 1;
+    if (limit < end) {
+        errlogPrintf("%s: %s : %s number %d-%d (%d %s x %d) exceeds the module limit of %d\n", __func__, prec->name, (type==kBit)?"Relay":"Register", addr, end, width, (type==kBit)?"bits":"words", nelm, limit);
+        return 0;
+    }
+
+    int32_t nord = (limit - addr + 1) / width;
+    if (nord < nelm) {
+        errlogPrintf("%s: %s : Warning: NORD shrinked to %d : %s number %d-%d (%d %s x %d) exceeds the module limit of %d\n", __func__, prec->name, nord, (type==kBit)?"Relay":"Register", addr, end, width, (type==kBit)?"bits":"words", nelm, limit);
+        return nord;
+    } else {
+        return nelm;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////

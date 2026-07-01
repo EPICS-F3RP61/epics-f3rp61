@@ -63,21 +63,15 @@ static long init_record(aiRecord *prec)
     if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, prec,
                           "devAiF3RP61 (init_record) Illegal INP field");
-        prec->pact = 1;
         return S_db_badField;
     }
 
-    // Allocate private data storage area
-    F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    prec->dpvt = dpvt;
-    const uint32_t nelm = 1;
-
     //
+    const uint32_t nelm = 1;
     const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, DBF_DOUBLE, nelm);
     if (ret < 0) {
-        //errlogPrintf("devAiF3RP61: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
+        recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
+        return 0;
     }
 
     //
@@ -90,10 +84,19 @@ static long init_record(aiRecord *prec)
 static long read_ai(aiRecord *prec)
 {
     F3RP61_DPVT *dpvt = prec->dpvt;
-    int32_t      nord = dpvt->nord;
+    if (!dpvt) { // something was wrong in OUT field and init_record() failed
+        recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
+        return -1;
+    }
 
     //debug
     //fprintf(stderr, "%s : %s : dpvt->count=%d dpvt->nord=%d\n", __func__, prec->name, dpvt->count, dpvt->nord);
+
+    //
+    prec->udf = FALSE;
+
+    //
+    int32_t nord = dpvt->nord;
 
     // Issue API function
     nord = f3rp61Read((dbCommon*)prec, nord); // nord must be identical to dpvt->nord, if no error
@@ -102,14 +105,13 @@ static long read_ai(aiRecord *prec)
         return -1;
     }
 
-    //
-    prec->udf = FALSE;
-
     // fill VAL field
     int ret = devF3RP61buf2double(dpvt->buf, &prec->val, dpvt->conv, nord);
-    prec->udf = isnan(prec->val);
     // todo : consider ASLO and AOFF field
     // todo : consider SMOO field
+
+    //
+    prec->udf = isnan(prec->val);
 
     //
     return ret;

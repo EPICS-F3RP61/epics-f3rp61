@@ -65,20 +65,16 @@ static long init_record(mbboDirectRecord *prec)
         return S_db_badField;
     }
 
-    // Allocate private data storage area
-    F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    prec->dpvt = dpvt;
-    const uint32_t nelm = 1;
-
     //
+    const uint32_t nelm = 1;
     const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, DBF_LONG, nelm);
     if (ret < 0) {
-        //errlogPrintf("devLoF3RP61: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
+        recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
+        return 0;
     }
 
     // Set MASK, NOBT, and MASK
+    F3RP61_DPVT *dpvt = prec->dpvt;
     const int8_t conv = dpvt->conv;
     if (conv == 'L' || conv == 'X') { // 'X' conversion may not make sense for mbbiDirect
         prec->nobt = 32;
@@ -99,7 +95,16 @@ static long init_record(mbboDirectRecord *prec)
 static long write_mbboDirect(mbboDirectRecord *prec)
 {
     F3RP61_DPVT *dpvt = prec->dpvt;
-    int32_t      nord = dpvt->nord;
+    if (!dpvt) { // something was wrong in OUT field and init_record() failed
+        recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
+        return -1;
+    }
+
+    //
+    prec->udf = FALSE;
+
+    //
+    int32_t nord = dpvt->nord;
 
     // Compose data to write
     int ret = devF3RP61uint2buf(&prec->rval, dpvt->buf, dpvt->conv, nord);
@@ -114,9 +119,6 @@ static long write_mbboDirect(mbboDirectRecord *prec)
         recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
         return -1;
     }
-
-    //
-    prec->udf = FALSE;
 
     //
     return 0;

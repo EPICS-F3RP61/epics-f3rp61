@@ -104,6 +104,8 @@ int f3rp61CheckConversion(F3RP61_ACCESS_TYPE type, const dbfType ftvl, const cha
 #define BCDMIN_BCD     0 // 0x9999
 #define BCDMIN_INT     0 //
 
+#define BCD_OVERFLOW -1
+
 // converts bcd to deciaml
 static uint16_t bcd2ushort(uint16_t bcd, int32_t *overflow)
 {
@@ -113,7 +115,7 @@ static uint16_t bcd2ushort(uint16_t bcd, int32_t *overflow)
 
     //fprintf(stderr, "%s : %5d(0x%04x)\n", __func__, bcd, bcd);
     if (bcd>BCDMAX_BCD) {
-        *overflow = -1;
+        *overflow = BCD_OVERFLOW;
         return BCDMAX_INT;
     }
 
@@ -123,7 +125,7 @@ static uint16_t bcd2ushort(uint16_t bcd, int32_t *overflow)
             dec += digit * base;
         } else {
             // overflow; this may not happen
-            *overflow = -1;
+            *overflow = BCD_OVERFLOW;
             dec += 9 * base;
         }
         bcd >>= 4;
@@ -138,10 +140,10 @@ static uint16_t ushort2bcd(uint16_t dec, int32_t *overflow)
 {
     if (dec<BCDMIN_INT) {
         // underflow; this may not happen for unsigned value
-        *overflow = -1;
+        *overflow = BCD_OVERFLOW;
         return BCDMIN_BCD;
     } else if (dec>BCDMAX_INT) {
-        *overflow = -1;
+        *overflow = BCD_OVERFLOW;
         return BCDMAX_BCD;
     }
 

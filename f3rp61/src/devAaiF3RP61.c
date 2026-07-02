@@ -63,13 +63,9 @@ static long init_record(aaiRecord *prec)
         return S_db_badField;
     }
 
-    // Allocate private data storage area
-    F3RP61_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61_DPVT), "calloc failed");
-    prec->dpvt = dpvt;
+    //
     const dbfType  ftvl = prec->ftvl;
     const uint32_t nelm = prec->nelm;
-
-    //
     const int ret = f3rp61ParseLink(plink, rw, type, (dbCommon *)prec, ftvl, nelm);
     if (ret < 0) {
         recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);

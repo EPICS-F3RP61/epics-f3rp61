@@ -220,7 +220,7 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
 
     // Check address validity when accessing relays in byte-wise
     if (type == kWord &&
-        (device == 'X' || device == 'Y' || device=='I' || device=='M')) {
+        (device == 'X' || device == 'Y')) {
         if (addr%16 != 1) {
             errlogPrintf("%s: %s : Illegal relay number : %d\n", __func__, prec->name, addr);
             return -1;

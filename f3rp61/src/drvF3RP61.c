@@ -539,7 +539,7 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
 
     // Check if start address is valid when accessing relays in byte-wise
     if (type == kWord &&
-        (device == 'X' || device == 'Y' || device=='E' || device=='L')) {
+        (device == 'X' || device == 'Y')) {
         if (addr%16 != 1) {
             errlogPrintf("%s: %s : Illegal relay number : %d\n", __func__, prec->name, addr);
             return -1;
@@ -551,7 +551,7 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
         .unitno = unit,
         .slotno = slot,
     };
-    if (ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info)<0) {
+    if (ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info) < 0) {
         errlogPrintf("%s: %s : Unit %d Slot %d is empty\n", __func__, prec->name, unit, slot);
         return -1;
     }

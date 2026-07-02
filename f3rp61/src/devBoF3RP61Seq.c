@@ -51,25 +51,16 @@ static long init_record(boRecord *prec)
     if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, prec,
                           "devBoF3RP61Seq (init_record) Illegal OUT field");
-        prec->pact = 1;
         return S_db_badField;
     }
 
-    // Allocate private data storage area
-    F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
-    prec->dpvt = dpvt;
-    const uint32_t nelm = 1;
-
     //
+    const uint32_t nelm = 1;
     const int ret = f3rp61seqParseLink(plink, kWrite, kBit, (dbCommon *)prec, DBF_ENUM, nelm);
     if (ret < 0) {
-        //errlogPrintf("devLoF3RP61Seq: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
+        recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
+        return 0;
     }
-
-    //
-    callbackSetUser(prec, &dpvt->callback);
 
     return 0;
 }
@@ -80,6 +71,10 @@ static long init_record(boRecord *prec)
 static long write_bo(boRecord *prec)
 {
     F3RP61SEQ_DPVT *dpvt = prec->dpvt;
+    if (!dpvt) { // something was wrong in OUT field and init_record() failed
+        recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
+        return -1;
+    }
 
     if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
@@ -90,7 +85,7 @@ static long write_bo(boRecord *prec)
         //
         prec->udf = FALSE;
 
-    } else { // First call (PACT is still FALSE)
+    } else { // First call (PACT is FALSE)
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
         MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];

@@ -56,25 +56,16 @@ static long init_record(aiRecord *prec)
     if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, prec,
                           "devAiF3RP61Seq (init_record) Illegal INP field");
-        prec->pact = 1;
         return S_db_badField;
     }
 
-    // Allocate private data storage area
-    F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
-    prec->dpvt = dpvt;
-    const uint32_t nelm = 1;
-
     //
+    const uint32_t nelm = 1;
     const int ret = f3rp61seqParseLink(plink, kRead, kWord, (dbCommon *)prec, DBF_DOUBLE, nelm);
     if (ret < 0) {
-        //errlogPrintf("devAiF3RP61Seq: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
+        recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
+        return 0;
     }
-
-    //
-    callbackSetUser(prec, &dpvt->callback);
 
     return 0;
 }
@@ -85,7 +76,10 @@ static long init_record(aiRecord *prec)
 static long read_ai(aiRecord *prec)
 {
     F3RP61SEQ_DPVT *dpvt = prec->dpvt;
-    const uint32_t nelm = 1;
+    if (!dpvt) { // something was wrong in INP field and init_record() failed
+        recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
+        return -1;
+    }
 
     if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
@@ -102,14 +96,15 @@ static long read_ai(aiRecord *prec)
         uint16_t *wdata = pmcmdResponse->dataBuff.wData;
 
         // fill VAL field
-        int ret = devF3RP61buf2double(wdata, &prec->val, dpvt->conv, nelm);
+        int32_t nord = dpvt->nord;
+        int ret = devF3RP61buf2double(wdata, &prec->val, dpvt->conv, nord);
         prec->udf = isnan(prec->val);
         // todo : consider ASLO and AOFF field
         // todo : consider SMOO field
 
         return ret;
 
-    } else { // First call (PACT is still FALSE)
+    } else { // First call (PACT is FALSE)
         // Issue read request
         if (f3rp61seqQueueRequest(dpvt) < 0) {
             errlogPrintf("devAiF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", prec->name);
@@ -120,5 +115,5 @@ static long read_ai(aiRecord *prec)
         prec->pact = 1;
     }
 
-    return 0; // with conversion
+    return 0;
 }

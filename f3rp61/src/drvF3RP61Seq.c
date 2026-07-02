@@ -107,6 +107,9 @@ static long init(void)
 //
 // Parses INP or OUT link and initializes F3RP61SEQ_DPVT structure.
 //
+// Returns: NORD on success (may smaller than NELM due to hardware constraints, such as relay number on the I/O module)
+//          -1 on error
+//
 int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE type, dbCommon *prec, const dbfType ftvl, const uint32_t nelm)
 {
     const size_t size = strlen(plink->value.instio.string) + 1; // + 1 for terminating null character
@@ -115,15 +118,15 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
     strncpy(buf, plink->value.instio.string, size);
     buf[size - 1] = '\0';
 
-    //
-    F3RP61SEQ_DPVT *dpvt = prec->dpvt;
+    // Clear dpvt so that subsequent failure of init_record() can be detected
+    prec->dpvt = 0;
 
     // Parse conversion specifier
-    dpvt->conv = 'W'; // default for Word access
+    char conv = 'W'; // default for Word access
     char *popt = strchr(buf, '&');
     if (popt) {
         *popt++ = '\0';
-        if (sscanf(popt, "%c", &dpvt->conv) < 1) {
+        if (sscanf(popt, "%c", &conv) < 1) {
             errlogPrintf("%s: %s : can't get conversion specifier\n", __func__, prec->name);
             return -1;
         }
@@ -131,9 +134,8 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
 
     // Check conversion specifier
     const char *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
-    if (f3rp61CheckConversion(type, ftvl, dpvt->conv) < 0) {
-        errlogPrintf("%s: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", __func__, prec->name, dpvt->conv, ftvlstr);
-        prec->pact = 1;
+    if (f3rp61CheckConversion(type, ftvl, conv) < 0) {
+        errlogPrintf("%s: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", __func__, prec->name, conv, ftvlstr);
         return -1;
     }
 
@@ -228,11 +230,20 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
     // Consider I/O data length
     const int width = 2; // We don't use long-word access, so width is fixed to 2
     int num = 1;
-    if (dpvt->conv == 'D') {
+    if (conv == 'D') {
         num = 4;
-    } else if (dpvt->conv == 'F' || dpvt->conv == 'L') {
+    } else if (conv == 'F' ||conv == 'L') {
         num = 2;
     }
+
+    //
+    uint32_t nord = nelm;
+
+    // Allocate private data storage area
+    F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
+    prec->dpvt = dpvt;
+    dpvt->nord = nord;
+    dpvt->conv = conv;
 
     // Compose data structure for I/O request to CPU module
     MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
@@ -262,8 +273,11 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
         pmcmdRequest->dataSize = 10 + num * width;
     }
 
+    //
+    callbackSetUser(prec, &dpvt->callback);
+
     // success
-    return 0;
+    return nord;
 }
 
 //////////////////////////////////////////////////////////////////////////

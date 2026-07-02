@@ -51,25 +51,16 @@ static long init_record(biRecord *prec)
     if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, prec,
                           "devBiF3RP61Seq (init_record) Illegal INP field");
-        prec->pact = 1;
         return S_db_badField;
     }
 
-    // Allocate private data storage area
-    F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
-    prec->dpvt = dpvt;
-    const uint32_t nelm = 1;
-
     //
+    const uint32_t nelm = 1;
     const int ret = f3rp61seqParseLink(plink, kRead, kBit, (dbCommon *)prec, DBF_ENUM, nelm);
     if (ret < 0) {
-        //errlogPrintf("devBiF3RP61Seq: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
+        recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
+        return 0;
     }
-
-    //
-    callbackSetUser(prec, &dpvt->callback);
 
     return 0;
 }
@@ -80,6 +71,10 @@ static long init_record(biRecord *prec)
 static long read_bi(biRecord *prec)
 {
     F3RP61SEQ_DPVT *dpvt = prec->dpvt;
+    if (!dpvt) { // something was wrong in INP field and init_record() failed
+        recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
+        return -1;
+    }
 
     if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
@@ -98,7 +93,7 @@ static long read_bi(biRecord *prec)
         // fill VAL field
         prec->rval = (unsigned long) pmcmdResponse->dataBuff.wData[0];
 
-    } else { // First call (PACT is still FALSE)
+    } else { // First call (PACT is FALSE)
         // Issue read request
         if (f3rp61seqQueueRequest(dpvt) < 0) {
             errlogPrintf("devBiF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", prec->name);

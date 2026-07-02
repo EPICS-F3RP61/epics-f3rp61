@@ -65,6 +65,9 @@ typedef struct {
     MCMD_STRUCT  mcmdStruct;
     CALLBACK     callback;
     int          ret;
+    uint32_t     nord;    // number of elemetns to be read from or written to the PV (within the hardware limitations)
+    //uint32_t     offset;  //
+    //void        *buf;     // buffer for I/O
     int8_t       conv;
 } F3RP61SEQ_DPVT;
 

@@ -56,25 +56,16 @@ static long init_record(aoRecord *prec)
     if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, prec,
                           "devAoF3RP61Seq (init_record) Illegal OUT field");
-        prec->pact = 1;
         return S_db_badField;
     }
 
-    // Allocate private data storage area
-    F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
-    prec->dpvt = dpvt;
-    const uint32_t nelm = 1;
-
     //
+    const uint32_t nelm = 1;
     const int ret = f3rp61seqParseLink(plink, kWrite, kWord, (dbCommon *)prec, DBF_DOUBLE, nelm);
     if (ret < 0) {
-        //errlogPrintf("devAoF3RP61Seq: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
+        recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
+        return 0;
     }
-
-    //
-    callbackSetUser(prec, &dpvt->callback);
 
     return 0;
 }
@@ -85,7 +76,10 @@ static long init_record(aoRecord *prec)
 static long write_ao(aoRecord *prec)
 {
     F3RP61SEQ_DPVT *dpvt = prec->dpvt;
-    const uint32_t nelm = 1;
+    if (!dpvt) { // something was wrong in OUT field and init_record() failed
+        recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
+        return -1;
+    }
 
     int ret = 0; // with conversion
 
@@ -98,14 +92,15 @@ static long write_ao(aoRecord *prec)
         //
         prec->udf = FALSE;
 
-    } else { // First call (PACT is still FALSE)
+    } else { // First call (PACT is FALSE)
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
         MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
         uint16_t *wdata = pM3WriteSeqdev->dataBuff.wData;
 
         // Compose data to write
-        devF3RP61double2buf(&prec->val, wdata, dpvt->conv, nelm);
+        int32_t nord = dpvt->nord;
+        devF3RP61double2buf(&prec->val, wdata, dpvt->conv, nord);
         prec->udf = isnan(prec->val); // does this make sense?
 
         // Issue write request

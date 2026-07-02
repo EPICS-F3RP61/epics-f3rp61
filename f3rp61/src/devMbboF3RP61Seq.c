@@ -52,24 +52,19 @@ static long init_record(mbboRecord *prec)
     if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, prec,
                           "devMbboF3RP61Seq (init_record) Illegal OUT field");
-        prec->pact = 1;
         return S_db_badField;
     }
 
-    // Allocate private data storage area
-    F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
-    prec->dpvt = dpvt;
-    const uint32_t nelm = 1;
-
     //
+    const uint32_t nelm = 1;
     const int ret = f3rp61seqParseLink(plink, kWrite, kWord, (dbCommon *)prec, DBF_LONG, nelm);
     if (ret < 0) {
-        //errlogPrintf("devMbbiF3RP61Seq: %s : syntax error in INP field\n", prec->name);
-        prec->pact = 1;
-        return -1;
+        recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
+        return 0;
     }
 
     // Set MASK, NOBT, and MASK
+    F3RP61SEQ_DPVT *dpvt = prec->dpvt;
     const int8_t conv = dpvt->conv;
     if (conv == 'L' || conv == 'X') { // 'X' conversion may not make sense for mbbiDirect
         prec->nobt = 32;
@@ -81,9 +76,6 @@ static long init_record(mbboRecord *prec)
         prec->shft = 0;
     }
 
-    //
-    callbackSetUser(prec, &dpvt->callback);
-
     return 0;
 }
 
@@ -93,7 +85,10 @@ static long init_record(mbboRecord *prec)
 static long write_mbbo(mbboRecord *prec)
 {
     F3RP61SEQ_DPVT *dpvt = prec->dpvt;
-    const uint32_t nelm = 1;
+    if (!dpvt) { // something was wrong in OUT field and init_record() failed
+        recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
+        return -1;
+    }
 
     if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
@@ -104,15 +99,16 @@ static long write_mbbo(mbboRecord *prec)
         //
         prec->udf = FALSE;
 
-    } else { // First call (PACT is still FALSE)
+    } else { // First call (PACT is FALSE)
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
         MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
         uint16_t *wdata = pM3WriteSeqdev->dataBuff.wData;
 
         // Compose data to write
-        int ret = devF3RP61uint2buf(&prec->rval, wdata, dpvt->conv, nelm);
-        if (!ret) {
+        int32_t nord = dpvt->nord;
+        int ret = devF3RP61uint2buf(&prec->rval, wdata, dpvt->conv, nord);
+        if (ret < 0) {
             // overflow happend in int2bcd
             recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
         }

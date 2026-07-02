@@ -538,10 +538,16 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
 
     // Check if something is installed in the slot specified.
     M3IO_MODULE_INFORMATION module_info = {
-        .unitno = unit,
-        .slotno = slot,
+        .unitno   = unit,
+        .slotno   = slot,
+        .num_xreg = 0,
+        .num_yreg = 0,
+        .num_dreg = 0,
     };
-    if (ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info) < 0) {
+    if (device == 'E' || device == 'R' || device == 'L' || device == 'W') {
+        // For shared devices and link devices, both unit number and
+        // slot number are not used, hence no check is required.
+    } else if (ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info) < 0) {
         errlogPrintf("%s: %s : Unit %d Slot %d is empty\n", __func__, prec->name, unit, slot);
         return -1;
     }

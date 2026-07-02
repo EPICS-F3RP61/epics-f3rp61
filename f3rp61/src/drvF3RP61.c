@@ -408,7 +408,6 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
     const char *ftvlstr = (pamapdbfType[ftvl].strvalue) + 4;
     if (f3rp61CheckConversion(type, ftvl, conv) < 0) {
         errlogPrintf("%s: %s : unsupported conversion specifier \'%c\' with FTVL field %s\n", __func__, prec->name, conv, ftvlstr);
-        prec->pact = 1;
         return -1;
     }
 

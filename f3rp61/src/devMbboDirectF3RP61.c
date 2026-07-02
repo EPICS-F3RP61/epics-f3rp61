@@ -108,7 +108,7 @@ static long write_mbboDirect(mbboDirectRecord *prec)
 
     // Compose data to write
     int ret = devF3RP61uint2buf(&prec->rval, dpvt->buf, dpvt->conv, nord);
-    if (!ret) {
+    if (ret < 0) {
         // overflow happend in int2bcd
         recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
     }

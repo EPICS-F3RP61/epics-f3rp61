@@ -86,7 +86,7 @@ static long init_record(aaiRecord *prec)
 static long read_aai(aaiRecord *prec)
 {
     F3RP61_DPVT *dpvt = prec->dpvt;
-    if (!dpvt) { // something was wrong in OUT field and init_record() failed
+    if (!dpvt) { // something was wrong in INP field and init_record() failed
         recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
         return -1;
     }

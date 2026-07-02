@@ -75,7 +75,7 @@ static long init_record(aaoRecord *prec)
         return 0;
     }
 
-    // Set NORD othrewise it becomes zero for uninitialized Aao record.
+    // Set NORD otherwise it becomes zero for uninitialized aao record.
     // The array widget of CSS/Boy will disable elements that exceed NORD, thus prevents value input.
     prec->nord = ret;
 

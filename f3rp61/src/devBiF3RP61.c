@@ -80,7 +80,7 @@ static long init_record(biRecord *prec)
 static long read_bi(biRecord *prec)
 {
     F3RP61_DPVT *dpvt = prec->dpvt;
-    if (!dpvt) { // something was wrong in OUT field and init_record() failed
+    if (!dpvt) { // something was wrong in INP field and init_record() failed
         recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
         return -1;
     }

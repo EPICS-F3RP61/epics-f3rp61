@@ -40,12 +40,12 @@ int f3rp61CheckConversion(F3RP61_ACCESS_TYPE, const dbfType, const char);
 int32_t f3rp61CheckAddrRange(dbCommon *prec, F3RP61_ACCESS_TYPE type, const int addr, int32_t count, const int32_t nelm, const int limit);
 
 //
-int32_t  devF3RP61buf2int(void *buf, int32_t *val, const int8_t conv, int32_t nord);
-int32_t  devF3RP61int2buf(int32_t *val, void *buf, const int8_t conv, int32_t nord);
+int32_t  devF3RP61buf2long(void *buf, int32_t *val, const int8_t conv, int32_t nord);
+int32_t  devF3RP61long2buf(int32_t *val, void *buf, const int8_t conv, int32_t nord);
 
 //
-int32_t  devF3RP61buf2uint(void *buf, uint32_t *val, const int8_t conv, int32_t nord);
-int32_t  devF3RP61uint2buf(uint32_t *val, void *buf, const int8_t conv, int32_t nord);
+int32_t  devF3RP61buf2ulong(void *buf, uint32_t *val, const int8_t conv, int32_t nord);
+int32_t  devF3RP61ulong2buf(uint32_t *val, void *buf, const int8_t conv, int32_t nord);
 
 //
 int32_t  devF3RP61buf2short(void *buf, int16_t *val, const int8_t conv, int32_t nord);

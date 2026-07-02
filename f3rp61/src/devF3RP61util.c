@@ -141,6 +141,7 @@ static uint16_t bcd2ushort(uint16_t bcd, int32_t *overflow)
 
     while (bcd>0) {
         uint16_t digit = bcd & 0x000f;
+        //fprintf(stderr, "    %d %d %d (overflow:0x%0x)\n", bcd, digit, base, *overflow);
         if (digit <= 9) {
             dec += digit * base;
         } else {
@@ -184,7 +185,7 @@ static uint16_t ushort2bcd(uint16_t dec, int32_t *overflow)
 
 // read data from buf and fill to val
 // return: 0= success, -1= overflow/underflow in bcd2ushort
-int32_t devF3RP61buf2int(void *buf, int32_t *val, const int8_t conv, int32_t nord)
+int32_t devF3RP61buf2long(void *buf, int32_t *val, const int8_t conv, int32_t nord)
 {
     int32_t ret = 0;
     uint16_t *wdata = buf;
@@ -229,7 +230,7 @@ int32_t devF3RP61buf2int(void *buf, int32_t *val, const int8_t conv, int32_t nor
 
 // read data from val and fill to buf
 // return: 0= success, -1= overflow/underflow in ushort2bcd
-int32_t devF3RP61int2buf(int32_t *val, void *buf, const int8_t conv, int32_t nord)
+int32_t devF3RP61long2buf(int32_t *val, void *buf, const int8_t conv, int32_t nord)
 {
     int ret = 0;
     uint16_t *wdata = buf;
@@ -280,7 +281,7 @@ int32_t devF3RP61int2buf(int32_t *val, void *buf, const int8_t conv, int32_t nor
 
 // read data from buf and fill to val
 // return: 0= success, -1= overflow/underflow in bcd2ushort
-int32_t devF3RP61buf2uint(void *buf, uint32_t *val, const int8_t conv, int32_t nord)
+int32_t devF3RP61buf2ulong(void *buf, uint32_t *val, const int8_t conv, int32_t nord)
 {
     int32_t ret = 0;
     uint16_t *wdata = buf;
@@ -325,7 +326,7 @@ int32_t devF3RP61buf2uint(void *buf, uint32_t *val, const int8_t conv, int32_t n
 
 // read data from val and fill to buf
 // return: 0= success, -1= overflow/underflow in ushort2bcd
-int32_t devF3RP61uint2buf(uint32_t *val, void *buf, const int8_t conv, int32_t nord)
+int32_t devF3RP61ulong2buf(uint32_t *val, void *buf, const int8_t conv, int32_t nord)
 {
     int ret = 0;
     uint16_t *wdata = buf;

@@ -111,22 +111,16 @@ static long read_wf(waveformRecord *prec)
     } else if (ftvl == DBF_FLOAT) {
         devF3RP61buf2float(dpvt->buf, prec->bptr, dpvt->conv, nord);
     } else if (ftvl == DBF_LONG || ftvl == DBF_ULONG) {
-        int ret = devF3RP61buf2int(dpvt->buf, prec->bptr, dpvt->conv, nord);
+        int ret = devF3RP61buf2long(dpvt->buf, prec->bptr, dpvt->conv, nord);
         if (ret < 0) {
-            // overflow happend in bcd2int
+            // overflow happend in bcd2ushort
             recGblSetSevr(prec, HIGH_ALARM, INVALID_ALARM);
         }
     } else {//(ftvl == DBF_SHORT || ftvl == DBF_USHORT)
-        uint16_t *bptr  = prec->bptr;
-        uint16_t *wdata = dpvt->buf;
-        if (0) {
-        //} else if (conv == 'D') {
-        //} else if (conv == 'F') {
-        //} else if (conv == 'L') {
-        } else {// conv == 'U' || conv == 'W'
-            for (uint32_t i=0; i<nord; i++) {
-                bptr[i] = wdata[i];
-            }
+        int ret = devF3RP61buf2short(dpvt->buf, prec->bptr, dpvt->conv, nord);
+        if (ret < 0) {
+            // overflow happend in bcd2ushort
+            recGblSetSevr(prec, HIGH_ALARM, INVALID_ALARM);
         }
     }
 

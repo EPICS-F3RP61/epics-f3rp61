@@ -116,22 +116,16 @@ static long write_aao(aaoRecord *prec)
     } else if (ftvl == DBF_FLOAT) {
         devF3RP61float2buf(prec->bptr, dpvt->buf, dpvt->conv, nord);
     } else if (ftvl == DBF_LONG || ftvl == DBF_ULONG) {
-        int ret = devF3RP61int2buf(prec->bptr, dpvt->buf, dpvt->conv, nord);
+        int ret = devF3RP61long2buf(prec->bptr, dpvt->buf, dpvt->conv, nord);
         if (ret < 0) {
-            // overflow happend in int2bcd
+            // overflow happend in ushort2bcd
             recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
         }
     } else {//(ftvl == DBF_SHORT || ftvl == DBF_USHORT)
-        const uint16_t *bptr  = prec->bptr;
-        uint16_t       *wdata = dpvt->buf;
-        if (0) {
-        //} else if (conv == 'D') {
-        //} else if (conv == 'F') {
-        //} else if (conv == 'L') {
-        } else {// conv == 'U' || conv == 'W'
-            for (int32_t i=0; i<nord; i++) {
-                wdata[i] = (uint16_t)bptr[i];
-            }
+        int ret = devF3RP61short2buf(prec->bptr, dpvt->buf, dpvt->conv, nord);
+        if (ret < 0) {
+            // overflow happend in ushort2bcd
+            recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
         }
     }
 

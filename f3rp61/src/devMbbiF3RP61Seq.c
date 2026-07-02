@@ -106,9 +106,9 @@ static long read_mbbi(mbbiRecord *prec)
 
         // fill VAL field
         int32_t nord = dpvt->nord;
-        int ret = devF3RP61buf2uint(wdata, &prec->rval, dpvt->conv, nord);
+        int ret = devF3RP61buf2ulong(wdata, &prec->rval, dpvt->conv, nord);
         if (ret < 0) {
-            // overflow happend in bcd2int
+            // overflow happend in bcd2ushort
             recGblSetSevr(prec, HIGH_ALARM, INVALID_ALARM);
         }
 

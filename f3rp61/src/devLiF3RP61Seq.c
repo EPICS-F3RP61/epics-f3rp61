@@ -95,9 +95,9 @@ static long read_longin(longinRecord *prec)
 
         // fill VAL field
         int32_t nord = dpvt->nord;
-        int ret = devF3RP61buf2int(wdata, &prec->val, dpvt->conv, nord);
+        int ret = devF3RP61buf2long(wdata, &prec->val, dpvt->conv, nord);
         if (ret < 0) {
-            // overflow happend in bcd2int
+            // overflow happend in bcd2ushort
             recGblSetSevr(prec, HIGH_ALARM, INVALID_ALARM);
         }
 

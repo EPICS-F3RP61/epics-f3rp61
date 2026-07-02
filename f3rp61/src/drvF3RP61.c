@@ -527,16 +527,6 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
         count = 2;
     }
 
-    // Check for unit and slot number. Address number will be checked later
-    if (unit<0  || unit>=M3IO_NUM_UNIT) { // unit : 0,2,..., 7
-        errlogPrintf("%s: %s : Invalid unit number: %d\n", __func__, prec->name, unit);
-        return -1;
-    }
-    if (slot<=0 || slot>M3IO_NUM_SLOT) {  // slot : 1,2,...,16
-        errlogPrintf("%s: %s : Invalid slot number: %d\n", __func__, prec->name, slot);
-        return -1;
-    }
-
     // Check if start address is valid when accessing relays in byte-wise
     if (type == kWord &&
         (device == 'X' || device == 'Y')) {

@@ -588,10 +588,14 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
             // accepted. Similary, the count can be 1, 2, or 4. Be aware
             // that writing to the address 4 does not make sense, and may
             // cause problems.
-            const int nreg = 4; // The number of Mode registers for F3RP61 is 3, but 4 seems OK
+            int nreg = 4; // The number of Mode registers for F3RP61 is 3, but 4 seems OK
 #else
-            const int nreg = 8; // The number of Mode registers for F3RP7x is 8
+            int nreg = 8; // The number of Mode registers for F3RP7x is 8
 #endif
+            if (module_info.num_xreg == 0 && module_info.num_yreg == 0) {
+                // If there are no X registers and no Y registers, there should be no mode register either.
+                nreg = 0;
+            }
             nord = f3rp61CheckAddrRange(prec, kWord, addr, count, nelm, nreg);
         } else if (device == 'A') {
             if (conv == 'X') {

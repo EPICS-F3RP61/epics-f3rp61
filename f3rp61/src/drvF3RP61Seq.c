@@ -30,7 +30,7 @@ struct {
 
 epicsExportAddress(drvet, drvF3RP61Seq);
 
-int f3rp61seqFd = -1;
+static int f3rp61seq_fd = -1;
 
 //
 void showreq(const iocshArgBuf *);
@@ -68,8 +68,8 @@ static long init(void)
     }
     init_flag = 1;
 
-    f3rp61seqFd = open(DEVFILE, O_RDWR);
-    if (f3rp61seqFd < 0) {
+    f3rp61seq_fd = open(DEVFILE, O_RDWR);
+    if (f3rp61seq_fd < 0) {
         errlogPrintf("drvF3RP61Seq: can't open " DEVFILE "\n");
         return -1;
     }
@@ -193,7 +193,7 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
     }
 
     // Read the slot number of this CPU module
-    if (ioctl(f3rp61seqFd, M3CPU_GET_NUM, &srcSlot) < 0) {
+    if (ioctl(f3rp61seq_fd, M3CPU_GET_NUM, &srcSlot) < 0) {
         errlogPrintf("%s: %s : ioctl failed [%d]\n", __func__, prec->name, errno);
         return -1;
     }
@@ -218,18 +218,6 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
         }
     }
 
-    // Check address validity when accessing relays in byte-wise
-    if (type == kWord &&
-        (device == 'X' || device == 'Y')) {
-        int32_t unit =  addr / 10000;
-        int32_t slot = (addr % 10000) / 100;
-        int32_t pos  =  addr % 100;
-        if (pos%16 != 1) {
-            errlogPrintf("%s: %s : Illegal relay number : %d\n", __func__, prec->name, pos);
-            return -1;
-        }
-    }
-
     // Consider I/O data length
     const int width = 2; // We don't use long-word access, so width is fixed to 2
     int num = 1;
@@ -239,8 +227,60 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
         num = 2;
     }
 
-    //
+    // Make sure that relay/register number is suitable for the hardware, if possible.
     uint32_t nord = nelm;
+
+    // Check for X or Y relays
+    if (device == 'X' || device == 'Y') {
+        int32_t unit =  addr / 10000;
+        int32_t slot = (addr % 10000) / 100;
+        int32_t pos  =  addr % 100;
+        extern int f3rp61_fd;
+
+        // Check if something is installed in the slot specified.
+        M3IO_MODULE_INFORMATION module_info = {
+            .unitno   = unit,
+            .slotno   = slot,
+            .num_xreg = 0,
+            .num_yreg = 0,
+            .num_dreg = 0,
+        };
+        if (ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info) < 0) {
+            errlogPrintf("%s: %s : Unit %d Slot %d is empty\n", __func__, prec->name, unit, slot);
+            return -1;
+        }
+
+        // Check address validity
+        if (type == kBit) {
+            int32_t nrly;
+            if (0) {
+                //
+            } else if (device == 'X') {
+                nrly = module_info.num_xreg;
+            } else if (device == 'Y') {
+                nrly = module_info.num_yreg;
+            } else {
+                nrly = pos; // We don't care devices other than X or Y
+            }
+            if (pos > nrly) {
+                errlogPrintf("%s: %s : Relay number %d exceeds the module limit of %d\n", __func__, prec->name, pos, nrly);
+                return -1;
+            }
+        } else {  //kWord
+            if (pos%16 != 1) {
+                errlogPrintf("%s: %s : Illegal relay number : %d\n", __func__, prec->name, pos);
+                return -1;
+            }
+
+            if (0) {
+                //
+            } else if (device == 'X') {
+                nord = f3rp61CheckAddrRange(prec, kBit, pos, num, nelm, module_info.num_xreg);
+            } else if (device == 'Y') {
+                nord = f3rp61CheckAddrRange(prec, kBit, pos, num, nelm, module_info.num_yreg);
+            }
+        }
+    }
 
     // Allocate private data storage area
     F3RP61SEQ_DPVT *dpvt = callocMustSucceed(1, sizeof(F3RP61SEQ_DPVT), "calloc failed");
@@ -315,7 +355,7 @@ static void mcmd_thread(void *arg)
             dbCommon *prec;
             callbackGetUser(prec, pcallback);
 
-            if (ioctl(f3rp61seqFd, M3CPU_ACCS_CMD, pmcmdStruct) < 0) {
+            if (ioctl(f3rp61seq_fd, M3CPU_ACCS_CMD, pmcmdStruct) < 0) {
                 MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
                 uint16_t errorCode = pmcmdResponse->errorCode;
                 if (errno == EIO) {

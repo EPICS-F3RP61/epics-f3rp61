@@ -7,7 +7,7 @@
 **************************************************************************
 * devAaoF3RP61.c - Device Support Routines for F3RP61 Array Analog Output
 *
-*      Author: Shuei YAMADA
+*      Author: Shuei YAMADA (KEK/J-PARC)
 *      Date: 2026-06-02
 */
 
@@ -75,7 +75,7 @@ static long init_record(aaoRecord *prec)
         return 0;
     }
 
-    // Set NORD otherwise it becomes zero for uninitialized aao record.
+    // Set NORD otherwise it becomes zero for records not processed yet.
     // The array widget of CSS/Boy will disable elements that exceed NORD, thus prevents value input.
     prec->nord = ret;
 

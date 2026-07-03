@@ -7,7 +7,7 @@
 **************************************************************************
 * devAaiF3RP61.c - Device Support Routines for F3RP61 Array Analog Input
 *
-*      Author: Shuei YAMADA
+*      Author: Shuei YAMADA (KEK/J-PARC)
 *      Date: 2026-06-02
 */
 

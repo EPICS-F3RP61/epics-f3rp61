@@ -5,22 +5,24 @@
 * and higher are distributed subject to a Software License Agreement found
 * in file LICENSE that is included with this distribution.
 **************************************************************************
-* devMbbiDirectF3RP61Seq.c - Device Support Routines for F3RP61 Multi-bit
-* Binary Direct Input
+* devWfF3RP61Seq.c - Device Support Routines for F3RP61 Array Analog Input
 *
-*      Author: Jun-ichi Odagiri
-*      Date: 6-30-08
+*      Author: Shuei YAMADA (KEK/J-PARC)
+*      Date: 2026-07-06
 */
 
 //
-#include <mbbiDirectRecord.h>
+#include <waveformRecord.h>
 
 //
 #include <drvF3RP61Seq.h>
 
-// Create the dset for devMbbiDirectF3RP61Seq
+//
+#include <math.h>
+
+// Create the dset for devAiF3RP61Seq
 static long init_record();
-static long read_mbbiDirect();
+static long read_wf();
 
 struct {
     long       number;
@@ -28,22 +30,24 @@ struct {
     DEVSUPFUN  init;
     DEVSUPFUN  init_record;
     DEVSUPFUN  get_ioint_info;
-    DEVSUPFUN  read_mbbiDirect;
-} devMbbiDirectF3RP61Seq = {
-    5,
+    DEVSUPFUN  read_wf;
+    DEVSUPFUN  special_linconv;
+} devWfF3RP61Seq = {
+    6,
     NULL,
     NULL,
     init_record,
     NULL,
-    read_mbbiDirect
+    read_wf,
+    NULL
 };
 
-epicsExportAddress(dset, devMbbiDirectF3RP61Seq);
+epicsExportAddress(dset, devWfF3RP61Seq);
 
 // init_record() initializes record - parses INP/OUT field string,
 // allocates private data storage area and sets initial configuration
 // values.
-static long init_record(mbbiDirectRecord *prec)
+static long init_record(waveformRecord *prec)
 {
     //
     struct link *plink = &prec->inp;
@@ -51,39 +55,27 @@ static long init_record(mbbiDirectRecord *prec)
     // Link type must be INST_IO
     if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, prec,
-                          "devMbbiDirectF3RP61Seq (init_record) Illegal INP field");
+                          "devWfF3RP61Seq (init_record) Illegal INP field");
         return S_db_badField;
     }
 
     //
-    const uint32_t nelm = 1;
-    const int ret = f3rp61seqParseLink(plink, kRead, kWord, (dbCommon *)prec, DBF_LONG, nelm);
+    const dbfType  ftvl = prec->ftvl;
+    const uint32_t nelm = prec->nelm;
+    const int ret = f3rp61seqParseLink(plink, kRead, kWord, (dbCommon *)prec, ftvl, nelm);
     if (ret < 0) {
         recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
         return 0;
-    }
-
-    // Set MASK, NOBT, and MASK
-    F3RP61SEQ_DPVT *dpvt = prec->dpvt;
-    const int8_t conv = dpvt->conv;
-    if (conv == 'L' || conv == 'X') { // 'X' conversion may not make sense for mbbiDirect
-        prec->nobt = 32;
-        prec->mask = 0xffffffff;
-        prec->shft = 0;
-    } else {
-        prec->nobt = 16;
-        prec->mask = 0xffff;
-        prec->shft = 0;
     }
 
     //
     return 0;
 }
 
-// read_mbbiDirect() is called when there was a request to process a record.
+// read_wf() is called when there was a request to process a record.
 // When called, it reads the value from the driver and stores to the
 // VAL field, then sets PACT field back to TRUE.
-static long read_mbbiDirect(mbbiDirectRecord *prec)
+static long read_wf(waveformRecord *prec)
 {
     F3RP61SEQ_DPVT *dpvt = prec->dpvt;
     if (!dpvt) { // something was wrong in INP field and init_record() failed
@@ -103,24 +95,44 @@ static long read_mbbiDirect(mbbiDirectRecord *prec)
         //
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
-        uint16_t *wdata = pmcmdResponse->dataBuff.wData;
+        uint16_t *buf = pmcmdResponse->dataBuff.wData;
 
         // fill VAL field
-        int32_t nord = dpvt->nord;
-        int ret = devF3RP61buf2ulong(wdata, &prec->rval, dpvt->conv, nord);
-        if (ret < 0) {
-            // overflow happend in bcd2ushort
-            recGblSetSevr(prec, HIGH_ALARM, INVALID_ALARM);
+        int32_t nord = dpvt->ret; // dpvt->nord;
+        const dbfType ftvl = prec->ftvl;
+        if (0) {
+        } else if (ftvl == DBF_DOUBLE) {
+            devF3RP61buf2double(buf, prec->bptr, dpvt->conv, nord);
+        } else if (ftvl == DBF_FLOAT) {
+            devF3RP61buf2float(buf, prec->bptr, dpvt->conv, nord);
+        } else if (ftvl == DBF_LONG || ftvl == DBF_ULONG) {
+            int ret = devF3RP61buf2long(buf, prec->bptr, dpvt->conv, nord);
+            if (ret < 0) {
+                // overflow happend in bcd2ushort
+                recGblSetSevr(prec, HIGH_ALARM, INVALID_ALARM);
+            }
+        } else {//(ftvl == DBF_SHORT || ftvl == DBF_USHORT)
+            int ret = devF3RP61buf2short(buf, prec->bptr, dpvt->conv, nord);
+            if (ret < 0) {
+                // overflow happend in bcd2ushort
+                recGblSetSevr(prec, HIGH_ALARM, INVALID_ALARM);
+            }
         }
+
+        //
+        prec->nord = nord;
+
+        return 0;
 
     } else { // First call (PACT is FALSE)
         // Issue read request
         if (f3rp61seqQueueRequest(dpvt) < 0) {
-            errlogPrintf("devMbbiDirectF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", prec->name);
+            errlogPrintf("devAiF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", prec->name);
             recGblSetSevr(prec, READ_ALARM, INVALID_ALARM);
             return -1;
         }
 
+        dpvt->nord = 0;
         prec->pact = 1;
     }
 

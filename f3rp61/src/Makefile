@@ -50,6 +50,9 @@ f3rp61_SRCS += devSoF3RP61.c
 f3rp61_SRCS += devSiF3RP61.c
 f3rp61_SRCS += devWfF3RP61.c
 f3rp61_SRCS += drvF3RP61.c
+
+f3rp61_SRCS += devAaiF3RP61Seq.c
+f3rp61_SRCS += devAaoF3RP61Seq.c
 f3rp61_SRCS += devAiF3RP61Seq.c
 f3rp61_SRCS += devAoF3RP61Seq.c
 f3rp61_SRCS += devBiF3RP61Seq.c
@@ -60,7 +63,9 @@ f3rp61_SRCS += devMbbiF3RP61Seq.c
 f3rp61_SRCS += devMbboF3RP61Seq.c
 f3rp61_SRCS += devMbbiDirectF3RP61Seq.c
 f3rp61_SRCS += devMbboDirectF3RP61Seq.c
+f3rp61_SRCS += devWfF3RP61Seq.c
 f3rp61_SRCS += drvF3RP61Seq.c
+
 f3rp61_SRCS += devBiF3RP61SysCtl.c
 f3rp61_SRCS += devBoF3RP61SysCtl.c
 f3rp61_SRCS += devMbbiF3RP61SysCtl.c

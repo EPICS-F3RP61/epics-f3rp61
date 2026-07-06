@@ -62,6 +62,7 @@ static long init_record(biRecord *prec)
         return 0;
     }
 
+    //
     return 0;
 }
 

@@ -67,6 +67,7 @@ static long init_record(aiRecord *prec)
         return 0;
     }
 
+    //
     return 0;
 }
 

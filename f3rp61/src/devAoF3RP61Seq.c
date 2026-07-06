@@ -67,6 +67,7 @@ static long init_record(aoRecord *prec)
         return 0;
     }
 
+    //
     return 0;
 }
 

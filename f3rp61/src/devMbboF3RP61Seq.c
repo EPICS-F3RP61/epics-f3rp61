@@ -76,6 +76,7 @@ static long init_record(mbboRecord *prec)
         prec->shft = 0;
     }
 
+    //
     return 0;
 }
 

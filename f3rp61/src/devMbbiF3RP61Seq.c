@@ -76,6 +76,7 @@ static long init_record(mbbiRecord *prec)
         prec->shft = 0;
     }
 
+    //
     return 0;
 }
 

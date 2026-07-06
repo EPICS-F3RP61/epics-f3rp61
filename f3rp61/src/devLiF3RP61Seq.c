@@ -65,6 +65,7 @@ static long init_record(longinRecord *prec)
         return 0;
     }
 
+    //
     return 0;
 }
 

@@ -5,22 +5,24 @@
 * and higher are distributed subject to a Software License Agreement found
 * in file LICENSE that is included with this distribution.
 **************************************************************************
-* devMbboDirectF3RP61Seq.c - Device Support Routines for F3RP61 Multi-bit
-* Binary Output
+* devAaoF3RP61Seq.c - Device Support Routines for F3RP61 Array Analog Output
 *
-*      Author: Jun-ichi Odagiri
-*      Date: 6-30-08
+*      Author: Shuei YAMADA (KEK/J-PARC)
+*      Date: 2026-07-03
 */
 
 //
-#include <mbboDirectRecord.h>
+#include <aaoRecord.h>
 
 //
 #include <drvF3RP61Seq.h>
 
-// Create the dset for devMbboDirectF3RP61Seq
+//
+#include <math.h>
+
+// Create the dset for devAoF3RP61Seq
 static long init_record();
-static long write_mbboDirect();
+static long write_aao();
 
 struct {
     long       number;
@@ -28,22 +30,24 @@ struct {
     DEVSUPFUN  init;
     DEVSUPFUN  init_record;
     DEVSUPFUN  get_ioint_info;
-    DEVSUPFUN  write_mbboDirect;
-} devMbboDirectF3RP61Seq = {
-    5,
+    DEVSUPFUN  write_aao;
+    DEVSUPFUN  special_linconv;
+} devAaoF3RP61Seq = {
+    6,
     NULL,
     NULL,
     init_record,
     NULL,
-    write_mbboDirect
+    write_aao,
+    NULL
 };
 
-epicsExportAddress(dset, devMbboDirectF3RP61Seq);
+epicsExportAddress(dset, devAaoF3RP61Seq);
 
 // init_record() initializes record - parses INP/OUT field string,
 // allocates private data storage area and sets initial configuration
 // values.
-static long init_record(mbboDirectRecord *prec)
+static long init_record(aaoRecord *prec)
 {
     //
     struct link *plink = &prec->out;
@@ -51,45 +55,39 @@ static long init_record(mbboDirectRecord *prec)
     // Link type must be INST_IO
     if (plink->type != INST_IO) {
         recGblRecordError(S_db_badField, prec,
-                          "devMbboDirectF3RP61Seq (init_record) Illegal OUT field");
+                          "devAaoF3RP61Seq (init_record) Illegal OUT field");
         return S_db_badField;
     }
 
     //
-    const uint32_t nelm = 1;
-    const int ret = f3rp61seqParseLink(plink, kWrite, kWord, (dbCommon *)prec, DBF_LONG, nelm);
+    const dbfType  ftvl = prec->ftvl;
+    const uint32_t nelm = prec->nelm;
+    const int ret = f3rp61seqParseLink(plink, kWrite, kWord, (dbCommon *)prec, ftvl, nelm);
     if (ret < 0) {
         recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
         return 0;
     }
 
-    // Set MASK, NOBT, and MASK
-    F3RP61SEQ_DPVT *dpvt = prec->dpvt;
-    const int8_t conv = dpvt->conv;
-    if (conv == 'L' || conv == 'X') { // 'X' conversion may not make sense for mbbiDirect
-        prec->nobt = 32;
-        prec->mask = 0xffffffff;
-        prec->shft = 0;
-    } else {
-        prec->nobt = 16;
-        prec->mask = 0xffff;
-        prec->shft = 0;
-    }
+    // Set NORD otherwise it becomes zero for records not processed yet.
+    // The array widget of CSS/Boy will disable elements that exceed NORD, thus prevents value input.
+    prec->nord = ret;
 
     //
-    return 2; // no conversion
+    return 0;
 }
 
-// write_mbboDirect() is called when there was a request to process a record.
+// write_aao() is called when there was a request to process a record.
 // When called, it sends the value from the VAL filed to the driver,
 // then sets PACT field back to TRUE.
-static long write_mbboDirect(mbboDirectRecord *prec)
+static long write_aao(aaoRecord *prec)
 {
     F3RP61SEQ_DPVT *dpvt = prec->dpvt;
     if (!dpvt) { // something was wrong in OUT field and init_record() failed
         recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
         return -1;
     }
+
+    int ret = 0; // with conversion
 
     if (prec->pact) { // Second call (PACT is TRUE)
         if (dpvt->ret < 0) {
@@ -100,23 +98,40 @@ static long write_mbboDirect(mbboDirectRecord *prec)
         //
         prec->udf = FALSE;
 
+        //
+        prec->nord = dpvt->ret; // dpvt->nord;
+
     } else { // First call (PACT is FALSE)
         MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
         MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
-        uint16_t *wdata = pM3WriteSeqdev->dataBuff.wData;
+        uint16_t *buf = pM3WriteSeqdev->dataBuff.wData;
 
         // Compose data to write
         int32_t nord = dpvt->nord;
-        int ret = devF3RP61ulong2buf(&prec->rval, wdata, dpvt->conv, nord);
-        if (ret < 0) {
-            // overflow happend in ushort2bcd
-            recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
+        const dbfType ftvl = prec->ftvl;
+        if (0) {
+        } else if (ftvl == DBF_DOUBLE) {
+            devF3RP61double2buf(prec->bptr, buf, dpvt->conv, nord);
+        } else if (ftvl == DBF_FLOAT) {
+            devF3RP61float2buf(prec->bptr, buf, dpvt->conv, nord);
+        } else if (ftvl == DBF_LONG || ftvl == DBF_ULONG) {
+            int ret = devF3RP61long2buf(prec->bptr, buf, dpvt->conv, nord);
+            if (ret < 0) {
+                // overflow happend in ushort2bcd
+                recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
+            }
+        } else {//(ftvl == DBF_SHORT || ftvl == DBF_USHORT)
+            int ret = devF3RP61short2buf(prec->bptr, buf, dpvt->conv, nord);
+            if (ret < 0) {
+                // overflow happend in ushort2bcd
+                recGblSetSevr(prec, HW_LIMIT_ALARM, INVALID_ALARM);
+            }
         }
 
         // Issue write request
         if (f3rp61seqQueueRequest(dpvt) < 0) {
-            errlogPrintf("devMbboDirectF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", prec->name);
+            errlogPrintf("devAoF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", prec->name);
             recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
             return -1;
         }
@@ -124,5 +139,5 @@ static long write_mbboDirect(mbboDirectRecord *prec)
         prec->pact = 1;
     }
 
-    return 0;
+    return ret;
 }

@@ -8,7 +8,7 @@
 * devF3RP61util.c - Helper Routines for F3RP61
 *
 *      Author: Shuei YAMADA (KEK/J-PARC)
-*      Date: 2020 Oct. 01
+*      Date: 2020-10-01
 */
 
 //

@@ -230,6 +230,13 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
     // Make sure that relay/register number is suitable for the hardware, if possible.
     uint32_t nord = nelm;
 
+    if (num*nord > DEVICE_MAX_NUM) {
+        // for preliminary waveform/aai/aao record support. The
+        // maximum data size is 256 words. Split transfer over this
+        // limit might be supported in the future.
+        nord = DEVICE_MAX_NUM / num;
+    }
+
     // Check for X or Y relays
     if (device == 'X' || device == 'Y') {
         int32_t unit =  addr / 10000;
@@ -287,6 +294,7 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
     prec->dpvt = dpvt;
     dpvt->nord = nord;
     dpvt->conv = conv;
+    dpvt->num  = num;
 
     // Compose data structure for I/O request to CPU module
     MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
@@ -303,17 +311,17 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
     if (rw == kRead) {
         M3_READ_SEQDEV *pM3ReadSeqdev = (M3_READ_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
         pM3ReadSeqdev->accessType = type;
-        pM3ReadSeqdev->dataNum = num;
+        pM3ReadSeqdev->dataNum = num * nord;
         pM3ReadSeqdev->devType = device - '@'; // 'D'=>0x04, 'B'=>0x02, 'F'=>0x06, 'Z'=>0x1A, 'I'=>0x09
         pM3ReadSeqdev->topDevNo = addr;
         pmcmdRequest->dataSize = 10;
-    } else {
+    } else {//kWrite
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
         pM3WriteSeqdev->accessType = type;
-        pM3WriteSeqdev->dataNum = num;
+        pM3WriteSeqdev->dataNum = num * nord;
         pM3WriteSeqdev->devType = device - '@'; // 'D'=>0x04, 'B'=>0x02, 'F'=>0x06, 'Z'=>0x1A, 'I'=>0x09
         pM3WriteSeqdev->topDevNo = addr;
-        pmcmdRequest->dataSize = 10 + num * width;
+        pmcmdRequest->dataSize = 10 + num * nord * width;
     }
 
     //
@@ -345,7 +353,8 @@ static void mcmd_thread(void *arg)
         while ((dpvt = get_request_from_queue())) {
             dpvt->ret = 0;
             MCMD_STRUCT *pmcmdStruct = &dpvt->mcmdStruct;
-            pmcmdStruct->mcmdRequest.comId = ++request_id;
+            MCMD_REQUEST *pmcmdRequest = &pmcmdStruct->mcmdRequest;
+            pmcmdRequest->comId = ++request_id;
 
             if (debug_flag) {
                 dump_mcmd_request(pmcmdStruct);
@@ -355,8 +364,8 @@ static void mcmd_thread(void *arg)
             dbCommon *prec;
             callbackGetUser(prec, pcallback);
 
+            MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
             if (ioctl(f3rp61seq_fd, M3CPU_ACCS_CMD, pmcmdStruct) < 0) {
-                MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
                 uint16_t errorCode = pmcmdResponse->errorCode;
                 if (errno == EIO) {
                     errlogPrintf("drvF3RP61Seq: %s : ioctl failed [%d] : %s : errorCode 0x%04x\n", prec->name, errno, strerror(errno), errorCode);
@@ -364,11 +373,25 @@ static void mcmd_thread(void *arg)
                     errlogPrintf("drvF3RP61Seq: %s : ioctl failed [%d] : %s\n", prec->name, errno, strerror(errno));
                 }
                 dpvt->ret = -1;
-            } else if (pmcmdStruct->mcmdResponse.comId != request_id) {
-                errlogPrintf("drvF3RP61Seq: %s : comId does not match : expected=0x%08lx received=0x%08lx\n", prec->name, request_id, pmcmdStruct->mcmdResponse.comId);
+            } else if (pmcmdResponse->comId != request_id) {
+                errlogPrintf("drvF3RP61Seq: %s : comId does not match : expected=0x%08lx received=0x%08lx\n", prec->name, request_id, pmcmdResponse->comId);
                 dpvt->ret = -1;
             }
 
+            // for preliminary waveform/aai/aao record support
+            const int width = 2; // We don't use long-word access, so width is fixed to 2
+            int32_t num  = dpvt->num;
+            if (pmcmdResponse->subCode == kRead) { // or shall we use pcmdREqust->subCode?
+                int32_t datasize = pmcmdResponse->dataSize;
+                int32_t nord = (datasize - 2) / (num * width);
+                dpvt->ret = nord;
+            } else {                    //kWrite
+                int32_t datasize = pmcmdRequest->dataSize;
+                int32_t nord = (datasize - 10) / (num * width);
+                dpvt->ret = nord;
+            }
+
+            //
             callbackRequestProcessCallback(pcallback, priorityLow, prec);
         }
     }

@@ -149,34 +149,34 @@ access specific devices. Some record types accepts conversion specifier.
 | bo            | F3RP61       |    Y, E, L                                |                                  |
 | longin        | F3RP61       | X, Y, E, L, R, W, M, A  r                 | U, L, B                          |
 | longout       | F3RP61       |    Y, E, L, R, W, M, A  r                 | U, L, B                          |
-| mbbiDirect    | F3RP61       | X, Y, E, L, R, W, M, A, r                 | U, L                             |
-| mbboDirect    | F3RP61       |    Y, E, L, R, W, M, A, r                 | U, L                             |
-| mbbi          | F3RP61       | X, Y, E, L, R, W, M, A, r                 | U, L                             |
-| mbbo          | F3RP61       |    Y, E, L, W, R, M, A, r                 | U, L                             |
-| ai            | F3RP61       | X, Y, E, L, R, W, M, A  r                 | U, L, F, D                       |
-| ao            | F3RP61       |    Y, E, L, R, W, M, A  r                 | U, L, F, D                       |
-| aai, waveform | F3RP61       | X, Y, E, L, R, W, M, A, r                 | U, L, F, D                       |
-| aao           | F3RP61       |    Y, E, L, R, W, M, A, r                 | U, L, F, D                       |
+| mbbiDirect    | F3RP61       | X, Y, E, L, R, W, M, A, r                 | U, L, B                          |
+| mbboDirect    | F3RP61       |    Y, E, L, R, W, M, A, r                 | U, L, B                          |
+| mbbi          | F3RP61       | X, Y, E, L, R, W, M, A, r                 | U, L, B                          |
+| mbbo          | F3RP61       |    Y, E, L, W, R, M, A, r                 | U, L, B                          |
+| ai            | F3RP61       | X, Y, E, L, R, W, M, A  r                 | U, L,    F, D                    |
+| ao            | F3RP61       |    Y, E, L, R, W, M, A  r                 | U, L,    F, D                    |
+| aai, waveform | F3RP61       | X, Y, E, L, R, W, M, A, r                 | U, L, B, F, D                    |
+| aao           | F3RP61       |    Y, E, L, R, W, M, A, r                 | U, L, B, F, D                    |
 | si            | F3RP61       |                      A                    |                                  |
 | so            | F3RP61       |                      A                    |                                  |
 | bi            | F3RP61Seq    | I, M                                      |                                  |
 | bo            | F3RP61Seq    | I, M                                      |                                  |
 | longin        | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B                          |
 | longout       | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B                          |
-| mbbiDirect    | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                             |
-| mbboDirect    | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                             |
-| mbbi          | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                             |
-| mbbo          | F3RP61Seq    | I, M, D, B, F, Z                          | U, L                             |
-| ai            | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, F, D                       |
-| ao            | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, F, D                       |
+| mbbiDirect    | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B                          |
+| mbboDirect    | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B                          |
+| mbbi          | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B                          |
+| mbbo          | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B                          |
+| ai            | F3RP61Seq    | I, M, D, B, F, Z                          | U, L,    F, D                    |
+| ao            | F3RP61Seq    | I, M, D, B, F, Z                          | U, L,    F, D                    |
 | bi            | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3; System Stat. Reg. |                                  |
 | bo            | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3                    |                                  |
 | mbbi          | F3RP61SysCtl | Rotary Switch position                    |                                  |
 
 **Notes**
 - Device `r` represents shared memory (or 'Old interface' for shared registers/relays).
-- In `aai`, `waveform`, and `aao` records, the supported `FTVL` fields are `DBF_DOUBLE`, `DBF_FLOAT`, `DBF_LONG`, `DBF_ULONG`, `DBF`_SHORT`, `DBF_USHORT`.
-- When the relay device is accessed by records other than `bi`/`bo`, the subsequent 16 relays are accessed as 16-bit data. In this case, the device number must be multiple of 16 plus 1, i.e., 1, 17, 33, 49, and so on.
+- In `aai`, `waveform`, and `aao` records, the supported `FTVL` fields are `DBF_DOUBLE`, `DBF_FLOAT`, `DBF_LONG`, `DBF_ULONG`, `DBF`_SHORT`, `DBF_USHORT`. The &B conversion is supported when `FTVL` field is an integer type.
+- When the `'X` or `Y` relay is accessed by records other than `bi`/`bo`, the subsequent 16 relays are accessed as 16-bit data. In this case, the device number must be multiple of 16 plus 1, i.e., 1, 17, 33, 49, and so on.
 
 ## Conversion Specifiers
 

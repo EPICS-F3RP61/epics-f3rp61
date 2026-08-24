@@ -177,7 +177,7 @@ access specific devices. Some record types accepts conversion specifier.
 
 **Notes**
 - Device `r` represents shared memory (or 'Old interface' for shared registers/relays).
-- In `aai`, `waveform`, and `aao` records, the supported `FTVL` fields are `DBF_DOUBLE`, `DBF_FLOAT`, `DBF_LONG`, `DBF_ULONG`, `DBF`_SHORT`, `DBF_USHORT`. The &B conversion is supported when `FTVL` field is an integer type.
+- In `aai`, `waveform`, and `aao` records, the supported `FTVL` fields are `DBF_DOUBLE`, `DBF_FLOAT`, `DBF_LONG`, `DBF_ULONG`, `DBF_SHORT`, `DBF_USHORT`. The &B conversion is supported when `FTVL` field is an integer type.
 - When the `'X` or `Y` relay is accessed by records other than `bi`/`bo`, the subsequent 16 relays are accessed as 16-bit data. In this case, the device number must be multiple of 16 plus 1, i.e., 1, 17, 33, 49, and so on.
 - For `aai`, `waveform` and `aao` records on the `F3P61Seq` device, the maximum data size is limited to 256 words (= 512 bytes).
 
@@ -532,7 +532,7 @@ record(longout, "f3rp61_example_15") {
 <!--
 ### Read an array of data
 
-'aai`, `waveform`, and `aao` records are supported to read / write an
+`aai`, `waveform`, and `aao` records are supported to read / write an
 array of data from the relays or registers of I/O modules.  The
 supported `FTVL` fields are `DBF_DOUBLE`, `DBF_FLOAT`, `DBF_LONG`,
 `DBF_ULONG`, `DBF`_SHORT`, `DBF_USHORT`.

@@ -106,8 +106,8 @@ record must be set to either:
 * **`F3RP61SysCtl`** for controlling status LEDs and/or reading rotary
    switch position of the Linux CPU module.
 
-Note that F3RP71 also uses `F3RP61`, `F3RP61Seq`, and `F3RP61SysCtl`
-for its device type.
+Note that F3RP70 and F3RP71 also uses `F3RP61`, `F3RP61Seq`, and
+`F3RP61SysCtl` for its device type.
 
 ## Record Types
 
@@ -125,12 +125,12 @@ relevant record types.
 | W               | Link registers (for FA Link and FL-net) | F3RP61     |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao,         waveform, aai, aao |
 | A               | Registers on special module             | F3RP61     |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao, si, so, waveform, aai, aao |
 | r               | Shared memory                           | F3RP61     |        16-bit               |         longin, longout  mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
-| I               | Internal relays                         | F3RP61Seq  | 1-bit, 16-bit               | bi, bo, longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
-| M               | Special relays                          | F3RP61Seq  | 1-bit, 16-bit               | bi, bo, longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
-| D               | Data registers                          | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
-| B               | File registers                          | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
-| F               | Cache registers                         | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
-| Z               | Special registers                       | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao                             |
+| I               | Internal relays                         | F3RP61Seq  | 1-bit, 16-bit               | bi, bo, longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao          waveform, aai, aao |
+| M               | Special relays                          | F3RP61Seq  | 1-bit, 16-bit               | bi, bo, longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao          waveform, aai, aao |
+| D               | Data registers                          | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao          waveform, aai, aao |
+| B               | File registers                          | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao          waveform, aai, aao |
+| F               | Cache registers                         | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao          waveform, aai, aao |
+| Z               | Special registers                       | F3RP61Seq  |        16-bit               |         longin, longout, mbbiDirect, mbboDirect, mbbi, mbbo, ai, ao          waveform, aai, aao |
 | T               | Timer relays                            |            |                             |                                                                                                 |
 | C               | Counter relays                          |            |                             |                                                                                                 |
 | V               | Index registers                         |            |                             |                                                                                                 |
@@ -169,6 +169,8 @@ access specific devices. Some record types accepts conversion specifier.
 | mbbo          | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B                          |
 | ai            | F3RP61Seq    | I, M, D, B, F, Z                          | U, L,    F, D                    |
 | ao            | F3RP61Seq    | I, M, D, B, F, Z                          | U, L,    F, D                    |
+| aai, waveform | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B, F, D                    |
+| aao           | F3RP61Seq    | I, M, D, B, F, Z                          | U, L, B, F, D                    |
 | bi            | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3; System Stat. Reg. |                                  |
 | bo            | F3RP61SysCtl | LEDs: R, A, E, 1, 2, 3                    |                                  |
 | mbbi          | F3RP61SysCtl | Rotary Switch position                    |                                  |
@@ -177,6 +179,7 @@ access specific devices. Some record types accepts conversion specifier.
 - Device `r` represents shared memory (or 'Old interface' for shared registers/relays).
 - In `aai`, `waveform`, and `aao` records, the supported `FTVL` fields are `DBF_DOUBLE`, `DBF_FLOAT`, `DBF_LONG`, `DBF_ULONG`, `DBF`_SHORT`, `DBF_USHORT`. The &B conversion is supported when `FTVL` field is an integer type.
 - When the `'X` or `Y` relay is accessed by records other than `bi`/`bo`, the subsequent 16 relays are accessed as 16-bit data. In this case, the device number must be multiple of 16 plus 1, i.e., 1, 17, 33, 49, and so on.
+- For `aai`, `waveform` and `aao` records on the `F3P61Seq` device, the maximum data size is limited to 256 words (= 512 bytes).
 
 ## Conversion Specifiers
 
@@ -1295,7 +1298,7 @@ CPU is to use the message-based communicaion transaction, which
 specifies `F3RP61Seq` for the `DTYP` field:
 
 ```
-field(DTYP, "F3RP61")
+field(DTYP, "F3RP61Seq")
 ```
 
 It enables the Linux CPU to access internal relays and registers of

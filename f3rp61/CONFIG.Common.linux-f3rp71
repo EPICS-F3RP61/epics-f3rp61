@@ -16,6 +16,8 @@ ARCH_DEP_CXXFLAGS += -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=softfp
 ARCH_DEP_LDFLAGS += -lpthread
 
 ifeq ($(BUILD_CLASS),CROSS)
+    GNU_DIR = /opt/Xilinx/SDK/2013.4/gnu/arm/lin
+
     GNU_TARGET = arm-xilinx-linux-gnueabi
     #export CROSS_COMPILE=arm-xilinx-linux-gnueabi-
 

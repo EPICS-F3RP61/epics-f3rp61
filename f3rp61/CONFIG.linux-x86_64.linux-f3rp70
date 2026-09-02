@@ -1,4 +1,4 @@
-#  CONFIG.linux-x86_64.linux-f3rp70
+# CONFIG.linux-x86_64.linux-f3rp70
 #
 # Definitions for linux-x86_64 host - linux-f3rp70 target builds
 # Sites may override these definitions in CONFIG_SITE.linux-x86_64.linux-f3rp70
@@ -6,9 +6,6 @@
 
 # Include common gnu compiler definitions
 include $(CONFIG)/CONFIG.gnuCommon
-
-GNU_DIR = /opt/gcc-arm-10.2-2020.11-x86_64-arm-none-linux-gnueabihf
-#GNU_DIR = /opt/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf
 
 STATIC_LDFLAGS_YES= -Wl,-Bstatic
 STATIC_LDFLAGS_NO=

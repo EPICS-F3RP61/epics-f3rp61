@@ -18,6 +18,8 @@ ARCH_DEP_CFLAGS += -mcpu=603e
 ARCH_DEP_CXXFLAGS += -mcpu=603e
 
 ifeq ($(BUILD_CLASS),CROSS)
+    GNU_DIR = /opt/f3rp6x/usr
+
     GNU_TARGET = ppc_6xx
 
     # prefix of compiler tools

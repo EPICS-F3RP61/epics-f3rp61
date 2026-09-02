@@ -1,13 +1,11 @@
-#  CONFIG.linux-x86.linux-f3rp71
+# CONFIG.linux-x86.linux-f3rp71
 #
-# Definitions for linux-x86 host - linux-p pc target builds
-# Sites may override these definitions in CONFIG_SITE.linux-x86.linux-f3rp61
+# Definitions for linux-x86 host - linux-f3rp71 target builds
+# Sites may override these definitions in CONFIG_SITE.linux-x86.linux-f3rp71
 #-------------------------------------------------------
 
 # Include common gnu compiler definitions
 include $(CONFIG)/CONFIG.gnuCommon
-
-GNU_DIR = /opt/Xilinx/SDK/2013.4/gnu/arm/lin
 
 STATIC_LDFLAGS_YES= -Wl,-Bstatic
 STATIC_LDFLAGS_NO=
@@ -20,7 +18,7 @@ LOADABLE_SHRLIB_LDFLAGS = -shared -fPIC
 # Executables for F3RP71 that link against libf3rp61 must explicitly
 # link against libm3.
 #
-# The device suport library libf3rp61 is linked against libm3, whose
+# The device support library libf3rp61 is linked against libm3, whose
 # SONAME is libm3.so.1. Therefore, when anapplication is linked
 # against libf3rp61, the linker will implicilty link agains
 # libm3.so.1. However, as libm3.so.1 does not exist in the F3RP71

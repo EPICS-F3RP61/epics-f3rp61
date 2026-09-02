@@ -49,7 +49,7 @@ driver support for F3RP70, F3RP71, and F3RP61. It covers following schenarios:
 cd /opt/Xilinx/SDK/2013.4/gnu/arm/lin/arm-xilinx-linux-gnueabi/libc/usr/include
 mkdir ert3
 cd ert3
-ln -fs ../m3*.h ert3
+ln -fs ../m3*.h .
 ```
 
 ## Preparation for cross-compiling for F3RP61

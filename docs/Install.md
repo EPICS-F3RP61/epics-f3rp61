@@ -28,13 +28,13 @@ Installing Device and Driver Support for F3RP70, F3RP71, and F3RP61
 
 This document descibes the instructions for building the device and
 driver support for F3RP70, F3RP71, and F3RP61. It covers following schenarios:
-- Self-buinding on F3RP70.
+- Native-buinding on F3RP70.
   - Optionally, cross-buliding for F3RP70; however, setting up a cross-development environment for F3RP70 target is beyond the scope of this document, this will not be covered here.
 - Cross-building on linux-x86_64 (or linux-x86) for F3RP71 and/or F3RP61.
 
 # Prerequisites
 - This device and driver support has been developed with EPICS base R7.0.10 and R3.15.9.
-- To self-compile on F3RP70, one should prepare in the same way as installing EPICS on a Linux-machine. Refer to the following document: [Installation on Linux / MacOS](https://docs.epics-controls.org/en/latest/getting-started/installation-linux.html)
+- To native-compile on F3RP70, one should prepare in the same way as installing EPICS on a Linux-machine. Refer to the following document: [Installation on Linux / MacOS](https://docs.epics-controls.org/en/latest/getting-started/installation-linux.html)
 - To cross-compile for F3RP71 and/or F3RP61, install the Linux BSP and cross-development environment on the host machine.
 
 ## Preparation for cross-compiling for F3RP71

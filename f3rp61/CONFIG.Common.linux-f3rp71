@@ -19,6 +19,7 @@ ifeq ($(BUILD_CLASS),CROSS)
     GNU_DIR = /opt/Xilinx/SDK/2013.4/gnu/arm/lin
 
     GNU_TARGET = arm-xilinx-linux-gnueabi
+
     #export CROSS_COMPILE=arm-xilinx-linux-gnueabi-
 
     # prefix of compiler tools

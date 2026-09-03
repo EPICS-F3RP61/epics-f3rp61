@@ -22,8 +22,9 @@ ifeq ($(BUILD_CLASS),CROSS)
 
     GNU_TARGET = ppc_6xx
 
+    #export CROSS_COMPILE=ppc_6xx-
+
     # prefix of compiler tools
     CMPLR_SUFFIX =
     CMPLR_PREFIX = $(addsuffix -,$(GNU_TARGET))
 endif
-

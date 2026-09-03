@@ -2,7 +2,7 @@
 #
 # This file is maintained by the build community.
 #
-# Definitions for linux-ppc target builds
+# Definitions for linux-f3rp61 target builds
 # Sites may override these definitions in CONFIG_SITE.Common.linux-f3rp61
 #-------------------------------------------------------
 

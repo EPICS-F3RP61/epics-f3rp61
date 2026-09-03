@@ -26,6 +26,7 @@
 #include <dbCommon.h>
 //#include <dbDefs.h>
 #include <dbScan.h>
+#include <devSup.h>
 #include <drvSup.h>
 #include <epicsExport.h>
 #include <epicsThread.h>

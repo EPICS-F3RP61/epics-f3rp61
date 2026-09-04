@@ -14,6 +14,17 @@
 //
 #include <drvF3RP61.h>
 
+//
+// The BSP for F3RP61 does not contain 'linux/verson.h' unless either
+// the entire kernel is built or 'linux/version.h' is generated
+// explicitly.  We only need the KERNEL_VERSION() macro from
+// 'linux/version.h' here, so we will redefine it.
+#define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
+//#include <linux/version.h>
+
+//
+#include <sys/utsname.h>
+
 #if defined(__powerpc__)
 #define S_m3dev_INVALID_NUMBER     S_m3data_INVALID_NUMBER      // 392
 #define S_m3dev_DEVICE_NOT_FOUND   S_m3data_DEVICE_NOT_FOUND    // 393

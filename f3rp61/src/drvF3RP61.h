@@ -15,9 +15,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <linux/version.h>
-#include <sys/utsname.h>
-
 //
 #include <alarm.h>
 //#include <callback.h>

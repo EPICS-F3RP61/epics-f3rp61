@@ -431,10 +431,10 @@ int32_t devF3RP61short2buf(int16_t *val, void *buf, const int8_t conv, int32_t n
 //
 
 // read data from buf and fill to val
-// return: 0= success, 2= no conversion
+// return: 2= no conversion
 int32_t devF3RP61buf2double(void *buf, double *val, const int8_t conv, int32_t nord)
 {
-    int ret = 0;
+    const int ret = 2;
     uint16_t *wdata = buf;
 
     if (0) {
@@ -449,7 +449,6 @@ int32_t devF3RP61buf2double(void *buf, double *val, const int8_t conv, int32_t n
             memcpy(&tmp, &lval, sizeof(double));
             val[i] = tmp;
         }
-        ret = 2;
     } else if (conv == 'F') {
         for (uint32_t i=0; i<nord; i++) {
             float tmp;
@@ -459,7 +458,6 @@ int32_t devF3RP61buf2double(void *buf, double *val, const int8_t conv, int32_t n
             memcpy(&tmp, &lval, sizeof(float));
             val[i] = tmp;
         }
-        ret = 2;
     } else if (conv == 'L') {
         for (uint32_t i=0; i<nord; i++) {
             uint32_t w0 = wdata[2*i + 0];
@@ -529,10 +527,10 @@ int32_t devF3RP61double2buf(double *val, void *buf, const int8_t conv, int32_t n
 //
 
 // read data from buf and fill to val
-// return: 0= success, 2= no conversion
+// return: 2= no conversion
 int32_t devF3RP61buf2float(void *buf, float *val, const int8_t conv, int32_t nord)
 {
-    int ret = 0;
+    const int ret = 2; // no conversion
     uint16_t *wdata = buf;
 
     if (0) {
@@ -546,7 +544,6 @@ int32_t devF3RP61buf2float(void *buf, float *val, const int8_t conv, int32_t nor
             memcpy(&tmp, &lval, sizeof(float));
             val[i] = tmp;
         }
-        ret = 2;
     } else if (conv == 'L') {
         for (uint32_t i=0; i<nord; i++) {
             uint32_t w0 = wdata[2*i + 0];

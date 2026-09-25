@@ -15,7 +15,7 @@
 #include <aiRecord.h>
 
 //
-#include <drvF3RP61.h>
+#include <drvF3RP61_private.h>
 
 //
 #include <math.h>

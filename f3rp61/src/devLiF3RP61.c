@@ -18,7 +18,7 @@
 #include <longinRecord.h>
 
 //
-#include <drvF3RP61.h>
+#include <drvF3RP61_private.h>
 
 //
 static const F3RP61_RW rw = kRead;

@@ -12,7 +12,7 @@
 */
 
 //
-#include <drvF3RP61.h>
+#include <drvF3RP61_private.h>
 
 //
 // The BSP for F3RP61 does not contain 'linux/verson.h' unless either
@@ -83,10 +83,6 @@ int f3rp61_fd = -1;
 // I/O interrupt handlers
 static void msgrcv_thread(void *);
 static void read_thread(void *);
-
-// helper fuction(s)
-static int f3rp61RegisterIoInterrupt(const dbCommon *, int, int, int);
-static int f3rp61EnableIoInterrupt(void);
 
 // iocsh commands
 
@@ -370,7 +366,7 @@ static void read_thread(void *arg)
 //
 // Initialize device support in 2 pass.
 // - after==0 : 1st pass: befor initDatabase(), in which calls init_record() for each record instances.
-// - after==0 : 2nd pass: after initDatabase()
+// - after==1 : 2nd pass: after initDatabase()
 //
 long f3rp61Init(int after)
 {
@@ -1016,7 +1012,6 @@ int32_t f3rp61Write(const dbCommon *prec, const int32_t nord)
 
 //////////////////////////////////////////////////////////////////////////
 //
-static
 int f3rp61RegisterIoInterrupt(const dbCommon *prec, int unit, int slot, int channel)
 {
     // debug
@@ -1045,7 +1040,6 @@ int f3rp61RegisterIoInterrupt(const dbCommon *prec, int unit, int slot, int chan
 //
 //
 //
-static
 int f3rp61EnableIoInterrupt(void)
 {
     static int init_flag = 0;

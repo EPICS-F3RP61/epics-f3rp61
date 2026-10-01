@@ -178,7 +178,7 @@ access specific devices. Some record types accepts conversion specifier.
 **Notes**
 - Device `r` represents shared memory (or 'Old interface' for shared registers/relays).
 - In `aai`, `waveform`, and `aao` records, the supported `FTVL` fields are `DBF_DOUBLE`, `DBF_FLOAT`, `DBF_LONG`, `DBF_ULONG`, `DBF_SHORT`, `DBF_USHORT`. The &B conversion is supported when `FTVL` field is an integer type.
-- When the `'X` or `Y` relay is accessed by records other than `bi`/`bo`, the subsequent 16 relays are accessed as 16-bit data. In this case, the device number must be multiple of 16 plus 1, i.e., 1, 17, 33, 49, and so on.
+- When the `X` or `Y` relay is accessed by records other than `bi`/`bo`, the subsequent 16 relays are accessed as 16-bit data. In this case, the device number must be multiple of 16 plus 1, i.e., 1, 17, 33, 49, and so on.
 - For `aai`, `waveform` and `aao` records on the `F3P61Seq` device, the maximum data size is limited to 256 words (= 512 bytes).
 
 ## Conversion Specifiers
@@ -210,7 +210,7 @@ to an `ai` record using the `&F` conversion.
 
 ## Reading / Writing an Array of Data
 
-'aai`, `waveform`, and `aao` records are supported to read / write an
+`aai`, `waveform`, and `aao` records are supported to read / write an
 array of data from subsequent relays or registers. The supported
 `FTVL` fields are `DBF_DOUBLE`, `DBF_FLOAT`, `DBF_LONG`, `DBF_ULONG`,
 `DBF`_SHORT`, `DBF_USHORT`. The `FTVL` field and conversion specifier
@@ -249,7 +249,7 @@ field(INP, "@U1,S2,X03&L")
   * &F - Single precision floating point (32-bit)
   * &D - Double precision floating point (64-bit)
 
-Optionally, PLC-like notation is supported for 'X' and 'Y' devices:
+Optionally, PLC-like notation is supported for `X` and `Y` devices:
 
 ```
 field(INP, "@typenumber[&conversion")
@@ -1153,8 +1153,8 @@ record(ao, "f3rp61_example_34") {
 ```
 
 Waveform type records are supported to read out an array of data from
-shared registers. The value of FTVL (Field Type of VaLue) must match
-with the type of the data written by the Sequence CPU.
+shared registers. The conversion specifier in the `INP`/`OUT` field
+must consistent with the type of the data written by the Sequence CPU.
 
 The following example shows how to read successive 256 float values
 (on 512 words of registers). The address, R1, specifies the first

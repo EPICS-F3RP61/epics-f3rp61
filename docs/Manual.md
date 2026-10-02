@@ -3,7 +3,9 @@
 Device and Driver Support for F3RP70, F3RP71, and F3RP61
 ========================================================
 
+<!-- cd /path/to/doctoc -->
 <!-- npx doctoc /path/to/Manual.md -->
+
 **Table of Contents**
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -34,10 +36,10 @@ Device and Driver Support for F3RP70, F3RP71, and F3RP61
 - [Accessing Internal Relays or Data/File/Cache Registes on Sequence CPU (F3RP61Seq devices)](#accessing-internal-relays-or-datafilecache-registes-on-sequence-cpu-f3rp61seq-devices)
   - [Input / Output Link (INP/OUT) Fields](#input--output-link-inpout-fields)
 - [FL-net Support](#fl-net-support)
-- [LED / Rotary Switch / Status Register support](#led--rotary-switch--status-register-support)
+- [LED / Rotary Switch / Battery Status support](#led--rotary-switch--battery-status-support)
   - [LED support](#led-support)
   - [Rotary switch support](#rotary-switch-support)
-  - [Status register support](#status-register-support)
+  - [Battery Status support](#battery-status-support)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -1542,17 +1544,16 @@ MbbiDirect /mbboDirect are also supported to read / write link
 registers.
 
 
-# LED / Rotary Switch / Status Register support
+# LED / Rotary Switch / Battery Status support
 
 On the front panel of the Linux CPU there are status LEDs (namely,
 **Run**, **Alarm**, **Error**, **U1**, **U2**, and **U3**) as well as
 an rotary switch that is used to control boot option for the Linux
 CPU. Device support provides functionality to control those LEDs, read
 position of the rotary switch and read the status register (battery
-status) using EPICS database records. In that case, DTYP of the record
-must be set to `F3RP61SysCtl`. Additionally, there is iocsh command
-available to control status LEDs.
-
+status) using EPICS records. In that case, DTYP of the record must be
+set to `F3RP61SysCtl`. Additionally, there are iocsh commands available
+to set/get LED status and battery status.
 
 ## LED support
 
@@ -1629,13 +1630,21 @@ It is important to note that returned position will be position of the
 switch at boot time, irrelevant of the current position of the switch.
 
 
-## Status register support
+## Battery Status support
 
-The usage of bi record to read status register is shown below:
+To display the battery status in the iocsh, use the f3rp61GetBattery command:
+
+```
+f3rp61GetBattery
+```
+
+The usage of bi record to read bettery status is shown below:
 
 ```
 record(bi, "f3rp61_example_57") {
     field(DTYP, "F3RP61SysCtl")
-    field(OUT, "@SYS,R")
+    field(OUT,  "@SYS,R")
+    field(ZNAM, "Normal battery Voltage (BAT LED is off")
+    field(ONAM, "Low Battery Voltage (BAT LED is on")
 }
 ```

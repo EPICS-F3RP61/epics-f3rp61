@@ -32,6 +32,10 @@ epicsExportAddress(drvet, drvF3RP61SysCtl);
 
 int f3rp61SysCtl_fd = -1;
 
+// iocsh commands
+static int getBattery(void);
+
+//
 static void drvF3RP61SysCtlRegisterCommands(void);
 
 //////////////////////////////////////////////////////////////////////////
@@ -168,6 +172,48 @@ static void setLEDCallFunc(const iocshArgBuf *args)
     setLED(args[0].sval[0], args[1].sval);
 }
 
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh command 'f3rp61GetBattery'
+//
+// usage: f3rp61GetBattery
+//
+// Show bettery status.
+//
+static const iocshFuncDef getBatteryFuncDef = { "f3rp61GetBattery", 0, 0,
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+    "Get battery level.\n"
+#endif
+};
+
+static void getBatteryCallFunc(const iocshArgBuf *args)
+{
+    if (! getBattery()) {
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
+}
+
+static int getBattery(void)
+{
+    // Buffer(s) for data read;
+    unsigned long data = 0;
+    if (ioctl(f3rp61SysCtl_fd, M3SC_CHECK_BAT, &data) < 0) {
+        errlogPrintf("f3rp61GetBattery: ioctl M3SC_CHECK_BAT failed [%d]\n", errno);
+        return -1;
+    }
+
+    int low = (data & 0x00000004) ? 1 : 0; // 0: Normal, 1: Low
+    char *status[] = {"Normal battery voltage (BAT LED is off)", "Low battery voltage (BAT LED is on)", };
+    printf("%s\n", status[low]);
+
+    return 0; // success
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Register iocsh commands
 //
 static void drvF3RP61SysCtlRegisterCommands(void)
 {
@@ -175,6 +221,7 @@ static void drvF3RP61SysCtlRegisterCommands(void)
     if (!init_flag) {
         init_flag = 1;
         iocshRegister(&setLEDFuncDef, setLEDCallFunc);
+        iocshRegister(&getBatteryFuncDef, getBatteryCallFunc);
     }
 }
 

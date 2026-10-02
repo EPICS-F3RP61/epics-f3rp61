@@ -1334,14 +1334,14 @@ static const iocshArg    *setInternalDeviceConfigArgs[]  = {
 static const iocshFuncDef  setInternalDeviceConfigFuncDef = { "f3rp61SetInternalDeviceConfig", 4, setInternalDeviceConfigArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Configure local device assignment.\n"
-    "[loc] : Location of local device (treated as 0 if omitted))\n"
-    "        0:SDRAM\n"
+    "  [loc] : Location of local device (treated as 0 if omitted))\n"
+    "          0:SDRAM\n"
 #  if defined(__powerpc__)
-    "        1:Sytem SRAM on F3RP6x\n" // 256kB
+    "          1:Sytem SRAM on F3RP6x\n" // 256kB
 #  endif
-    "        2:User SRAM on F3RPxx-2L\n" // F3RP61-2L supports up to 4MB, while not sure for F3RP7x-2L
-    "nRlys : Number of relays (0, 32, 64, ...)\n"
-    "nRegs : Number of data registers (0, 2, 4, ...)\n"
+    "          2:User SRAM on F3RPxx-2L\n" // F3RP61-2L supports up to 4MB, while not sure for F3RP7x-2L
+    "  nRlys : Number of relays (0, 32, 64, ...)\n"
+    "  nRegs : Number of data registers (0, 2, 4, ...)\n"
 //    "Calling f3rp61SetInternalDeviceConfig after iocInit has no effect.\n"
 #endif
 };
@@ -1357,7 +1357,7 @@ static void setInternalDeviceConfigCallFunc(const iocshArgBuf *args)
     //printf("%d : %d %d %d\n", argc, args[0].ival, args[1].ival, args[2].ival);
 
     if (argc < 0) {
-        fprintf(stderr, "f3rp61SetInternalDeviceConfig: error : argument is missing\n");
+        errlogPrintf("f3rp61SetInternalDeviceConfig: error : argument is missing\n");
 #ifdef IOCSHFUNCDEF_HAS_USAGE
         iocshSetError(-1);
 #endif
@@ -1421,18 +1421,18 @@ static int setInternalDeviceConfig(int loc, int nrly, int nreg)
         static char *locname[] = { "SDRAM", "System-SRAM", "User-SRAM" };
         switch (errno) {
         case S_m3dev_INVALID_NUMBER: // 392
-            fprintf(stderr, "f3rp61SetInternalDeviceConfig: error : Parameter out of range\n");
+            errlogPrintf("f3rp61SetInternalDeviceConfig: error : Parameter out of range\n");
             break;
         case S_m3dev_DEVICE_NOT_FOUND: //393
-            fprintf(stderr, "f3rp61SetInternalDeviceConfig : error : Specified device not found : %s\n", locname[loc]);
+            errlogPrintf("f3rp61SetInternalDeviceConfig : error : Specified device not found : %s\n", locname[loc]);
             break;
         case S_m3dev_DEVICE_ENTRY_ERROR: //394; F3RP6x only
             //fprintf(stderr, "%s failed.\n", cmdname);
-            fprintf(stderr, "f3rp61SetInternalDeviceConfig : error : Local device appears to be already configured.\n");
-            fprintf(stderr, "System reboot is required to alter the configuration.\n");
+            errlogPrintf("f3rp61SetInternalDeviceConfig : error : Local device appears to be already configured.\n");
+            errlogPrintf("System reboot is required to alter the configuration.\n");
             break;
         default:
-            fprintf(stderr, "f3rp61SetInternalDeviceConfig : error : %s\n", strerror(errno));
+            errlogPrintf("f3rp61SetInternalDeviceConfig : error : %s\n", strerror(errno));
         }
         return -1;
     }
@@ -1491,23 +1491,44 @@ static const iocshArg      setSharedDeviceConfigArg1    = { "nRlys",     iocshAr
 static const iocshArg      setSharedDeviceConfigArg2    = { "nRegs",     iocshArgInt };
 static const iocshArg      setSharedDeviceConfigArg3    = { "ext_nRlys", iocshArgInt };
 static const iocshArg      setSharedDeviceConfigArg4    = { "ext_nRegs", iocshArgInt };
+static const iocshArg      setSharedDeviceConfigArg5    = { "",          iocshArgArgv };
 static const iocshArg     *setSharedDeviceConfigArgs[]  = {
     &setSharedDeviceConfigArg0,
     &setSharedDeviceConfigArg1,
     &setSharedDeviceConfigArg2,
     &setSharedDeviceConfigArg3,
-    &setSharedDeviceConfigArg4
+    &setSharedDeviceConfigArg4,
+    &setSharedDeviceConfigArg5,
 };
-static const iocshFuncDef  setSharedDeviceConfigFuncDef = { "f3rp61SetSharedDeviceConfig", 5, setSharedDeviceConfigArgs,
+static const iocshFuncDef  setSharedDeviceConfigFuncDef = { "f3rp61SetSharedDeviceConfig", 6, setSharedDeviceConfigArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Configure shared device assignment for given CPU.\n"
+    "  cpuNo     : CPU number (0, 1, ...)\n"
+    "  nRlys     : Number of relays (0, 32, 64, ...)\n"
+    "  nRegs     : Number of registers (0, 2, 4, ...)\n"
+    "  ext_nRlys : Number of extended relays (0, 32, 64, ...)\n"
+    "  ext_nRegs : Number of extended registers (0, 2, 4, ...)\n"
     "Calling f3rp61SetSharedDeviceConfig after iocInit has no effect.\n"
 #endif
 };
 
 static void setSharedDeviceConfigCallFunc(const iocshArgBuf *args)
 {
-    if (! setSharedDeviceConfig(args[0].ival, args[1].ival, args[2].ival, args[3].ival, args[4].ival)) {
+    int cpuno    = args[0].ival;
+    int nrly     = args[1].ival;
+    int nreg     = args[2].ival;
+    int ext_nrly = args[3].ival;
+    int ext_nreg = args[4].ival;
+    const int argc = args[5].aval.ac;
+
+    if (argc < 1) {
+        errlogPrintf("f3rp61SetSharedDeviceConfig: error : argument is missing\n");
+#ifdef IOCSHFUNCDEF_HAS_USAGE
+        iocshSetError(-1);
+#endif
+    }
+
+    if (! setSharedDeviceConfig(cpuno, nrly, nreg, ext_nrly, ext_nreg)) {
 #ifdef IOCSHFUNCDEF_HAS_USAGE
         iocshSetError(-1);
 #endif
@@ -1520,19 +1541,19 @@ static int setSharedDeviceConfig(int cpuno, int nrly, int nreg, int ext_nrly, in
         errlogPrintf("f3rp61SetSharedDeviceConfig: CPU number out of range\n");
         return -1;
     }
-    if (nrly < 0 || nrly >  2048) {
+    if (nrly < 0 || nrly >  2048 || nrly % 32) {
         errlogPrintf("f3rp61SetSharedDeviceConfig: Number of shared relays out of range\n");
         return -1;
     }
-    if (nreg < 0 || nreg > 1024) {
+    if (nreg < 0 || nreg > 1024 || nreg % 2) {
         errlogPrintf("f3rp61SetSharedDeviceConfig: Number of shared registers out of range\n");
         return -1;
     }
-    if (ext_nrly < 0 || ext_nrly >  2048) {
+    if (ext_nrly < 0 || ext_nrly >  2048 || ext_nrly % 32) {
         errlogPrintf("f3rp61SetSharedDeviceConfig: Number of extended shared relays out of range\n");
         return -1;
     }
-    if (ext_nreg < 0 || ext_nreg > 3072) {
+    if (ext_nreg < 0 || ext_nreg > 3072 || ext_nreg % 32) {
         errlogPrintf("f3rp61SetSharedDeviceConfig: Number of extended shared registers out of range\n");
         return -1;
     }
@@ -1603,6 +1624,9 @@ static const iocshArg     *setLinkDeviceConfigArgs[]  = {
 static const iocshFuncDef  setLinkDeviceConfigFuncDef = { "f3rp61SetLinkDeviceConfig", 4, setLinkDeviceConfigArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Configure link device assignment.\n"
+    "  sysNo     : System number (0, 1)\n"
+    "  nRlys     : Number of relays (0, 16, 32, ...)\n"
+    "  nRegs     : Number of registers (0, 16, 32, ...)\n"
     "Calling f3rp61SetLinkDeviceConfig after iocInit has no effect.\n"
 #endif
 };
@@ -1618,7 +1642,7 @@ static void setLinkDeviceConfigCallFunc(const iocshArgBuf *args)
     //printf("%d : %d %d %d\n", argc, args[0].ival, args[1].ival, args[2].ival);
 
     if (argc < 0) {
-        fprintf(stderr, "f3rp61SetLinkDeviceConfig: error : argument is missing\n");
+        errlogPrintf("f3rp61SetLinkDeviceConfig: error : argument is missing\n");
 #ifdef IOCSHFUNCDEF_HAS_USAGE
         iocshSetError(-1);
 #endif
@@ -1645,11 +1669,11 @@ static int setLinkDeviceConfig(int sysno, int nrly, int nreg)
         errlogPrintf("f3rp61SetLinkDeviceConfig: Number of FL-net interface out of range\n");
         return -1;
     }
-    if (nrly < 1 || nrly > 8192) {
+    if (nrly < 1 || nrly > 8192 || nrly % 16) {
         errlogPrintf("f3rp61SetLinkDeviceConfig: Number of link relays out of range\n");
         return -1;
     }
-    if (nreg < 1 || nreg > 8192) {
+    if (nreg < 1 || nreg > 8192 || nrly % 16) {
         errlogPrintf("f3rp61SetLinkDeviceConfig: Number of link registers out of range\n");
         return -1;
     }
@@ -1681,6 +1705,8 @@ static const iocshArg     *getInterruptEdgeArgs[]  = {
 static const iocshFuncDef  getInterruptEdgeFuncDef = { "f3rp61GetInterruptEdge", 3, getInterruptEdgeArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Get interrupt edge or output on failure setting for specified unit and slot.\n"
+    "  [unit] : Unit number (0, 1, 2, ..., 7)\n"
+    "  slot   : Slot number (1, 2, ..., 16))\n"
     "The unit is optional (treated as 0 if omitted).\n"
 #endif
 };
@@ -1695,7 +1721,7 @@ static void getInterruptEdgeCallFunc(const iocshArgBuf *args)
     //printf("%d : %d %d\n", argc, args[0].ival, args[1].ival);
 
     if (argc < 0) {
-        fprintf(stderr, "f3rp61GetInterruptEdge: error : argument is missing\n");
+        errlogPrintf("f3rp61GetInterruptEdge: error : argument is missing\n");
 #ifdef IOCSHFUNCDEF_HAS_USAGE
         iocshSetError(-1);
 #endif
@@ -1792,9 +1818,11 @@ static const iocshArg     *setInterruptEdgeArgs[]  = {
 static const iocshFuncDef  setInterruptEdgeFuncDef = { "f3rp61SetInterruptEdge", 5, setInterruptEdgeArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Set interrupt edge or output on failure setting for specified unit and slot.\n"
+    "  [unit] : Unit number (0, 1, 2, ..., 7)\n"
+    "  slot   : Slot number (1, 2, ..., 16))\n"
+    "  ch     : 1 (channel 1-8), 9 (channel 9-16), ..., 57 (channel 57-64)\n"
+    "  val    : 0 (Rising Edge/Hold Output), 1 (Falling Edge/Reset Output)\n"
     "The unit is optional (treated as 0).\n"
-    "ch  : 1 (channel 1-8), 9 (channel 9-16), ..., 57 (channel 57-64)\n"
-    "val : 0 (Rising Edge/Hold Output), 1 (Falling Edge/Reset Output)\n"
 #endif
 };
 
@@ -1810,7 +1838,7 @@ static void setInterruptEdgeCallFunc(const iocshArgBuf *args)
     //printf("%d : %d %d %d %d\n", argc, args[0].ival, args[1].ival, args[2].ival, args[3].ival);
 
     if (argc < 0) {
-        fprintf(stderr, "f3rp61SetInterruptEdge: error : argument is missing\n");
+        errlogPrintf("f3rp61SetInterruptEdge: error : argument is missing\n");
 #ifdef IOCSHFUNCDEF_HAS_USAGE
         iocshSetError(-1);
 #endif
@@ -1937,6 +1965,8 @@ static const iocshArg     *getInputSamplingArgs[]  = {
 static const iocshFuncDef  getInputSamplingFuncDef = { "f3rp61GetInputSampling", 3, getInputSamplingArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Get input sampling period for specified unit and slot.\n"
+    "  [unit] : Unit number (0, 1, 2, ..., 7)\n"
+    "  slot   : Slot number (1, 2, ..., 16))\n"
     "The unit is optional (treated as 0 if omitted).\n"
 #endif
 };
@@ -1951,7 +1981,7 @@ static void getInputSamplingCallFunc(const iocshArgBuf *args)
     //printf("%d : %d %d\n", argc, args[0].ival, args[1].ival);
 
     if (argc < 0) {
-        fprintf(stderr, "f3rp61GetInputSampling: error : argument is missing\n");
+        errlogPrintf("f3rp61GetInputSampling: error : argument is missing\n");
 #ifdef IOCSHFUNCDEF_HAS_USAGE
         iocshSetError(-1);
 #endif
@@ -2042,9 +2072,11 @@ static const iocshArg     *setInputSamplingArgs[]  = {
 static const iocshFuncDef  setInputSamplingFuncDef = { "f3rp61SetInputSampling", 5, setInputSamplingArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Set input sampling period for specified unit and slot.\n"
+    "  [unit] : Unit number (0, 1, 2, ..., 7)\n"
+    "  slot   : Slot number (1, 2, ..., 16))\n"
+    "  ch     : 1 (channel 1-8), 9 (channel 9-16), ... 57 (channel 57-64)\n"
+    "  val    : 0 (16ms), 1 (1ms), 2 (62.5us), 3 (0us)\n"
     "The unit is optional (treated as 0).\n"
-    "ch  : 1 (channel 1-8), 9 (channel 9-16), ... 57 (channel 57-64)\n"
-    "val : 0 (16ms), 1 (1ms), 2 (62.5us), 3 (0us)\n"
 #endif
 };
 
@@ -2060,7 +2092,7 @@ static void setInputSamplingCallFunc(const iocshArgBuf *args)
     //printf("%d : %d %d %d %d\n", argc, args[0].ival, args[1].ival, args[2].ival, args[3].ival);
 
     if (argc < 0) {
-        fprintf(stderr, "f3rp61SetInputSampling: error : argument is missing\n");
+        errlogPrintf("f3rp61SetInputSampling: error : argument is missing\n");
 #ifdef IOCSHFUNCDEF_HAS_USAGE
         iocshSetError(-1);
 #endif
@@ -2176,6 +2208,8 @@ static const iocshArg     *getInputFilterArgs[]  = {
 static const iocshFuncDef  getInputFilterFuncDef = { "f3rp61GetInputFilter", 3, getInputFilterArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Get input filter time constant for specified unit and slot.\n"
+    "  [unit] : Unit number (0, 1, 2, ..., 7)\n"
+    "  slot   : Slot number (1, 2, ..., 16))\n"
     "The unit is optional (treated as 0 if omitted).\n"
 #endif
 };
@@ -2190,7 +2224,7 @@ static void getInputFilterCallFunc(const iocshArgBuf *args)
     //printf("%d : %d %d\n", argc, args[0].ival, args[1].ival);
 
     if (argc < 0) {
-        fprintf(stderr, "f3rp61GetInputFilter: error : argument is missing\n");
+        errlogPrintf("f3rp61GetInputFilter: error : argument is missing\n");
 #ifdef IOCSHFUNCDEF_HAS_USAGE
         iocshSetError(-1);
 #endif
@@ -2280,10 +2314,12 @@ static const iocshArg     *setInputFilterArgs[]  = {
 static const iocshFuncDef  setInputFilterFuncDef = { "f3rp61SetInputFilter", 5, setInputFilterArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Set input filter time constant for specified unit and slot.\n"
+    "  [unit] : Unit number (0, 1, 2, ..., 7)\n"
+    "  slot   : Slot number (1, 2, ..., 16))\n"
+    "  ch     : 1 (channel 1-8), 9 (channel 9-16), ..., 57 (channel 57-64)\n"
+    "  val    : 0 (128-64ms), 1 (64-32ms),   2 (16-8ms),       3 (4-2ms),\n"
+    "           4 (1-0.5ms),  5 (250-125us), 6 (62.5-31.25us), 7 (none)\n"
     "The unit is optional (treated as 0).\n"
-    "ch  : 1 (channel 1-8), 9 (channel 9-16), ..., 57 (channel 57-64)\n"
-    "val : 0 (128-64ms), 1 (64-32ms),   2 (16-8ms),       3 (4-2ms),\n"
-    "      4 (1-0.5ms),  5 (250-125us), 6 (62.5-31.25us), 7 (none)\n"
 #endif
 };
 
@@ -2299,7 +2335,7 @@ static void setInputFilterCallFunc(const iocshArgBuf *args)
     //printf("%d : %d %d %d %d\n", argc, args[0].ival, args[1].ival, args[2].ival, args[3].ival);
 
     if (argc < 0) {
-        fprintf(stderr, "f3rp61SetInputFilter: error : argument is missing\n");
+        errlogPrintf("f3rp61SetInputFilter: error : argument is missing\n");
 #ifdef IOCSHFUNCDEF_HAS_USAGE
         iocshSetError(-1);
 #endif

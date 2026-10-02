@@ -1618,7 +1618,7 @@ static void setLinkDeviceConfigCallFunc(const iocshArgBuf *args)
     //printf("%d : %d %d %d\n", argc, args[0].ival, args[1].ival, args[2].ival);
 
     if (argc < 0) {
-        fprintf(stderr, "f3rp61SetInterruptEdge: error : argument is missing\n");
+        fprintf(stderr, "f3rp61SetLinkDeviceConfig: error : argument is missing\n");
 #ifdef IOCSHFUNCDEF_HAS_USAGE
         iocshSetError(-1);
 #endif

@@ -1660,7 +1660,7 @@ static int setLinkDeviceConfig(int sysno, int nrly, int nreg)
     return 0; // Success
 }
 
-static const iocshFuncDef linkDeviceConfigreFuncDef = { "f3rp61LinkDeviceConfig", 5, setLinkDeviceConfigArgs,
+static const iocshFuncDef linkDeviceConfigureFuncDef = { "f3rp61LinkDeviceConfigure", 5, setLinkDeviceConfigArgs,
 #ifdef IOCSHFUNCDEF_HAS_USAGE
     "Old name for f3rp61SetLinkDeviceConfig, retained for backward compatibility.\n"
 #endif
@@ -2423,7 +2423,7 @@ static void drvF3RP61RegisterCommands(void)
         //
         iocshRegister(&getLinkDeviceConfigFuncDef,     getLinkDeviceConfigCallFunc);
         iocshRegister(&setLinkDeviceConfigFuncDef,     setLinkDeviceConfigCallFunc);
-        iocshRegister(&linkDeviceConfigreFuncDef,      setLinkDeviceConfigCallFunc);     // for backward compatibility
+        iocshRegister(&linkDeviceConfigureFuncDef,     setLinkDeviceConfigCallFunc);     // for backward compatibility
 
         //
         iocshRegister(&getInterruptEdgeFuncDef,        getInterruptEdgeCallFunc);

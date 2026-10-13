@@ -248,9 +248,6 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
         M3IO_MODULE_INFORMATION module_info = {
             .unitno   = unit,
             .slotno   = slot,
-            .num_xreg = 0,
-            .num_yreg = 0,
-            .num_dreg = 0,
         };
         if (ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info) < 0) {
             errlogPrintf("%s: %s : Unit %d Slot %d is empty\n", __func__, prec->name, unit, slot);
@@ -259,21 +256,22 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
 
         // Check address validity
         if (type == kBit) {
-            int32_t nrly;
             if (0) {
                 //
             } else if (device == 'X') {
-                nrly = module_info.num_xreg;
+                const int low  = 1;
+                const int high = module_info.num_xreg;
+                nord = f3rp61CheckRelay(prec, pos, low, high);
             } else if (device == 'Y') {
-                nrly = module_info.num_yreg;
-            } else {
-                nrly = pos; // We don't care devices other than X or Y
+                const int low  = module_info.num_xreg + 1;
+                const int high = module_info.num_xreg + module_info.num_yreg;
+                nord = f3rp61CheckRelay(prec, pos, low, high);
             }
-            if (pos > nrly) {
-                errlogPrintf("%s: %s : Relay number %d exceeds the module limit of %d\n", __func__, prec->name, pos, nrly);
+            if (nord == 0) {
                 return -1;
             }
         } else {  //kWord
+            // Check if start address is valid when accessing relays in byte-wise
             if (pos%16 != 1) {
                 errlogPrintf("%s: %s : Illegal relay number : %d\n", __func__, prec->name, pos);
                 return -1;
@@ -282,9 +280,13 @@ int f3rp61seqParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYP
             if (0) {
                 //
             } else if (device == 'X') {
-                nord = f3rp61CheckAddrRange(prec, kBit, pos, num, nelm, module_info.num_xreg);
+                const int low  = 1;
+                const int high = module_info.num_xreg;
+                nord = f3rp61CheckAddrRange(prec, kBit, pos, num, nelm, low, high);
             } else if (device == 'Y') {
-                nord = f3rp61CheckAddrRange(prec, kBit, pos, num, nelm, module_info.num_yreg);
+                const int low  = module_info.num_xreg + 1;
+                const int high = module_info.num_xreg + module_info.num_yreg;
+                nord = f3rp61CheckAddrRange(prec, kBit, pos, num, nelm, low, high);
             }
         }
     }

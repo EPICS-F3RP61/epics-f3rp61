@@ -37,7 +37,8 @@ typedef enum {
 int f3rp61CheckConversion(F3RP61_ACCESS_TYPE, const dbfType, const char);
 
 //
-int32_t f3rp61CheckAddrRange(dbCommon *prec, F3RP61_ACCESS_TYPE type, const int addr, int32_t count, const int32_t nelm, const int limit);
+int32_t f3rp61CheckRelay(dbCommon *prec, const int addr, const int low, const int high);
+int32_t f3rp61CheckAddrRange(dbCommon *prec, F3RP61_ACCESS_TYPE type, const int addr, int32_t count, const int32_t nelm, const int low, const int high);
 
 //
 int32_t  devF3RP61buf2long(void *buf, int32_t *val, const int8_t conv, int32_t nord);

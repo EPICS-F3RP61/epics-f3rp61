@@ -11,13 +11,12 @@
 *      Date: 2020-10-01
 */
 
-//
 #include <devF3RP61util.h>
 
 //////////////////////////////////////////////////////////////////////////
 //
-// check conversion specifier validity
-// return: 0= OK, -1=NG
+// Check conversion specifier validity.
+// Return: 0= OK, -1=NG
 //
 int f3rp61CheckConversion(F3RP61_ACCESS_TYPE type, const dbfType ftvl, const char conv)
 {
@@ -89,27 +88,55 @@ int f3rp61CheckConversion(F3RP61_ACCESS_TYPE type, const dbfType ftvl, const cha
 
 //////////////////////////////////////////////////////////////////////////
 //
-// check if address range is suitable for the hardware
+// Check if relay number is suitable for the hardware
 // return: the number of elements that can be read/written (i.e. NORD)
 //
-int32_t f3rp61CheckAddrRange(dbCommon *prec, F3RP61_ACCESS_TYPE type, const int addr, int32_t count, const int32_t nelm, const int limit)
+int32_t f3rp61CheckRelay(dbCommon *prec, const int addr, const int low, const int high)
 {
-
-    const int   width = (type==kBit) ? count*16 : count;
-    const char *dev   = (type==kBit) ? "Relay"  : "Register";
-    const char *unit  = (type==kBit) ? "bits"   : "words";
-
     //
-    const int end = addr + (width * nelm) - 1;
-    if (limit < end) {
-        errlogPrintf("%s: %s : %s number %d-%d (%d %s x %d) exceeds the module limit of %d\n", __func__, prec->name, dev, addr, end, width, unit, nelm, limit);
+    if (addr < low) {
+        errlogPrintf("%s: %s : Relay number %d exceeds the module lower limit of %d\n", __func__, prec->name, addr, low);
         return 0;
     }
 
     //
-    int32_t nord = (limit - addr + 1) / width;
+    if (high < addr) {
+        errlogPrintf("%s: %s : Relay number %d exceeds the module upper limit of %d\n", __func__, prec->name, addr, high);
+        return 0;
+    }
+
+    return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Check if address range is suitable for the hardware
+// return: the number of elements that can be read/written (i.e. NORD)
+//
+int32_t f3rp61CheckAddrRange(dbCommon *prec, F3RP61_ACCESS_TYPE type, const int addr, int32_t count, const int32_t nelm, const int low, const int high)
+{
+    const int   width = (type==kBit) ? count*16 : count;
+    const char *dev   = (type==kBit) ? "Relay"  : "Register";
+    const char *unit  = (type==kBit) ? "bits"   : "words";
+
+    const int end = addr + (width * nelm) - 1;
+
+    //
+    if (addr < low) {
+        errlogPrintf("%s: %s : %s number %d-%d (%d %s x %d) exceeds the module lower limit of %d\n", __func__, prec->name, dev, addr, end, width, unit, nelm, low);
+        return 0;
+    }
+
+    //
+    if (high < end) {
+        errlogPrintf("%s: %s : %s number %d-%d (%d %s x %d) exceeds the module upper limit of %d\n", __func__, prec->name, dev, addr, end, width, unit, nelm, high);
+        return 0;
+    }
+
+    //
+    int32_t nord = (high - addr + 1) / width;
     if (nord < nelm) {
-        errlogPrintf("%s: %s : Warning: NORD shrinked to %d : %s number %d-%d (%d %s x %d) exceeds the module limit of %d\n", __func__, prec->name, nord, dev, addr, end, width, unit, nelm, limit);
+        errlogPrintf("%s: %s : Warning: NORD shrinked to %d : %s number %d-%d (%d %s x %d) exceeds the module upper of %d\n", __func__, prec->name, nord, dev, addr, end, width, unit, nelm, high);
         return nord;
     } else {
         return nelm;
@@ -279,8 +306,8 @@ int32_t devF3RP61long2buf(int32_t *val, void *buf, const int8_t conv, int32_t no
 //////////////////////////////////////////////////////////////////////////
 //
 
-// read data from buf and fill to val
-// return: 0= success, -1= overflow/underflow in bcd2ushort
+// Read data from buf and fill to val.
+// Return: 0= success, -1= overflow/underflow in bcd2ushort
 int32_t devF3RP61buf2ulong(void *buf, uint32_t *val, const int8_t conv, int32_t nord)
 {
     int32_t ret = 0;
@@ -324,8 +351,8 @@ int32_t devF3RP61buf2ulong(void *buf, uint32_t *val, const int8_t conv, int32_t 
     return ret;
 }
 
-// read data from val and fill to buf
-// return: 0= success, -1= overflow/underflow in ushort2bcd
+// Read data from val and fill to buf.
+// Return: 0= success, -1= overflow/underflow in ushort2bcd
 int32_t devF3RP61ulong2buf(uint32_t *val, void *buf, const int8_t conv, int32_t nord)
 {
     int ret = 0;
@@ -375,8 +402,8 @@ int32_t devF3RP61ulong2buf(uint32_t *val, void *buf, const int8_t conv, int32_t 
 //////////////////////////////////////////////////////////////////////////
 //
 
-// read data from buf and fill to val
-// return: 0= success, -1= overflow/underflow in bcd2ushort
+// Read data from buf and fill to val.
+// Return: 0= success, -1= overflow/underflow in bcd2ushort
 int32_t devF3RP61buf2short(void *buf, int16_t *val, const int8_t conv, int32_t nord)
 {
     int32_t ret = 0;
@@ -401,8 +428,8 @@ int32_t devF3RP61buf2short(void *buf, int16_t *val, const int8_t conv, int32_t n
     return ret;
 }
 
-// read data from val and fill to buf
-// return: 0= success, -1= overflow/underflow in ushort2bcd
+// Read data from val and fill to buf.
+// Return: 0= success, -1= overflow/underflow in ushort2bcd
 int32_t devF3RP61short2buf(int16_t *val, void *buf, const int8_t conv, int32_t nord)
 {
     int ret = 0;
@@ -430,8 +457,8 @@ int32_t devF3RP61short2buf(int16_t *val, void *buf, const int8_t conv, int32_t n
 //////////////////////////////////////////////////////////////////////////
 //
 
-// read data from buf and fill to val
-// return: 2= no conversion
+// Read data from buf and fill to val.
+// Return: 2= no conversion
 int32_t devF3RP61buf2double(void *buf, double *val, const int8_t conv, int32_t nord)
 {
     const int ret = 2;
@@ -459,6 +486,7 @@ int32_t devF3RP61buf2double(void *buf, double *val, const int8_t conv, int32_t n
             val[i] = tmp;
         }
     } else if (conv == 'L') {
+        // ai record doesn't use this block, but waveform/aai/aao does.
         for (uint32_t i=0; i<nord; i++) {
             uint32_t w0 = wdata[2*i + 0];
             uint32_t w1 = wdata[2*i + 1];
@@ -466,10 +494,12 @@ int32_t devF3RP61buf2double(void *buf, double *val, const int8_t conv, int32_t n
             val[i] = lval;
         }
     } else if (conv == 'U') {
+        // ai record doesn't use this block, but waveform/aai/aao does.
         for (uint32_t i=0; i<nord; i++) {
             val[i] = (uint16_t)wdata[i];
         }
     } else {// conv == 'W'
+        // ai record doesn't use this block, but waveform/aai/aao does.
         for (uint32_t i=0; i<nord; i++) {
             val[i] = (int16_t)wdata[i];
         }
@@ -478,8 +508,8 @@ int32_t devF3RP61buf2double(void *buf, double *val, const int8_t conv, int32_t n
     return ret;
 }
 
-// read data from val and fill to buf
-// return: 0= success
+// Read data from val and fill to buf.
+// Return: 0= success
 int32_t devF3RP61double2buf(double *val, void *buf, const int8_t conv, int32_t nord)
 {
     int ret = 0;
@@ -526,8 +556,8 @@ int32_t devF3RP61double2buf(double *val, void *buf, const int8_t conv, int32_t n
 //////////////////////////////////////////////////////////////////////////
 //
 
-// read data from buf and fill to val
-// return: 2= no conversion
+// Read data from buf and fill to val.
+// Return: 2= no conversion
 int32_t devF3RP61buf2float(void *buf, float *val, const int8_t conv, int32_t nord)
 {
     const int ret = 2; // no conversion
@@ -564,8 +594,8 @@ int32_t devF3RP61buf2float(void *buf, float *val, const int8_t conv, int32_t nor
     return ret;
 }
 
-// read data from val and fill to buf
-// return: 0= success
+// Read data from val and fill to buf.
+// Return: 0= success
 int32_t devF3RP61float2buf(float *val, void *buf, const int8_t conv, int32_t nord)
 {
     int ret = 0;

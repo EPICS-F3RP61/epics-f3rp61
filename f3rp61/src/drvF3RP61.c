@@ -534,22 +534,10 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
         count = 2;
     }
 
-    // Check if start address is valid when accessing relays in byte-wise
-    if (type == kWord &&
-        (device == 'X' || device == 'Y')) {
-        if (addr%16 != 1) {
-            errlogPrintf("%s: %s : Illegal relay number : %d\n", __func__, prec->name, addr);
-            return -1;
-        }
-    }
-
     // Check if something is installed in the slot specified.
     M3IO_MODULE_INFORMATION module_info = {
         .unitno   = unit,
         .slotno   = slot,
-        .num_xreg = 0,
-        .num_yreg = 0,
-        .num_dreg = 0,
     };
     if (device == 'E' || device == 'R' || device == 'L' || device == 'W') {
         // For shared devices and link devices, both unit number and
@@ -562,27 +550,38 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
     // Make sure that relay/register number is suitable for the hardware, if possible.
     int32_t nord = nelm;
     if (type == kBit) {
-        int32_t nrly;
         if (0) {
             //
         } else if (device == 'X') {
-            nrly = module_info.num_xreg;
+            const int low  = 1;
+            const int high = module_info.num_xreg;
+            nord = f3rp61CheckRelay(prec, addr, low, high);
         } else if (device == 'Y') {
-            nrly = module_info.num_yreg;
-        } else {
-            nrly = addr; // We don't care devices other than X or Y
+            const int low  = module_info.num_xreg + 1;
+            const int high = module_info.num_xreg + module_info.num_yreg;
+            nord = f3rp61CheckRelay(prec, addr, low, high);
         }
-        if (addr > nrly) {
-            errlogPrintf("%s: %s : Relay number %d exceeds the module limit of %d\n", __func__, prec->name, addr, nrly);
+        if (nord == 0) {
             return -1;
         }
     } else { // kWord
+        // Check if start address is valid when accessing X or Y relays in byte-wise
+        if ( (device == 'X' || device == 'Y') &&
+             (addr%16 != 1) ) {
+            errlogPrintf("%s: %s : Illegal relay number : %d\n", __func__, prec->name, addr);
+            return -1;
+        }
+
         if (0) {
             //
         } else if (device == 'X') {
-            nord = f3rp61CheckAddrRange(prec, kBit, addr, count, nelm, module_info.num_xreg);
+            const int low  = 1;
+            const int high = module_info.num_xreg;
+            nord = f3rp61CheckAddrRange(prec, kBit, addr, count, nelm, low, high);
         } else if (device == 'Y') {
-            nord = f3rp61CheckAddrRange(prec, kBit, addr, count, nelm, module_info.num_yreg);
+            const int low  = module_info.num_xreg + 1;
+            const int high = module_info.num_xreg + module_info.num_yreg;
+            nord = f3rp61CheckAddrRange(prec, kBit, addr, count, nelm, low, high);
         } else if (device == 'M') {
 #if defined(__powerpc__)
             // The F3RP61 Linux BSP Reference manual states that start
@@ -599,12 +598,12 @@ int f3rp61ParseLink(const struct link *plink, F3RP61_RW rw, F3RP61_ACCESS_TYPE t
                 // If there are no X registers and no Y registers, there should be no mode register either.
                 nreg = 0;
             }
-            nord = f3rp61CheckAddrRange(prec, kWord, addr, count, nelm, nreg);
+            nord = f3rp61CheckAddrRange(prec, kWord, addr, count, nelm, 1, nreg);
         } else if (device == 'A') {
             if (conv == 'X') {
-                nord = f3rp61CheckAddrRange(prec, kWord, addr, count, nelm, module_info.num_dreg/2); // We need to check if dreg/2 is correct...
+                nord = f3rp61CheckAddrRange(prec, kWord, addr, count, nelm, 1, module_info.num_dreg/2); // We need to check if dreg/2 is correct...
             } else {
-                nord = f3rp61CheckAddrRange(prec, kWord, addr, count, nelm, module_info.num_dreg);
+                nord = f3rp61CheckAddrRange(prec, kWord, addr, count, nelm, 1, module_info.num_dreg);
             }
         }
         if (nord == 0) {
@@ -1250,9 +1249,9 @@ static int getModuleInfo(int verbosity)
                 .slotno = slot,
             };
 
-            if (ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info)<0) {
+            if (ioctl(f3rp61_fd, M3IO_GET_MODULE_INFO, &module_info) < 0) {
                 // ioctl() fails if no module is plugged in the specified slot, so the error should be ignored.
-                //errlogPrintf("drvF3RP61: ioctl M3IO_GET_MODULE_INFO failed [%d]\n", errno);
+                //errlogPrintf("%s: %s : Unit %d Slot %d is empty\n", __func__, prec->name, unit, slot);
                 //return -1;
             }
 

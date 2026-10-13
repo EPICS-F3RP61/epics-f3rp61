@@ -25,7 +25,7 @@ F3RP61Seq devices
   - [x] Add &L option support
   - [x] set NOBT to 32 with &L option, 16 without &L option
 - [x] Fix byte-swap on &F and &D options.
-- [ ] Consider ESLO/EOFF fields with `SLOPE` converion for ao records (without &D or &D conversion).
+- [x] Consider ESLO/EOFF fields with `SLOPE` converion for ao records (without &D or &D conversion).
 - [ ] Consider SMOO fields for ai records with &F or &D conversion.
 - [ ] Consider ASLO/AOFF fields for ai records with &F or &D conversion.
 - [ ] Consider ASLO/AOFF fields for ao records with (&F or &D conversion).
@@ -100,7 +100,7 @@ F3RP61 devices
     - [ ] Add &L option for longin/longout records - do we need this?.
   - [ ] Add aai/aao record supports - do we need this?
   - [ ] Drop mode register (M) support from Mbbi/Mbbo records (?).
-- [ ] Consider ESLO/EOFF fields with `SLOPE` converion for ao records without &D or &D conversion.
+- [x] Consider ESLO/EOFF fields with `SLOPE` converion for ao records without &D or &D conversion.
 - [ ] Consider SMOO fields for ai records with &F or &D conversion.
 - [ ] Consider ASLO/AOFF fields for ai records with &F or &D conversion.
 - [ ] Consider ASLO/AOFF fields for ao records with &F or &D conversion.

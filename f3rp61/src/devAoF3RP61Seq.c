@@ -99,11 +99,18 @@ static long write_ao(aoRecord *prec)
         M3_WRITE_SEQDEV *pM3WriteSeqdev = (M3_WRITE_SEQDEV *) &pmcmdRequest->dataBuff.bData[0];
         uint16_t *wdata = pM3WriteSeqdev->dataBuff.wData;
 
+
         // Compose data to write
         int32_t nord = dpvt->nord;
-        devF3RP61double2buf(&prec->val, wdata, dpvt->conv, nord);
-        prec->udf = isnan(prec->val); // does this make sense?
+        if (dpvt->conv == 'D' || dpvt->conv == 'F') {
+            devF3RP61double2buf(&prec->val, wdata, dpvt->conv, nord);
+            // todo : consider ASLO and AOFF field
 
+            // Perhaps we don't need this because isnan() must be called in aoRecord::process
+            prec->udf = isnan(prec->val); // does this make sense?
+        } else {
+            devF3RP61long2buf(&prec->rval, wdata, dpvt->conv, nord);
+        }
         // Issue write request
         if (f3rp61seqQueueRequest(dpvt) < 0) {
             errlogPrintf("devAoF3RP61Seq: %s : f3rp61seqQueueRequest failed\n", prec->name);

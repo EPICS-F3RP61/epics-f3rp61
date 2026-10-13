@@ -94,12 +94,17 @@ static long write_ao(aoRecord *prec)
     //
     prec->udf = FALSE;
 
-    //
-    int32_t nord = dpvt->nord;
-
     // Compose data to write
-    devF3RP61double2buf(&prec->val, dpvt->buf, dpvt->conv, nord);
-    // todo : consider ASLO and AOFF field
+    int32_t nord = dpvt->nord;
+    if (dpvt->conv == 'D' || dpvt->conv == 'F') {
+        devF3RP61double2buf(&prec->val, dpvt->buf, dpvt->conv, nord);
+        // todo : consider ASLO and AOFF field
+
+        // Perhaps we don't need this because isnan() must be called in aoRecord::process
+        prec->udf = isnan(prec->val);
+    } else {
+        devF3RP61long2buf(&prec->rval, dpvt->buf, dpvt->conv, nord);
+    }
 
     // Issue API function
     nord = f3rp61Write((dbCommon*)prec, nord); // nord must be identical to dpvt->nord, if no error
@@ -107,9 +112,6 @@ static long write_ao(aoRecord *prec)
         recGblSetSevr(prec, WRITE_ALARM, INVALID_ALARM);
         return -1;
     }
-
-    //
-    prec->udf = isnan(prec->val);
 
     //
     return 0;

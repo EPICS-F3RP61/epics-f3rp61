@@ -25,13 +25,15 @@ F3RP61Seq devices
   - [x] Add &L option support
   - [x] set NOBT to 32 with &L option, 16 without &L option
 - [x] Fix byte-swap on &F and &D options.
-- [ ] Consider ASLO/AOFF and SMOO fields for ai records.
-- [ ] Consider ASLO/AOFF fields for ao records.
-- [ ] Add Internal/file/cache registers (D/B/F).
+- [ ] Consider ESLO/EOFF fields with `SLOPE` converion for ao records (without &D or &D conversion).
+- [ ] Consider SMOO fields for ai records with &F or &D conversion.
+- [ ] Consider ASLO/AOFF fields for ai records with &F or &D conversion.
+- [ ] Consider ASLO/AOFF fields for ao records with (&F or &D conversion).
+- [x] Add Internal/file/cache registers (D/B/F).
   - [ ] for stringin records.
   - [ ] for stringout records.
-- [ ] Add waveform record support.
-- [ ] Add aai/aao record support.
+- [x] Add waveform record support.
+- [x] Add aai/aao record support.
 - [ ] Add lsi/lso record support.
 - [ ] Add int64in/int64out record support.
 
@@ -98,15 +100,17 @@ F3RP61 devices
     - [ ] Add &L option for longin/longout records - do we need this?.
   - [ ] Add aai/aao record supports - do we need this?
   - [ ] Drop mode register (M) support from Mbbi/Mbbo records (?).
-- [ ] Consider ASLO/AOFF and SMOO fields for ai records.
-- [ ] Consider ASLO/AOFF fields for ao records.
+- [ ] Consider ESLO/EOFF fields with `SLOPE` converion for ao records without &D or &D conversion.
+- [ ] Consider SMOO fields for ai records with &F or &D conversion.
+- [ ] Consider ASLO/AOFF fields for ai records with &F or &D conversion.
+- [ ] Consider ASLO/AOFF fields for ao records with &F or &D conversion.
 - [x] Add support for aai/aao records.
 - [ ] Add support for lsi/lso records.
 - [ ] Add int64in/int64out record support.
 - [ ] Secure against reading waveform larger than 4kB.
 - [ ] Read waveform data beyond 4kB.
 - [ ] Add option to access I/O modules in 8-bit data width.
-- [ ] Define and use dpvt structure which is common for various records.
+- [x] Define and use dpvt structure which is common for various records.
 - [ ] Support for double-word access modules (e.g. F3XP01, F3XP02).
   - [ ] We mey need either dedicated option or dedicated device for those double-word access modules.
 

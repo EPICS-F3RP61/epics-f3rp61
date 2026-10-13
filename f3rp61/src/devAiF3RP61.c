@@ -105,14 +105,22 @@ static long read_ai(aiRecord *prec)
         return -1;
     }
 
-    // fill VAL field
-    int ret = devF3RP61buf2double(dpvt->buf, &prec->val, dpvt->conv, nord);
-    // todo : consider ASLO and AOFF field
-    // todo : consider SMOO field
+    if (dpvt->conv == 'D' || dpvt->conv == 'F') {
+        // fill VAL field
+        int ret = devF3RP61buf2double(dpvt->buf, &prec->val, dpvt->conv, nord);
+        // todo : consider ASLO and AOFF field
+        // todo : consider SMOO field
 
-    //
-    prec->udf = isnan(prec->val);
+        // Perhaps we don't need this because isnan() must be called in aiRecord::process
+        prec->udf = isnan(prec->val);
 
-    //
-    return ret;
+        //
+        return ret;
+    } else {
+        // fill RVAL field
+        int ret = devF3RP61buf2long(dpvt->buf, &prec->rval, dpvt->conv, nord);
+
+        //
+        return ret;
+    }
 }

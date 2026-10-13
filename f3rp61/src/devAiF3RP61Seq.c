@@ -96,14 +96,22 @@ static long read_ai(aiRecord *prec)
         MCMD_RESPONSE *pmcmdResponse = &pmcmdStruct->mcmdResponse;
         uint16_t *wdata = pmcmdResponse->dataBuff.wData;
 
-        // fill VAL field
         int32_t nord = dpvt->nord;
-        int ret = devF3RP61buf2double(wdata, &prec->val, dpvt->conv, nord);
-        prec->udf = isnan(prec->val);
-        // todo : consider ASLO and AOFF field
-        // todo : consider SMOO field
+        if (dpvt->conv == 'D' || dpvt->conv == 'F') {
+            // fill VAL field
+            int ret = devF3RP61buf2double(wdata, &prec->val, dpvt->conv, nord);
+            prec->udf = isnan(prec->val);
+            // todo : consider ASLO and AOFF field
+            // todo : consider SMOO field
 
-        return ret;
+            return ret;
+        } else {
+            // fill RVAL field
+            int ret = devF3RP61buf2long(wdata, &prec->rval, dpvt->conv, nord);
+
+            //
+            return ret;
+        }
 
     } else { // First call (PACT is FALSE)
         // Issue read request

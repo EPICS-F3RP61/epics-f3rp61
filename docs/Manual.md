@@ -15,6 +15,7 @@ Device and Driver Support for F3RP70, F3RP71, and F3RP61
   - [Device Types](#device-types)
   - [Record Types](#record-types)
   - [Conversion Specifiers](#conversion-specifiers)
+  - [Units conversion in `ai` records](#units-conversion-in-ai-records)
   - [Reading / Writing an Array of Data](#reading--writing-an-array-of-data)
 - [Accessing Input Relays, Output Relays and Data Registers on I/O Modules (F3RP61 devices)](#accessing-input-relays-output-relays-and-data-registers-on-io-modules-f3rp61-devices)
   - [Input / Output Link (`INP`/`OUT`) Fields for Input Relays, Output Relays and Data Registers](#input--output-link-inpout-fields-for-input-relays-output-relays-and-data-registers)
@@ -209,6 +210,14 @@ status are set to `INVALID` / `HW_LIMIT`.
 Not all the supported conversion specifiers are necessarily
 meaningful. For example, consider reading 32 subsequent special relays
 to an `ai` record using the `&F` conversion.
+
+## Units conversion in `ai` records
+
+The device support performs a linear conversion when `LINR` field in
+an `ai` record is set to `SLOPE` or `LINEAR`, unless `&D` or `&F`
+conversion is specified in the `INP` field. It does not calcute ESLO
+and EOFF from EGUL and EGUF; thus there is no distinction between the
+`SLOPE` and `LINEAR` settings for the `LINR` field.
 
 ## Reading / Writing an Array of Data
 

@@ -17,7 +17,7 @@ Yokogawa succeeded to develop such an ideal controller based on the
 request from KEK control groups in 2008. Since then, many controllers
 in EPICS system were implemented.
 
-[docs/Install.md](docs/Install.md)
-[docs/Manual.md](docs/Manual.md)
+- [docs/Install.md](docs/Install.md)
+- [docs/Manual.md](docs/Manual.md)
 
 Please send your comments and questions to S. Yamada, K. Furukawa, or J. Odagiri.
